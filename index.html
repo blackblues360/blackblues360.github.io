@@ -37,30 +37,7 @@
     font-weight: 300;
     line-height: 1.7;
     font-size: 15px;
-    cursor: none;
-  }
-
-  /* Custom Cursor */
-  .cursor {
-    width: 8px; height: 8px;
-    background: var(--accent);
-    border-radius: 50%;
-    position: fixed;
-    top: 0; left: 0;
-    pointer-events: none;
-    z-index: 9999;
-    transition: transform 0.15s ease, opacity 0.3s;
-    mix-blend-mode: screen;
-  }
-  .cursor-ring {
-    width: 32px; height: 32px;
-    border: 1px solid rgba(126,184,212,0.4);
-    border-radius: 50%;
-    position: fixed;
-    top: 0; left: 0;
-    pointer-events: none;
-    z-index: 9998;
-    transition: transform 0.35s ease;
+    cursor: auto;
   }
 
   /* Noise overlay */
@@ -135,11 +112,11 @@
   }
 
   .hero-eyebrow {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.2em;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 300;
+    letter-spacing: 0.08em;
     color: var(--accent);
-    text-transform: uppercase;
     margin-bottom: 1.5rem;
     opacity: 0;
     animation: fadeUp 0.8s 0.2s forwards;
@@ -225,16 +202,17 @@
     margin-bottom: 2.5rem;
   }
   .section-label {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.18em;
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
     color: var(--accent);
-    text-transform: uppercase;
   }
   .section-count {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    color: var(--text3);
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    font-weight: 300;
+    color: var(--text2);
   }
 
   /* BLOG SECTION */
@@ -259,7 +237,7 @@
     text-decoration: none;
     color: inherit;
     transition: background 0.2s;
-    cursor: none;
+    cursor: pointer;
   }
   .blog-item:last-child { border-bottom: none; }
   .blog-item:hover .blog-title { color: var(--accent); }
@@ -340,7 +318,7 @@
     color: inherit;
     display: flex; flex-direction: column; gap: 0.6rem;
     transition: background 0.2s;
-    cursor: none;
+    cursor: pointer;
   }
   .bookmark-card:hover { background: var(--bg3); }
   .bookmark-card:hover .bookmark-name { color: var(--accent); }
@@ -389,7 +367,7 @@
     display: flex; align-items: center; gap: 1.5rem;
     padding: 1.2rem 0;
     border-bottom: 1px solid var(--border);
-    cursor: none;
+    cursor: default;
     transition: padding-left 0.2s;
   }
   .music-item:last-child { border-bottom: none; }
@@ -503,15 +481,10 @@
     .blog-item { grid-template-columns: 48px 1fr; }
     .blog-meta { display: none; }
     .nav-links { display: none; }
-    body { cursor: auto; }
-    .cursor, .cursor-ring { display: none; }
   }
 </style>
 </head>
 <body>
-
-<div class="cursor" id="cursor"></div>
-<div class="cursor-ring" id="cursorRing"></div>
 
 <!-- NAV -->
 <nav>
@@ -775,7 +748,7 @@
     <p>这个网站没有什么宏大的目标，只是想在互联网上留一片属于自己的角落。在这里我会写一些<strong>生活碎片</strong>、技术折腾、读书笔记，偶尔分享最近喜欢的音乐和随便想说的话。</p>
     <p>如果你在这里找到了共鸣，那很好；如果没有，那也没关系——我本来也只是写给自己看的。</p>
     <p style="margin-top: 1.5rem;">
-      <a href="mailto:hello@blackblues.me" style="color: var(--accent); text-decoration: none; font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.1em; border-bottom: 1px solid var(--accent2); padding-bottom: 2px;">
+      <a href="mailto:hello@blackblues.me" style="color: var(--accent); text-decoration: none; font-family: var(--sans); font-size: 0.95rem; font-weight: 300; border-bottom: 1px solid var(--accent2); padding-bottom: 2px;">
         hello@blackblues.me ↗
       </a>
     </p>
@@ -789,33 +762,6 @@
 </footer>
 
 <script>
-  const cursor = document.getElementById('cursor');
-  const ring = document.getElementById('cursorRing');
-  let mx = 0, my = 0, rx = 0, ry = 0;
-
-  document.addEventListener('mousemove', e => {
-    mx = e.clientX; my = e.clientY;
-    cursor.style.transform = `translate(${mx - 4}px, ${my - 4}px)`;
-  });
-
-  function animateRing() {
-    rx += (mx - rx - 16) * 0.12;
-    ry += (my - ry - 16) * 0.12;
-    ring.style.transform = `translate(${rx}px, ${ry}px)`;
-    requestAnimationFrame(animateRing);
-  }
-  animateRing();
-
-  document.querySelectorAll('a, .music-item, .bookmark-card, .blog-item').forEach(el => {
-    el.addEventListener('mouseenter', () => {
-      cursor.style.transform += ' scale(2)';
-      cursor.style.opacity = '0.6';
-    });
-    el.addEventListener('mouseleave', () => {
-      cursor.style.opacity = '1';
-    });
-  });
-
   // Intersection Observer fade-in
   const observer = new IntersectionObserver(entries => {
     entries.forEach(entry => {
