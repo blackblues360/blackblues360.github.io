@@ -3,495 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BLACK BLUES</title>
+<meta name="description" content="BLACK BLUES 是一个关于写作、音乐、阅读、科技和生活思考的个人空间。">
+<meta name="author" content="BLACK BLUES">
+<meta name="theme-color" content="#0e0e0f">
+<meta property="og:type" content="website">
+<meta property="og:title" content="BLACK BLUES">
+<meta property="og:description" content="写字、听歌、看世界。这里是我在互联网上的家。">
+<meta property="og:url" content="https://blackblues.xyz/">
+<meta property="og:site_name" content="BLACK BLUES">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://blackblues.xyz/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230e0e0f'/%3E%3Ctext x='32' y='39' text-anchor='middle' font-family='Georgia,serif' font-size='22' fill='%237eb8d4'%3EBB%3C/text%3E%3C/svg%3E">
+<title>BLACK BLUES | Personal Space</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300&display=swap" rel="stylesheet">
 
-<style>
-  :root {
-    --bg: #0e0e0f;
-    --bg2: #141416;
-    --bg3: #1a1a1d;
-    --border: rgba(255,255,255,0.07);
-    --border2: rgba(255,255,255,0.12);
-    --text: #e8e6e0;
-    --text2: #8a8680;
-    --text3: #5a5754;
-    --accent: #7eb8d4;
-    --accent2: #4a8fa8;
-    --accent-warm: #c9a96e;
-    --serif: 'Playfair Display', Georgia, serif;
-    --sans: 'DM Sans', sans-serif;
-    --mono: 'DM Mono', monospace;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html { scroll-behavior: smooth; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    font-weight: 300;
-    line-height: 1.7;
-    font-size: 15px;
-    cursor: auto;
-  }
-
-  /* Noise overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.6;
-  }
-
-  /* NAV */
-  nav {
-    position: fixed; top: 0; left: 0; right: 0;
-    z-index: 100;
-    padding: 0 clamp(1.5rem, 5vw, 4rem);
-    height: 64px;
-    display: flex; align-items: center; justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-    background: rgba(14,14,15,0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-  }
-
-  .nav-logo {
-    font-family: var(--serif);
-    font-size: 1.1rem;
-    letter-spacing: 0.08em;
-    color: var(--text);
-    text-decoration: none;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .nav-logo span {
-    display: inline-block;
-    width: 6px; height: 6px;
-    background: var(--accent);
-    border-radius: 50%;
-    animation: pulse 3s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.7); }
-  }
-
-  .nav-links {
-    display: flex; gap: 2rem; list-style: none;
-  }
-  .nav-links a {
-    color: var(--text2);
-    text-decoration: none;
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    transition: color 0.2s;
-  }
-  .nav-links a:hover { color: var(--text); }
-
-  /* MAIN LAYOUT */
-  main { padding-top: 64px; }
-
-  section { position: relative; z-index: 1; }
-
-  /* HERO */
-  .hero {
-    min-height: 100svh;
-    display: flex; flex-direction: column; justify-content: flex-end;
-    padding: clamp(2rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .hero-eyebrow {
-    font-family: var(--sans);
-    font-size: 0.9rem;
-    font-weight: 300;
-    letter-spacing: 0.08em;
-    color: var(--accent);
-    margin-bottom: 1.5rem;
-    opacity: 0;
-    animation: fadeUp 0.8s 0.2s forwards;
-  }
-
-  .hero-title {
-    font-family: var(--serif);
-    font-size: clamp(3.5rem, 10vw, 9rem);
-    line-height: 0.95;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    margin-bottom: 2rem;
-    opacity: 0;
-    animation: fadeUp 0.9s 0.35s forwards;
-  }
-
-  .hero-title em {
-    font-style: italic;
-    font-weight: 400;
-    color: var(--text2);
-  }
-
-  .hero-sub {
-    display: flex; align-items: flex-end; justify-content: space-between;
-    flex-wrap: wrap; gap: 1.5rem;
-    opacity: 0;
-    animation: fadeUp 0.9s 0.5s forwards;
-  }
-
-  .hero-desc {
-    max-width: 38ch;
-    color: var(--text2);
-    font-size: 0.95rem;
-    line-height: 1.8;
-  }
-
-  .hero-date {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    color: var(--text3);
-    letter-spacing: 0.12em;
-  }
-
-  .hero-scroll {
-    position: absolute;
-    bottom: 2.5rem; right: clamp(1.5rem, 5vw, 4rem);
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    opacity: 0;
-    animation: fadeIn 1s 1.2s forwards;
-  }
-  .hero-scroll span {
-    font-family: var(--mono);
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    color: var(--text3);
-    text-transform: uppercase;
-    writing-mode: vertical-rl;
-  }
-  .hero-scroll-line {
-    width: 1px; height: 60px;
-    background: linear-gradient(to bottom, var(--text3), transparent);
-    animation: scrollLine 2s ease-in-out infinite;
-  }
-  @keyframes scrollLine {
-    0%, 100% { transform: scaleY(1); transform-origin: top; }
-    50% { transform: scaleY(0.3); transform-origin: bottom; }
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(24px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  /* SECTION HEADERS */
-  .section-header {
-    display: flex; align-items: baseline; justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 1rem;
-    margin-bottom: 2.5rem;
-  }
-  .section-label {
-    font-family: var(--sans);
-    font-size: 0.95rem;
-    font-weight: 400;
-    letter-spacing: 0.06em;
-    color: var(--accent);
-  }
-  .section-count {
-    font-family: var(--sans);
-    font-size: 0.85rem;
-    font-weight: 300;
-    color: var(--text2);
-  }
-
-  /* BLOG SECTION */
-  .blog-section {
-    padding: clamp(3rem, 8vw, 6rem) clamp(1.5rem, 5vw, 4rem);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .blog-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
-  .blog-item {
-    display: grid;
-    grid-template-columns: 80px 1fr auto;
-    gap: 1.5rem;
-    align-items: start;
-    padding: 1.8rem 0;
-    border-bottom: 1px solid var(--border);
-    text-decoration: none;
-    color: inherit;
-    transition: background 0.2s;
-    cursor: pointer;
-  }
-  .blog-item:last-child { border-bottom: none; }
-  .blog-item:hover .blog-title { color: var(--accent); }
-  .blog-item:hover .blog-arrow { transform: translate(4px, -4px); }
-
-  .blog-num {
-    font-family: var(--mono);
-    font-size: 0.7rem;
-    color: var(--text3);
-    letter-spacing: 0.1em;
-    padding-top: 4px;
-  }
-
-  .blog-body {}
-
-  .blog-tag {
-    display: inline-block;
-    font-family: var(--mono);
-    font-size: 0.65rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent-warm);
-    margin-bottom: 0.4rem;
-  }
-
-  .blog-title {
-    font-family: var(--serif);
-    font-size: clamp(1.1rem, 2.5vw, 1.4rem);
-    font-weight: 400;
-    line-height: 1.3;
-    margin-bottom: 0.5rem;
-    transition: color 0.2s;
-  }
-
-  .blog-excerpt {
-    font-size: 0.85rem;
-    color: var(--text2);
-    line-height: 1.7;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .blog-meta {
-    font-family: var(--mono);
-    font-size: 0.68rem;
-    color: var(--text3);
-    text-align: right;
-    padding-top: 4px;
-  }
-
-  .blog-arrow {
-    display: block;
-    margin-top: 4px;
-    color: var(--text3);
-    transition: transform 0.2s;
-  }
-
-  /* BOOKMARKS SECTION */
-  .bookmarks-section {
-    padding: clamp(3rem, 8vw, 6rem) clamp(1.5rem, 5vw, 4rem);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .bookmarks-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-  }
-
-  .bookmark-card {
-    background: var(--bg);
-    padding: 1.6rem 1.8rem;
-    text-decoration: none;
-    color: inherit;
-    display: flex; flex-direction: column; gap: 0.6rem;
-    transition: background 0.2s;
-    cursor: pointer;
-  }
-  .bookmark-card:hover { background: var(--bg3); }
-  .bookmark-card:hover .bookmark-name { color: var(--accent); }
-
-  .bookmark-icon {
-    width: 36px; height: 36px;
-    border: 1px solid var(--border2);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    margin-bottom: 0.4rem;
-  }
-
-  .bookmark-name {
-    font-family: var(--serif);
-    font-size: 1rem;
-    font-weight: 400;
-    transition: color 0.2s;
-  }
-
-  .bookmark-desc {
-    font-size: 0.8rem;
-    color: var(--text2);
-    line-height: 1.6;
-    flex: 1;
-  }
-
-  .bookmark-url {
-    font-family: var(--mono);
-    font-size: 0.65rem;
-    color: var(--text3);
-    letter-spacing: 0.05em;
-  }
-
-  /* MUSIC SECTION */
-  .music-section {
-    padding: clamp(3rem, 8vw, 6rem) clamp(1.5rem, 5vw, 4rem);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .music-list {
-    display: flex; flex-direction: column; gap: 0;
-  }
-
-  .music-item {
-    display: flex; align-items: center; gap: 1.5rem;
-    padding: 1.2rem 0;
-    border-bottom: 1px solid var(--border);
-    cursor: default;
-    transition: padding-left 0.2s;
-  }
-  .music-item:last-child { border-bottom: none; }
-  .music-item:hover { padding-left: 0.5rem; }
-  .music-item:hover .music-title { color: var(--accent); }
-
-  .music-idx {
-    font-family: var(--mono);
-    font-size: 0.68rem;
-    color: var(--text3);
-    min-width: 24px;
-  }
-
-  .music-play {
-    width: 32px; height: 32px;
-    border: 1px solid var(--border2);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    color: var(--text2);
-    font-size: 10px;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .music-item:hover .music-play { border-color: var(--accent); color: var(--accent); }
-
-  .music-info { flex: 1; }
-  .music-title {
-    font-family: var(--serif);
-    font-size: 0.95rem;
-    transition: color 0.2s;
-  }
-  .music-artist {
-    font-size: 0.78rem;
-    color: var(--text2);
-    margin-top: 2px;
-  }
-
-  .music-duration {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    color: var(--text3);
-  }
-
-  /* ABOUT SECTION */
-  .about-section {
-    padding: clamp(3rem, 8vw, 6rem) clamp(1.5rem, 5vw, 4rem);
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .about-text {}
-  .about-text p {
-    color: var(--text2);
-    font-size: 0.95rem;
-    line-height: 1.85;
-    margin-bottom: 1rem;
-  }
-  .about-text p:last-child { margin-bottom: 0; }
-  .about-text strong { color: var(--text); font-weight: 400; }
-
-  .about-side {}
-  .about-quote {
-    font-family: var(--serif);
-    font-size: clamp(1.3rem, 3vw, 1.8rem);
-    font-style: italic;
-    line-height: 1.4;
-    color: var(--text);
-    border-left: 2px solid var(--accent);
-    padding-left: 1.5rem;
-    margin-bottom: 2rem;
-  }
-
-  .about-tags {
-    display: flex; flex-wrap: wrap; gap: 8px;
-    margin-top: 1.5rem;
-  }
-  .about-tag {
-    font-family: var(--mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    color: var(--text2);
-    border: 1px solid var(--border2);
-    padding: 5px 12px;
-    text-transform: uppercase;
-  }
-
-  /* FOOTER */
-  footer {
-    padding: clamp(2rem, 5vw, 3.5rem) clamp(1.5rem, 5vw, 4rem);
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 1rem;
-  }
-
-  .footer-brand {
-    font-family: var(--serif);
-    font-size: 0.95rem;
-    color: var(--text3);
-  }
-  .footer-copy {
-    font-family: var(--mono);
-    font-size: 0.68rem;
-    color: var(--text3);
-    letter-spacing: 0.1em;
-  }
-
-  /* MOBILE */
-  @media (max-width: 768px) {
-    .about-section { grid-template-columns: 1fr; gap: 2rem; }
-    .blog-item { grid-template-columns: 48px 1fr; }
-    .blog-meta { display: none; }
-    .nav-links { display: none; }
-  }
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
 <!-- NAV -->
-<nav>
-  <a href="#" class="nav-logo">
-    <span></span>
+<nav aria-label="主要导航">
+  <a href="#home" class="nav-logo">
+    <span aria-hidden="true"></span>
     BLACK BLUES
   </a>
+  <input class="nav-toggle" id="nav-toggle" type="checkbox" aria-label="打开导航菜单">
+  <label class="nav-menu-button" for="nav-toggle" aria-hidden="true">
+    <span></span>
+    <span></span>
+    <span></span>
+  </label>
   <ul class="nav-links">
     <li><a href="#blog">文章</a></li>
     <li><a href="#bookmarks">书签</a></li>
@@ -499,6 +42,8 @@
     <li><a href="#about">关于</a></li>
   </ul>
 </nav>
+
+<main>
 
 <!-- HERO -->
 <section class="hero" id="home">
@@ -522,7 +67,7 @@
   </div>
   <div class="blog-grid">
 
-    <a href="#" class="blog-item">
+    <a href="posts/ai-tools-half-year.html" class="blog-item">
       <span class="blog-num">001</span>
       <div class="blog-body">
         <span class="blog-tag">思考</span>
@@ -535,7 +80,7 @@
       </div>
     </a>
 
-    <a href="#" class="blog-item">
+    <a href="posts/rain-tea-night.html" class="blog-item">
       <span class="blog-num">002</span>
       <div class="blog-body">
         <span class="blog-tag">生活</span>
@@ -548,7 +93,7 @@
       </div>
     </a>
 
-    <a href="#" class="blog-item">
+    <a href="posts/cloudflare-github-pages.html" class="blog-item">
       <span class="blog-num">003</span>
       <div class="blog-body">
         <span class="blog-tag">技术</span>
@@ -561,7 +106,7 @@
       </div>
     </a>
 
-    <a href="#" class="blog-item">
+    <a href="posts/recent-songs.html" class="blog-item">
       <span class="blog-num">004</span>
       <div class="blog-body">
         <span class="blog-tag">音乐</span>
@@ -574,7 +119,7 @@
       </div>
     </a>
 
-    <a href="#" class="blog-item">
+    <a href="posts/sapiens-notes.html" class="blog-item">
       <span class="blog-num">005</span>
       <div class="blog-body">
         <span class="blog-tag">阅读</span>
@@ -587,7 +132,7 @@
       </div>
     </a>
 
-    <a href="#" class="blog-item">
+    <a href="posts/before-building-site.html" class="blog-item">
       <span class="blog-num">006</span>
       <div class="blog-body">
         <span class="blog-tag">随笔</span>
@@ -611,42 +156,42 @@
   </div>
   <div class="bookmarks-grid">
 
-    <a href="https://chat.openai.com" target="_blank" class="bookmark-card">
+    <a href="https://chat.openai.com" target="_blank" rel="noopener noreferrer" class="bookmark-card">
       <div class="bookmark-icon">⚡</div>
       <div class="bookmark-name">ChatGPT</div>
       <div class="bookmark-desc">最常用的 AI 助手，写作、编程、头脑风暴都靠它。</div>
       <div class="bookmark-url">chat.openai.com</div>
     </a>
 
-    <a href="https://claude.ai" target="_blank" class="bookmark-card">
+    <a href="https://claude.ai" target="_blank" rel="noopener noreferrer" class="bookmark-card">
       <div class="bookmark-icon">✦</div>
       <div class="bookmark-name">Claude</div>
       <div class="bookmark-desc">Anthropic 出品，长文分析和代码理解尤为出色。</div>
       <div class="bookmark-url">claude.ai</div>
     </a>
 
-    <a href="https://github.com" target="_blank" class="bookmark-card">
+    <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="bookmark-card">
       <div class="bookmark-icon">◈</div>
       <div class="bookmark-name">GitHub</div>
       <div class="bookmark-desc">代码仓库、项目管理，这个网站也托管在这里。</div>
       <div class="bookmark-url">github.com</div>
     </a>
 
-    <a href="https://www.notion.so" target="_blank" class="bookmark-card">
+    <a href="https://www.notion.so" target="_blank" rel="noopener noreferrer" class="bookmark-card">
       <div class="bookmark-icon">□</div>
       <div class="bookmark-name">Notion</div>
       <div class="bookmark-desc">笔记、数据库、项目规划，我的第二大脑。</div>
       <div class="bookmark-url">notion.so</div>
     </a>
 
-    <a href="https://open.spotify.com" target="_blank" class="bookmark-card">
+    <a href="https://open.spotify.com" target="_blank" rel="noopener noreferrer" class="bookmark-card">
       <div class="bookmark-icon">♫</div>
       <div class="bookmark-name">Spotify</div>
       <div class="bookmark-desc">音乐流媒体，每天陪伴工作和生活的声音。</div>
       <div class="bookmark-url">spotify.com</div>
     </a>
 
-    <a href="https://www.figma.com" target="_blank" class="bookmark-card">
+    <a href="https://www.figma.com" target="_blank" rel="noopener noreferrer" class="bookmark-card">
       <div class="bookmark-icon">◎</div>
       <div class="bookmark-name">Figma</div>
       <div class="bookmark-desc">设计原型工具，偶尔用来画一些想法和界面。</div>
@@ -748,12 +293,14 @@
     <p>这个网站没有什么宏大的目标，只是想在互联网上留一片属于自己的角落。在这里我会写一些<strong>生活碎片</strong>、技术折腾、读书笔记，偶尔分享最近喜欢的音乐和随便想说的话。</p>
     <p>如果你在这里找到了共鸣，那很好；如果没有，那也没关系——我本来也只是写给自己看的。</p>
     <p style="margin-top: 1.5rem;">
-      <a href="mailto:hello@blackblues.me" style="color: var(--accent); text-decoration: none; font-family: var(--sans); font-size: 0.95rem; font-weight: 300; border-bottom: 1px solid var(--accent2); padding-bottom: 2px;">
-        hello@blackblues.me ↗
+      <a href="mailto:blackblues360@gmail.com" class="contact-link">
+        blackblues360@gmail.com ↗
       </a>
     </p>
   </div>
 </section>
+
+</main>
 
 <!-- FOOTER -->
 <footer>
@@ -761,24 +308,7 @@
   <span class="footer-copy">© 2026 · Made with care</span>
 </footer>
 
-<script>
-  // Intersection Observer fade-in
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.style.opacity = '1';
-        entry.target.style.transform = 'translateY(0)';
-      }
-    });
-  }, { threshold: 0.08 });
-
-  document.querySelectorAll('.blog-item, .bookmark-card, .music-item').forEach((el, i) => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(16px)';
-    el.style.transition = `opacity 0.5s ${i * 0.06}s, transform 0.5s ${i * 0.06}s`;
-    observer.observe(el);
-  });
-</script>
+<script src="script.js"></script>
 
 </body>
 </html>
