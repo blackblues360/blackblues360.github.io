@@ -207,11 +207,6 @@ const createCategorySection = (category, links) => {
   const heading = document.createElement('h2');
   heading.className = 'category-title';
 
-  const categoryIcon = document.createElement('span');
-  categoryIcon.className = 'category-icon';
-  categoryIcon.setAttribute('aria-hidden', 'true');
-  categoryIcon.innerHTML = renderIcon(category.icon);
-
   const categoryName = document.createElement('span');
   categoryName.textContent = category.name;
 
@@ -219,7 +214,7 @@ const createCategorySection = (category, links) => {
   grid.className = 'link-grid';
   links.forEach(link => grid.append(createLinkCard(link)));
 
-  heading.append(categoryIcon, categoryName);
+  heading.append(categoryName);
   section.append(heading, grid);
   return section;
 };

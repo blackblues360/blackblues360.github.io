@@ -3,14 +3,15 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="dark">
+    <meta name="color-scheme" content="dark light">
     <title>歌单 | blackblues</title>
     <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/theme.css">
   </head>
   <body class="music-page">
     <header class="subpage-header">
       <a class="back-home" href="/">← 返回主页</a>
+      <button id="theme-btn" class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="切换主题">☀️</button>
     </header>
 
     <main class="music-shell">
@@ -19,5 +20,30 @@
         <p class="music-empty">歌单内容建设中...</p>
       </section>
     </main>
+    <footer class="site-footer">
+      <span>© 2026 blackblues · blackblues.xyz</span>
+      <span class="site-footer-links">
+        <a href="/blog/">博客</a> ·
+        <a href="/music/">音乐</a> ·
+        <a href="https://github.com/blackblues360" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </span>
+    </footer>
+    <script>
+      const saved = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      updateIcon(saved);
+
+      function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateIcon(next);
+      }
+
+      function updateIcon(theme) {
+        document.getElementById('theme-btn').textContent = theme === 'dark' ? '☀️' : '🌙';
+      }
+    </script>
   </body>
 </html>

@@ -3,87 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="dark">
+    <meta name="color-scheme" content="dark light">
     <title>blackblues</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="assets/css/style.css">
-    <style>
-      .web-search-area {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-        margin: 0 auto 36px;
-      }
-
-      .web-search-form {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        width: min(600px, 100%);
-        height: 52px;
-        padding: 0 8px 0 18px;
-        border: 1px solid #2a2d3a;
-        border-radius: 26px;
-        background: #1a1d27;
-        transition: border-color 0.16s ease, box-shadow 0.16s ease;
-      }
-
-      .web-search-form:focus-within {
-        border-color: #4ade80;
-        box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.12);
-      }
-
-      .web-search-icon {
-        flex: 0 0 auto;
-        color: #888;
-        font-size: 18px;
-        line-height: 1;
-      }
-
-      .web-search-input {
-        flex: 1 1 auto;
-        min-width: 0;
-        height: 100%;
-        border: 0;
-        outline: 0;
-        background: transparent;
-        color: var(--text);
-        padding: 0 4px;
-      }
-
-      .web-search-input::placeholder {
-        color: #888;
-      }
-
-      .web-search-engines {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        flex: 0 0 auto;
-      }
-
-      .web-search-engine {
-        display: grid;
-        place-items: center;
-        width: 36px;
-        height: 36px;
-        border: 0;
-        border-radius: 18px;
-        background: transparent;
-        color: #888;
-        cursor: pointer;
-        font-weight: 720;
-        line-height: 1;
-        transition: background-color 0.16s ease, color 0.16s ease;
-      }
-
-      .web-search-engine.is-active {
-        background: #4ade80;
-        color: #000;
-      }
-    </style>
+    <link rel="stylesheet" href="assets/css/theme.css">
   </head>
-  <body>
+  <body class="directory-page">
     <header class="site-header">
       <a class="site-name" href="/" aria-label="blackblues home">blackblues</a>
       <div class="header-tools">
@@ -102,6 +27,7 @@
           <input id="searchInput" type="search" autocomplete="off" placeholder="搜索" aria-label="搜索网站">
           <span id="searchCount" class="search-count" aria-live="polite">0 / 0</span>
         </label>
+        <button id="theme-btn" class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="切换主题">☀️</button>
       </div>
     </header>
 
@@ -120,6 +46,31 @@
       <p id="emptyState" class="empty-state" hidden>没有找到相关网站</p>
     </main>
 
+    <footer class="site-footer">
+      <span>© 2026 blackblues · blackblues.xyz · 意见反馈：<a href="mailto:feedback@blackblues.xyz">feedback@blackblues.xyz</a></span>
+      <span class="site-footer-links">
+        <a href="/blog/">博客</a> ·
+        <a href="/music/">音乐</a> ·
+        <a href="https://github.com/blackblues360" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </span>
+    </footer>
+    <script>
+      const saved = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      updateIcon(saved);
+
+      function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateIcon(next);
+      }
+
+      function updateIcon(theme) {
+        document.getElementById('theme-btn').textContent = theme === 'dark' ? '☀️' : '🌙';
+      }
+    </script>
     <script>
       (() => {
         const form = document.querySelector('#webSearchForm');

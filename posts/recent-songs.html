@@ -13,10 +13,15 @@
 <meta name="twitter:card" content="summary">
 <link rel="canonical" href="https://blackblues.xyz/posts/recent-songs.html">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../styles.css">
+<script>
+  (() => {
+    const themeFromUrl = new URLSearchParams(window.location.search).get('theme');
+    const saved = themeFromUrl || localStorage.getItem('theme') || 'dark';
+    if (themeFromUrl) localStorage.setItem('theme', saved);
+    document.documentElement.setAttribute('data-theme', saved);
+  })();
+</script>
+<link rel="stylesheet" href="../assets/css/theme.css">
 <title>最近在反复听的几首歌 | BLACK BLUES</title>
 </head>
 <body>
@@ -30,6 +35,7 @@
     <li><a href="../index.html#music">音乐</a></li>
     <li><a href="../index.html#about">关于</a></li>
   </ul>
+  <button id="theme-btn" class="theme-toggle" type="button" aria-label="切换主题">☀️</button>
 </nav>
 <main class="post-main">
   <article class="post">
@@ -44,9 +50,13 @@
     </div>
   </article>
 </main>
-<footer>
-  <span class="footer-brand">BLACK BLUES</span>
-  <span class="footer-copy">© 2026 · Made with care</span>
+<footer class="site-footer">
+  <span>© 2026 blackblues · blackblues.xyz</span>
+  <span class="site-footer-links">
+    <a href="/blog/">博客</a> ·
+    <a href="/music/">音乐</a> ·
+    <a href="https://github.com/blackblues360" target="_blank" rel="noopener noreferrer">GitHub</a>
+  </span>
 </footer>
 <script src="../script.js"></script>
 </body>

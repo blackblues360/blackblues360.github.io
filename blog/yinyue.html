@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark light">
+    <meta name="description" content="阅读与音乐文章列表。">
+    <title>阅读与音乐 | blackblues</title>
+    <link rel="stylesheet" href="../assets/css/theme.css">
+  </head>
+  <body class="blog-category-page category-yinyue">
+    <main class="page">
+      <nav class="top-nav" aria-label="顶部导航">
+        <a class="back-link" href="../blog/index.html">← 返回博客</a>
+        <button id="theme-btn" class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="切换主题">☀️</button>
+      </nav>
+
+      <header>
+        <h1 class="category-title">阅读与音乐</h1>
+        <p class="category-desc">这里先放这个板块的文章，之后可以按需要替换。</p>
+      </header>
+
+      <hr class="divider">
+
+      <section class="post-list" aria-label="文章列表">
+        <a class="post-item" href="#">
+          <span class="post-date">2026-06-01</span>
+          <span class="post-title">第一篇示例文章</span>
+          <span class="post-excerpt">这是一段示例摘要，用来占位展示文章列表的排版效果。后续可以替换成真实文章的简介。</span>
+        </a>
+
+        <a class="post-item" href="#">
+          <span class="post-date">2026-05-20</span>
+          <span class="post-title">第二篇示例文章</span>
+          <span class="post-excerpt">这里继续放一段示例文字，长度稍微多一点，方便观察两行省略在不同屏幕宽度下的表现。</span>
+        </a>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <span>© 2026 blackblues · blackblues.xyz</span>
+      <span class="site-footer-links">
+        <a href="/blog/">博客</a> ·
+        <a href="/music/">音乐</a> ·
+        <a href="https://github.com/blackblues360" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </span>
+    </footer>
+    <script>
+      const saved = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      updateIcon(saved);
+
+      function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateIcon(next);
+      }
+
+      function updateIcon(theme) {
+        document.getElementById('theme-btn').textContent = theme === 'dark' ? '☀️' : '🌙';
+      }
+    </script>
+  </body>
+</html>
