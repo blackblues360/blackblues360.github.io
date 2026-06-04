@@ -245,6 +245,26 @@ input {
   background: rgba(255, 255, 255, 0.08);
 }
 
+img.link-favicon {
+  object-fit: contain;
+}
+
+.link-favicon-icon {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+
+.link-favicon-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
 .link-content {
   display: grid;
   min-width: 0;

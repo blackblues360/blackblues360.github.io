@@ -28,12 +28,23 @@
         {
           "name": "Codex公益站",
           "url": "https://new.sharedchat.cc/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex",
+          "iconUrl": "https://new.sharedchat.cc/list/logo.svg",
           "description": "Codex 公益服务入口"
         },
         {
           "name": "Perplexity",
           "url": "https://www.perplexity.ai",
           "description": "AI 搜索与问答工具"
+        },
+        {
+          "name": "扣子",
+          "url": "https://www.coze.cn",
+          "description": "AI 智能体开发平台"
+        },
+        {
+          "name": "DeepSeek",
+          "url": "https://chat.deepseek.com",
+          "description": "DeepSeek 对话 AI"
         }
       ]
     },
@@ -135,6 +146,11 @@
           "description": "本地 Markdown 知识库"
         },
         {
+          "name": "Gmail",
+          "url": "https://mail.google.com",
+          "description": "Google 邮箱服务"
+        },
+        {
           "name": "Excalidraw",
           "url": "https://excalidraw.com",
           "description": "手绘风格白板工具"
@@ -147,35 +163,8 @@
       ]
     },
     {
-      "id": "music",
-      "name": "音乐",
-      "icon": "music",
-      "links": [
-        {
-          "name": "我的歌单",
-          "url": "/music/",
-          "description": "个人收藏歌单"
-        },
-        {
-          "name": "Spotify",
-          "url": "https://spotify.com",
-          "description": "流媒体音乐"
-        },
-        {
-          "name": "网易云音乐",
-          "url": "https://music.163.com",
-          "description": "华语音乐平台"
-        },
-        {
-          "name": "Last.fm",
-          "url": "https://www.last.fm",
-          "description": "音乐记录与发现"
-        }
-      ]
-    },
-    {
       "id": "rss",
-      "name": "RSS 阅读",
+      "name": "信息服务",
       "icon": "rss",
       "links": [
         {
@@ -187,6 +176,60 @@
           "name": "Inoreader",
           "url": "https://www.inoreader.com",
           "description": "RSS 阅读与自动化工具"
+        },
+        {
+          "name": "Linux Do",
+          "url": "https://linux.do",
+          "description": "技术社区与信息交流"
+        }
+      ]
+    },
+    {
+      "id": "music",
+      "name": "音乐",
+      "icon": "music",
+      "links": [
+        {
+          "name": "我的歌单",
+          "url": "/music/",
+          "icon": "headphones",
+          "description": "个人收藏歌单"
+        },
+        {
+          "name": "网易云音乐",
+          "url": "https://music.163.com",
+          "description": "华语音乐平台"
+        }
+      ]
+    },
+    {
+      "id": "blog",
+      "name": "博客",
+      "icon": "pencil",
+      "links": [
+        {
+          "name": "建站日记",
+          "url": "/blog/#建站日记",
+          "icon": "code",
+          "description": "从想法到上线的过程"
+        },
+        {
+          "name": "时隙随笔",
+          "url": "/blog/#时隙随笔",
+          "icon": "clock",
+          "description": "生活缝隙里的片段"
+        },
+        {
+          "name": "工具与思考",
+          "url": "/blog/#工具与思考",
+          "icon": "wrench",
+          "description": "关于效率和工作方式"
+        },
+        {
+          "name": "阅读与音乐",
+          "url": "/blog/#阅读与音乐",
+          "icon": "book-open",
+          "description": "书、歌和它们留下的余味"
         }
       ]
     }

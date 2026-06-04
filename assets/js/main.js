@@ -57,6 +57,11 @@ const icons = {
   server: '<svg viewBox="0 0 24 24" focusable="false"><rect x="4" y="4" width="16" height="6" rx="2"></rect><rect x="4" y="14" width="16" height="6" rx="2"></rect><path d="M8 7h.01"></path><path d="M8 17h.01"></path></svg>',
   notebook: '<svg viewBox="0 0 24 24" focusable="false"><path d="M7 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z"></path><path d="M8 3v18"></path><path d="M12 8h4"></path><path d="M12 12h4"></path></svg>',
   music: '<svg viewBox="0 0 24 24" focusable="false"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>',
+  pencil: '<svg viewBox="0 0 24 24" focusable="false"><path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg>',
+  headphones: '<svg viewBox="0 0 24 24" focusable="false"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"></path><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3Z"></path></svg>',
+  clock: '<svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>',
+  wrench: '<svg viewBox="0 0 24 24" focusable="false"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-3 3-2.4-2.4Z"></path></svg>',
+  'book-open': '<svg viewBox="0 0 24 24" focusable="false"><path d="M12 7v14"></path><path d="M3 5a7 7 0 0 1 7 0c1.2.7 2 2 2 2v14s-.8-1.3-2-2a7 7 0 0 0-7 0Z"></path><path d="M21 5a7 7 0 0 0-7 0c-1.2.7-2 2-2 2v14s.8-1.3 2-2a7 7 0 0 1 7 0Z"></path></svg>',
   rss: '<svg viewBox="0 0 24 24" focusable="false"><path d="M5 5a14 14 0 0 1 14 14"></path><path d="M5 11a8 8 0 0 1 8 8"></path><circle cx="6" cy="18" r="1"></circle></svg>'
 };
 
@@ -148,6 +153,25 @@ const isExternalUrl = url => {
 
 const renderIcon = icon => icons[icon] || icons.code;
 
+const createLinkIcon = link => {
+  if (link.icon) {
+    const icon = document.createElement('span');
+    icon.className = 'link-favicon link-favicon-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = renderIcon(link.icon);
+    return icon;
+  }
+
+  const icon = document.createElement('img');
+  icon.className = 'link-favicon';
+  icon.src = link.iconUrl || faviconUrl(link.url);
+  icon.alt = '';
+  icon.width = 32;
+  icon.height = 32;
+  icon.loading = 'lazy';
+  return icon;
+};
+
 const createLinkCard = link => {
   const card = document.createElement('a');
   card.className = 'link-card';
@@ -158,13 +182,7 @@ const createLinkCard = link => {
     card.rel = 'noopener noreferrer';
   }
 
-  const icon = document.createElement('img');
-  icon.className = 'link-favicon';
-  icon.src = faviconUrl(link.url);
-  icon.alt = '';
-  icon.width = 32;
-  icon.height = 32;
-  icon.loading = 'lazy';
+  const icon = createLinkIcon(link);
 
   const content = document.createElement('span');
   content.className = 'link-content';
@@ -234,19 +252,7 @@ const render = () => {
   emptyState.hidden = visibleLinks > 0;
 };
 
-const isTextInput = element =>
-  element instanceof HTMLInputElement ||
-  element instanceof HTMLTextAreaElement ||
-  element instanceof HTMLSelectElement ||
-  element.isContentEditable;
-
 document.addEventListener('keydown', event => {
-  if (event.key === '/' && !isTextInput(document.activeElement)) {
-    event.preventDefault();
-    searchInput.focus();
-    return;
-  }
-
   if (event.key === 'Escape') {
     searchInput.value = '';
     searchInput.blur();

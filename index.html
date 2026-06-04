@@ -7,6 +7,81 @@
     <title>blackblues</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+      .web-search-area {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin: 0 auto 36px;
+      }
+
+      .web-search-form {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: min(600px, 100%);
+        height: 52px;
+        padding: 0 8px 0 18px;
+        border: 1px solid #2a2d3a;
+        border-radius: 26px;
+        background: #1a1d27;
+        transition: border-color 0.16s ease, box-shadow 0.16s ease;
+      }
+
+      .web-search-form:focus-within {
+        border-color: #4ade80;
+        box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.12);
+      }
+
+      .web-search-icon {
+        flex: 0 0 auto;
+        color: #888;
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      .web-search-input {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 100%;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--text);
+        padding: 0 4px;
+      }
+
+      .web-search-input::placeholder {
+        color: #888;
+      }
+
+      .web-search-engines {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex: 0 0 auto;
+      }
+
+      .web-search-engine {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border: 0;
+        border-radius: 18px;
+        background: transparent;
+        color: #888;
+        cursor: pointer;
+        font-weight: 720;
+        line-height: 1;
+        transition: background-color 0.16s ease, color 0.16s ease;
+      }
+
+      .web-search-engine.is-active {
+        background: #4ade80;
+        color: #000;
+      }
+    </style>
   </head>
   <body>
     <header class="site-header">
@@ -31,23 +106,89 @@
     </header>
 
     <main class="page-shell">
+      <section class="web-search-area" aria-label="网页搜索">
+        <form id="webSearchForm" class="web-search-form" role="search">
+          <span class="web-search-icon" aria-hidden="true">🔍</span>
+          <input id="webSearchInput" class="web-search-input" type="search" autocomplete="off" placeholder="搜索网页" aria-label="搜索网页">
+          <span class="web-search-engines" aria-label="搜索引擎">
+            <button class="web-search-engine is-active" type="button" data-engine="google" aria-pressed="true" aria-label="使用谷歌搜索">G</button>
+            <button class="web-search-engine" type="button" data-engine="bing" aria-pressed="false" aria-label="使用必应搜索">B</button>
+          </span>
+        </form>
+      </section>
       <div id="categoryList" class="category-list" aria-live="polite"></div>
       <p id="emptyState" class="empty-state" hidden>没有找到相关网站</p>
     </main>
 
-    <footer class="site-footer">
-      <a class="blog-banner" href="/blog/" aria-label="打开我的博客">
-        <span class="blog-banner-main">
-          <span class="blog-banner-icon" aria-hidden="true">📝</span>
-          <span class="blog-banner-copy">
-            <span class="blog-banner-title">我的博客</span>
-            <span class="blog-banner-subtitle">文章、笔记、思考</span>
-          </span>
-        </span>
-        <span class="blog-banner-arrow" aria-hidden="true">→</span>
-      </a>
-    </footer>
+    <script>
+      (() => {
+        const form = document.querySelector('#webSearchForm');
+        const input = document.querySelector('#webSearchInput');
+        const bookmarkSearchInput = document.querySelector('#searchInput');
+        const engineButtons = Array.from(document.querySelectorAll('.web-search-engine'));
+        const storageKey = 'webSearchEngine';
+        const searchUrls = {
+          google: 'https://www.google.com/search?q=',
+          bing: 'https://www.bing.com/search?q='
+        };
 
+        if (!form || !input || engineButtons.length === 0) return;
+
+        let currentEngine = localStorage.getItem(storageKey) === 'bing' ? 'bing' : 'google';
+
+        const isTextInput = element =>
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement ||
+          element.isContentEditable;
+
+        const syncEngineButtons = () => {
+          engineButtons.forEach(button => {
+            const isActive = button.dataset.engine === currentEngine;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+          });
+        };
+
+        engineButtons.forEach(button => {
+          button.addEventListener('click', () => {
+            const engine = button.dataset.engine;
+            if (!searchUrls[engine]) return;
+
+            currentEngine = engine;
+            localStorage.setItem(storageKey, currentEngine);
+            syncEngineButtons();
+            input.focus();
+          });
+        });
+
+        form.addEventListener('submit', event => {
+          event.preventDefault();
+
+          const query = input.value.trim();
+          if (!query) return;
+
+          window.open(searchUrls[currentEngine] + encodeURIComponent(query), '_blank');
+        });
+
+        document.addEventListener('keydown', event => {
+          if (event.ctrlKey || event.metaKey || event.altKey || isTextInput(document.activeElement)) return;
+
+          if (event.key === '/') {
+            event.preventDefault();
+            input.focus();
+            return;
+          }
+
+          if (event.key.toLowerCase() === 'f' && bookmarkSearchInput) {
+            event.preventDefault();
+            bookmarkSearchInput.focus();
+          }
+        });
+
+        syncEngineButtons();
+      })();
+    </script>
     <script src="assets/js/main.js" defer></script>
   </body>
 </html>
