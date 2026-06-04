@@ -1,0 +1,162 @@
+{
+  "categories": [
+    {
+      "id": "ai",
+      "name": "AI 工具",
+      "icon": "robot",
+      "links": [
+        {
+          "name": "ChatGPT",
+          "url": "https://chatgpt.com",
+          "description": "OpenAI 对话 AI"
+        },
+        {
+          "name": "Claude",
+          "url": "https://claude.ai",
+          "description": "Anthropic 对话 AI"
+        },
+        {
+          "name": "Gemini",
+          "url": "https://gemini.google.com",
+          "description": "Google 多模态 AI"
+        },
+        {
+          "name": "OpenRouter",
+          "url": "https://openrouter.ai",
+          "description": "多模型 API 聚合平台"
+        },
+        {
+          "name": "Perplexity",
+          "url": "https://www.perplexity.ai",
+          "description": "AI 搜索与问答工具"
+        }
+      ]
+    },
+    {
+      "id": "dev",
+      "name": "开发工具",
+      "icon": "code",
+      "links": [
+        {
+          "name": "GitHub",
+          "url": "https://github.com",
+          "description": "代码托管与协作平台"
+        },
+        {
+          "name": "Vercel",
+          "url": "https://vercel.com",
+          "description": "前端应用部署平台"
+        },
+        {
+          "name": "Cloudflare",
+          "url": "https://www.cloudflare.com",
+          "description": "网络、DNS 与边缘服务"
+        },
+        {
+          "name": "VS Code Web",
+          "url": "https://vscode.dev",
+          "description": "浏览器版 VS Code"
+        },
+        {
+          "name": "Railway",
+          "url": "https://railway.com",
+          "description": "应用与数据库部署平台"
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "name": "学术研究",
+      "icon": "graduation-cap",
+      "links": [
+        {
+          "name": "PubMed",
+          "url": "https://pubmed.ncbi.nlm.nih.gov",
+          "description": "生物医学文献数据库"
+        },
+        {
+          "name": "Google Scholar",
+          "url": "https://scholar.google.com",
+          "description": "Google 学术搜索"
+        },
+        {
+          "name": "Semantic Scholar",
+          "url": "https://www.semanticscholar.org",
+          "description": "AI 驱动的学术搜索引擎"
+        },
+        {
+          "name": "Sci-Hub",
+          "url": "https://sci-hub.se",
+          "description": "论文检索入口"
+        },
+        {
+          "name": "Connected Papers",
+          "url": "https://www.connectedpapers.com",
+          "description": "论文关系图谱工具"
+        }
+      ]
+    },
+    {
+      "id": "school",
+      "name": "学校相关",
+      "icon": "school",
+      "links": []
+    },
+    {
+      "id": "server",
+      "name": "服务器",
+      "icon": "server",
+      "links": [
+        {
+          "name": "Oracle Cloud",
+          "url": "https://www.oracle.com/cloud",
+          "description": "Oracle 云服务器与云服务"
+        }
+      ]
+    },
+    {
+      "id": "productivity",
+      "name": "效率工具",
+      "icon": "notebook",
+      "links": [
+        {
+          "name": "Notion",
+          "url": "https://www.notion.so",
+          "description": "笔记、文档与项目管理"
+        },
+        {
+          "name": "Obsidian",
+          "url": "https://obsidian.md",
+          "description": "本地 Markdown 知识库"
+        },
+        {
+          "name": "Excalidraw",
+          "url": "https://excalidraw.com",
+          "description": "手绘风格白板工具"
+        },
+        {
+          "name": "Carbon",
+          "url": "https://carbon.now.sh",
+          "description": "代码截图生成工具"
+        }
+      ]
+    },
+    {
+      "id": "rss",
+      "name": "RSS 阅读",
+      "icon": "rss",
+      "links": [
+        {
+          "name": "Feedly",
+          "url": "https://feedly.com",
+          "description": "RSS 与信息订阅阅读器"
+        },
+        {
+          "name": "Inoreader",
+          "url": "https://www.inoreader.com",
+          "description": "RSS 阅读与自动化工具"
+        }
+      ]
+    }
+  ]
+}
