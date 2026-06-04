@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark">
     <title>blackblues</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/css/style.css">
   </head>
   <body>
@@ -14,6 +15,7 @@
         <div class="clock-widget" aria-label="当前时间">
           <span id="clockTime" class="clock-time">--:--</span>
           <span id="clockWeekday" class="clock-weekday">星期--</span>
+          <span id="weatherInfo" class="weather-info">天气 --</span>
         </div>
         <label class="search">
           <span class="search-icon" aria-hidden="true">
@@ -34,7 +36,16 @@
     </main>
 
     <footer class="site-footer">
-      <a href="/blog/">blog &rarr;</a>
+      <a class="blog-banner" href="/blog/" aria-label="打开我的博客">
+        <span class="blog-banner-main">
+          <span class="blog-banner-icon" aria-hidden="true">📝</span>
+          <span class="blog-banner-copy">
+            <span class="blog-banner-title">我的博客</span>
+            <span class="blog-banner-subtitle">文章、笔记、思考</span>
+          </span>
+        </span>
+        <span class="blog-banner-arrow" aria-hidden="true">→</span>
+      </a>
     </footer>
 
     <script src="assets/js/main.js" defer></script>

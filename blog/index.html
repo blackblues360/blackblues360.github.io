@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="blackblues 的文章归档。">
+    <title>blog | blackblues</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #0f1117;
+        color: #fff;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .page {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 40px 20px;
+      }
+
+      .back-link {
+        display: inline-block;
+        margin-bottom: 36px;
+        color: #4ade80;
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      .section-title {
+        margin-bottom: 16px;
+        font-size: 22px;
+        font-weight: 800;
+        color: #fff;
+      }
+
+      .category-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .category-card {
+        display: flex;
+        gap: 16px;
+        min-height: 128px;
+        padding: 20px;
+        border-radius: 12px;
+        background: #1a1d27;
+        cursor: pointer;
+        transition: background 0.18s ease;
+      }
+
+      .category-card:hover {
+        background: #1e2235;
+      }
+
+      .category-color {
+        flex: 0 0 auto;
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+      }
+
+      .category-body {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+        padding-bottom: 22px;
+      }
+
+      .category-name {
+        display: block;
+        margin-bottom: 6px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      .category-desc {
+        display: block;
+        color: #888;
+        font-size: 13px;
+      }
+
+      .category-count {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        color: #888;
+        font-size: 12px;
+      }
+
+      .divider {
+        margin: 40px 0 20px;
+        border: none;
+        border-top: 1px solid #2a2d3a;
+      }
+
+      .post-list {
+        margin-top: 14px;
+      }
+
+      .post-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 16px 0;
+        border-bottom: 1px solid #1e2235;
+        color: #fff;
+        transition: background 0.18s ease;
+      }
+
+      .post-row:hover {
+        background: #1a1d27;
+      }
+
+      .post-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .post-date {
+        flex: 0 0 auto;
+        color: #666;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .post-tag {
+        flex: 0 0 auto;
+        border-radius: 999px;
+        padding: 3px 8px;
+        color: #0f1117;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .post-title {
+        overflow: hidden;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .post-excerpt {
+        flex: 0 0 auto;
+        max-width: 300px;
+        overflow: hidden;
+        color: #666;
+        font-size: 13px;
+        text-align: right;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <a class="back-link" href="../index.html">← blackblues</a>
+
+      <section aria-labelledby="categories-title">
+        <h1 class="section-title" id="categories-title">板块</h1>
+        <div class="category-grid">
+          <a class="category-card" href="#site-diary">
+            <span class="category-color" style="background: #4ade80" aria-hidden="true"></span>
+            <span class="category-body">
+              <span class="category-name">建站日记</span>
+              <span class="category-desc">记录这个网站从想法、配置到上线的过程</span>
+              <span class="category-count">2篇</span>
+            </span>
+          </a>
+
+          <a class="category-card" href="#timeslot-notes">
+            <span class="category-color" style="background: #fb923c" aria-hidden="true"></span>
+            <span class="category-body">
+              <span class="category-name">时隙随笔</span>
+              <span class="category-desc">生活缝隙里的片段、心情和短记录</span>
+              <span class="category-count">1篇</span>
+            </span>
+          </a>
+
+          <a class="category-card" href="#tools-thinking">
+            <span class="category-color" style="background: #a78bfa" aria-hidden="true"></span>
+            <span class="category-body">
+              <span class="category-name">工具与思考</span>
+              <span class="category-desc">关于工具、效率和工作方式的观察</span>
+              <span class="category-count">1篇</span>
+            </span>
+          </a>
+
+          <a class="category-card" href="#reading-music">
+            <span class="category-color" style="background: #60a5fa" aria-hidden="true"></span>
+            <span class="category-body">
+              <span class="category-name">阅读与音乐</span>
+              <span class="category-desc">书、歌和它们留下的余味</span>
+              <span class="category-count">2篇</span>
+            </span>
+          </a>
+        </div>
+      </section>
+
+      <hr class="divider">
+
+      <section aria-labelledby="latest-title">
+        <h2 class="section-title" id="latest-title">最新文章</h2>
+        <div class="post-list">
+          <a class="post-row" id="tools-thinking" href="../posts/ai-tools-half-year.html">
+            <span class="post-left">
+              <span class="post-date">2026-05-28</span>
+              <span class="post-tag" style="background: #a78bfa">工具与思考</span>
+              <span class="post-title">我用AI工具工作了半年，有些话想说</span>
+            </span>
+            <span class="post-excerpt">从最初的好奇到现在的依赖，ChatGPT 和 Claude 已经成为我日常工作流不可分割的一部分。</span>
+          </a>
+
+          <a class="post-row" id="timeslot-notes" href="../posts/rain-tea-night.html">
+            <span class="post-left">
+              <span class="post-date">2026-05-14</span>
+              <span class="post-tag" style="background: #fb923c">时隙随笔</span>
+              <span class="post-title">深夜、雨声、一杯茶</span>
+            </span>
+            <span class="post-excerpt">有些时刻不需要记录什么大事，只是想留住窗外的雨声和心里那种说不清楚的平静。</span>
+          </a>
+
+          <a class="post-row" id="site-diary" href="../posts/cloudflare-github-pages.html">
+            <span class="post-left">
+              <span class="post-date">2026-04-30</span>
+              <span class="post-tag" style="background: #4ade80">建站日记</span>
+              <span class="post-title">用 Cloudflare + GitHub 搭建个人主页的全过程</span>
+            </span>
+            <span class="post-excerpt">从购买域名到绑定 Cloudflare，再到连接 GitHub Pages，记录一下这个网站是怎么诞生的。</span>
+          </a>
+
+          <a class="post-row" id="reading-music" href="../posts/recent-songs.html">
+            <span class="post-left">
+              <span class="post-date">2026-04-18</span>
+              <span class="post-tag" style="background: #60a5fa">阅读与音乐</span>
+              <span class="post-title">最近在反复听的几首歌</span>
+            </span>
+            <span class="post-excerpt">五月的歌单，有些旧歌，有些新欢。音乐是最诚实的东西，你听什么就是什么心情。</span>
+          </a>
+
+          <a class="post-row" href="../posts/sapiens-notes.html">
+            <span class="post-left">
+              <span class="post-date">2026-03-22</span>
+              <span class="post-tag" style="background: #60a5fa">阅读与音乐</span>
+              <span class="post-title">《人类简史》读完之后我想到了什么</span>
+            </span>
+            <span class="post-excerpt">赫拉利让我重新思考故事这件事：很多社会结构都依赖人类共同相信的叙事。</span>
+          </a>
+
+          <a class="post-row" href="../posts/before-building-site.html">
+            <span class="post-left">
+              <span class="post-date">2026-03-01</span>
+              <span class="post-tag" style="background: #4ade80">建站日记</span>
+              <span class="post-title">写在建站之前</span>
+            </span>
+            <span class="post-excerpt">为什么想要一个自己的网站？不是为了流量，不是为了影响力，只是想有个地方安静地说话。</span>
+          </a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

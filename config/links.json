@@ -26,6 +26,11 @@
           "description": "多模型 API 聚合平台"
         },
         {
+          "name": "Codex公益站",
+          "url": "https://new.sharedchat.cc/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex",
+          "description": "Codex 公益服务入口"
+        },
+        {
           "name": "Perplexity",
           "url": "https://www.perplexity.ai",
           "description": "AI 搜索与问答工具"
@@ -138,6 +143,33 @@
           "name": "Carbon",
           "url": "https://carbon.now.sh",
           "description": "代码截图生成工具"
+        }
+      ]
+    },
+    {
+      "id": "music",
+      "name": "音乐",
+      "icon": "music",
+      "links": [
+        {
+          "name": "我的歌单",
+          "url": "/music/",
+          "description": "个人收藏歌单"
+        },
+        {
+          "name": "Spotify",
+          "url": "https://spotify.com",
+          "description": "流媒体音乐"
+        },
+        {
+          "name": "网易云音乐",
+          "url": "https://music.163.com",
+          "description": "华语音乐平台"
+        },
+        {
+          "name": "Last.fm",
+          "url": "https://www.last.fm",
+          "description": "音乐记录与发现"
         }
       ]
     },
