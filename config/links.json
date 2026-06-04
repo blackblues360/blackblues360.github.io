@@ -209,25 +209,25 @@
       "links": [
         {
           "name": "建站日记",
-          "url": "/blog/#建站日记",
+          "url": "/blog/jianzhan.html",
           "icon": "code",
           "description": "从想法到上线的过程"
         },
         {
           "name": "时隙随笔",
-          "url": "/blog/#时隙随笔",
+          "url": "/blog/suibi.html",
           "icon": "clock",
           "description": "生活缝隙里的片段"
         },
         {
           "name": "工具与思考",
-          "url": "/blog/#工具与思考",
+          "url": "/blog/gongju.html",
           "icon": "wrench",
           "description": "关于效率和工作方式"
         },
         {
           "name": "阅读与音乐",
-          "url": "/blog/#阅读与音乐",
+          "url": "/blog/yinyue.html",
           "icon": "book-open",
           "description": "书、歌和它们留下的余味"
         }

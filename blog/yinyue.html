@@ -12,27 +12,27 @@
     <main class="page">
       <nav class="top-nav" aria-label="顶部导航">
         <a class="back-link" href="../blog/index.html">← 返回博客</a>
-        <button id="theme-btn" class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="切换主题">☀️</button>
+        <button id="theme-btn" class="theme-toggle" type="button" aria-label="切换主题">☀️</button>
       </nav>
 
       <header>
         <h1 class="category-title">阅读与音乐</h1>
-        <p class="category-desc">这里先放这个板块的文章，之后可以按需要替换。</p>
+        <p class="category-desc">书、歌和它们留下的余味。</p>
       </header>
 
       <hr class="divider">
 
       <section class="post-list" aria-label="文章列表">
-        <a class="post-item" href="#">
-          <span class="post-date">2026-06-01</span>
-          <span class="post-title">第一篇示例文章</span>
-          <span class="post-excerpt">这是一段示例摘要，用来占位展示文章列表的排版效果。后续可以替换成真实文章的简介。</span>
+        <a class="post-item" href="../posts/recent-songs.html">
+          <span class="post-date">2026-04-18</span>
+          <span class="post-title">最近在反复听的几首歌</span>
+          <span class="post-excerpt">五月的歌单，有些旧歌，有些新欢。音乐是最诚实的东西，你听什么就是什么心情。</span>
         </a>
 
-        <a class="post-item" href="#">
-          <span class="post-date">2026-05-20</span>
-          <span class="post-title">第二篇示例文章</span>
-          <span class="post-excerpt">这里继续放一段示例文字，长度稍微多一点，方便观察两行省略在不同屏幕宽度下的表现。</span>
+        <a class="post-item" href="../posts/sapiens-notes.html">
+          <span class="post-date">2026-03-22</span>
+          <span class="post-title">《人类简史》读完之后我想到了什么</span>
+          <span class="post-excerpt">赫拉利让我重新思考故事这件事：很多社会结构都依赖人类共同相信的叙事。</span>
         </a>
       </section>
     </main>
@@ -44,22 +44,6 @@
         <a href="https://github.com/blackblues360" target="_blank" rel="noopener noreferrer">GitHub</a>
       </span>
     </footer>
-    <script>
-      const saved = localStorage.getItem('theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', saved);
-      updateIcon(saved);
-
-      function toggleTheme() {
-        const current = document.documentElement.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-        updateIcon(next);
-      }
-
-      function updateIcon(theme) {
-        document.getElementById('theme-btn').textContent = theme === 'dark' ? '☀️' : '🌙';
-      }
-    </script>
+    <script src="../script.js"></script>
   </body>
 </html>

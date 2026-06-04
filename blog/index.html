@@ -12,7 +12,7 @@
     <main class="page">
       <nav class="top-nav" aria-label="顶部导航">
         <a class="back-link" href="../index.html">← blackblues</a>
-        <button id="theme-btn" class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="切换主题">☀️</button>
+        <button id="theme-btn" class="theme-toggle" type="button" aria-label="切换主题">☀️</button>
       </nav>
 
       <section aria-labelledby="categories-title">
@@ -129,33 +129,6 @@
         <a href="https://github.com/blackblues360" target="_blank" rel="noopener noreferrer">GitHub</a>
       </span>
     </footer>
-    <script>
-      const themeFromUrl = new URLSearchParams(window.location.search).get('theme');
-      const saved = themeFromUrl || localStorage.getItem('theme') || 'dark';
-      if (themeFromUrl) localStorage.setItem('theme', saved);
-      document.documentElement.setAttribute('data-theme', saved);
-      updateIcon(saved);
-
-      function toggleTheme() {
-        const current = document.documentElement.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-        updateIcon(next);
-      }
-
-      function updateIcon(theme) {
-        document.getElementById('theme-btn').textContent = theme === 'dark' ? '☀️' : '🌙';
-      }
-
-      document.querySelectorAll('a[href^="../posts/"]').forEach(link => {
-        link.addEventListener('click', () => {
-          const theme = document.documentElement.getAttribute('data-theme') || 'dark';
-          const url = new URL(link.getAttribute('href'), window.location.href);
-          url.searchParams.set('theme', theme);
-          link.href = url.href;
-        });
-      });
-    </script>
+    <script src="../script.js"></script>
   </body>
 </html>

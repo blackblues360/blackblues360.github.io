@@ -12,27 +12,21 @@
     <main class="page">
       <nav class="top-nav" aria-label="顶部导航">
         <a class="back-link" href="../blog/index.html">← 返回博客</a>
-        <button id="theme-btn" class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="切换主题">☀️</button>
+        <button id="theme-btn" class="theme-toggle" type="button" aria-label="切换主题">☀️</button>
       </nav>
 
       <header>
         <h1 class="category-title">工具与思考</h1>
-        <p class="category-desc">这里先放这个板块的文章，之后可以按需要替换。</p>
+        <p class="category-desc">关于工具、效率和工作方式的观察。</p>
       </header>
 
       <hr class="divider">
 
       <section class="post-list" aria-label="文章列表">
-        <a class="post-item" href="#">
-          <span class="post-date">2026-06-01</span>
-          <span class="post-title">第一篇示例文章</span>
-          <span class="post-excerpt">这是一段示例摘要，用来占位展示文章列表的排版效果。后续可以替换成真实文章的简介。</span>
-        </a>
-
-        <a class="post-item" href="#">
-          <span class="post-date">2026-05-20</span>
-          <span class="post-title">第二篇示例文章</span>
-          <span class="post-excerpt">这里继续放一段示例文字，长度稍微多一点，方便观察两行省略在不同屏幕宽度下的表现。</span>
+        <a class="post-item" href="../posts/ai-tools-half-year.html">
+          <span class="post-date">2026-05-28</span>
+          <span class="post-title">我用AI工具工作了半年，有些话想说</span>
+          <span class="post-excerpt">从最初的好奇到现在的依赖，ChatGPT 和 Claude 已经成为我日常工作流不可分割的一部分。</span>
         </a>
       </section>
     </main>
@@ -44,22 +38,6 @@
         <a href="https://github.com/blackblues360" target="_blank" rel="noopener noreferrer">GitHub</a>
       </span>
     </footer>
-    <script>
-      const saved = localStorage.getItem('theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', saved);
-      updateIcon(saved);
-
-      function toggleTheme() {
-        const current = document.documentElement.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-        updateIcon(next);
-      }
-
-      function updateIcon(theme) {
-        document.getElementById('theme-btn').textContent = theme === 'dark' ? '☀️' : '🌙';
-      }
-    </script>
+    <script src="../script.js"></script>
   </body>
 </html>

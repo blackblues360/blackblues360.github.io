@@ -6,6 +6,10 @@
     <meta name="color-scheme" content="dark light">
     <title>blackblues</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://api.open-meteo.com">
+    <link rel="preconnect" href="https://wttr.in">
+    <link rel="dns-prefetch" href="//api.open-meteo.com">
+    <link rel="dns-prefetch" href="//wttr.in">
     <link rel="stylesheet" href="assets/css/theme.css">
   </head>
   <body class="directory-page">
@@ -27,11 +31,11 @@
           <input id="searchInput" type="search" autocomplete="off" placeholder="搜索" aria-label="搜索网站">
           <span id="searchCount" class="search-count" aria-live="polite">0 / 0</span>
         </label>
-        <button id="theme-btn" class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="切换主题">☀️</button>
+        <button id="theme-btn" class="theme-toggle" type="button" aria-label="切换主题">☀️</button>
       </div>
     </header>
 
-    <main class="page-shell">
+    <main id="home" class="page-shell">
       <section class="web-search-area" aria-label="网页搜索">
         <form id="webSearchForm" class="web-search-form" role="search">
           <span class="web-search-icon" aria-hidden="true">🔍</span>
@@ -42,11 +46,13 @@
           </span>
         </form>
       </section>
-      <div id="categoryList" class="category-list" aria-live="polite"></div>
+      <section id="bookmarks" aria-label="网站书签">
+        <div id="categoryList" class="category-list" aria-live="polite"></div>
+      </section>
       <p id="emptyState" class="empty-state" hidden>没有找到相关网站</p>
     </main>
 
-    <footer class="site-footer">
+    <footer id="about" class="site-footer">
       <span>© 2026 blackblues · blackblues.xyz · 意见反馈：<a href="mailto:feedback@blackblues.xyz">feedback@blackblues.xyz</a></span>
       <span class="site-footer-links">
         <a href="/blog/">博客</a> ·
@@ -54,23 +60,6 @@
         <a href="https://github.com/blackblues360" target="_blank" rel="noopener noreferrer">GitHub</a>
       </span>
     </footer>
-    <script>
-      const saved = localStorage.getItem('theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', saved);
-      updateIcon(saved);
-
-      function toggleTheme() {
-        const current = document.documentElement.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-        updateIcon(next);
-      }
-
-      function updateIcon(theme) {
-        document.getElementById('theme-btn').textContent = theme === 'dark' ? '☀️' : '🌙';
-      }
-    </script>
     <script>
       (() => {
         const form = document.querySelector('#webSearchForm');
@@ -82,10 +71,24 @@
           google: 'https://www.google.com/search?q=',
           bing: 'https://www.bing.com/search?q='
         };
+        const readStorage = key => {
+          try {
+            return localStorage.getItem(key);
+          } catch {
+            return null;
+          }
+        };
+        const writeStorage = (key, value) => {
+          try {
+            localStorage.setItem(key, value);
+          } catch {
+            // 搜索本身不依赖本地存储，保存失败时只影响下次默认引擎。
+          }
+        };
 
         if (!form || !input || engineButtons.length === 0) return;
 
-        let currentEngine = localStorage.getItem(storageKey) === 'bing' ? 'bing' : 'google';
+        let currentEngine = readStorage(storageKey) === 'bing' ? 'bing' : 'google';
 
         const isTextInput = element =>
           element instanceof HTMLInputElement ||
@@ -107,7 +110,7 @@
             if (!searchUrls[engine]) return;
 
             currentEngine = engine;
-            localStorage.setItem(storageKey, currentEngine);
+            writeStorage(storageKey, currentEngine);
             syncEngineButtons();
             input.focus();
           });
@@ -140,6 +143,7 @@
         syncEngineButtons();
       })();
     </script>
+    <script src="script.js"></script>
     <script src="assets/js/main.js" defer></script>
   </body>
 </html>

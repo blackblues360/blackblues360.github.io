@@ -6,6 +6,7 @@ const clockTime = document.querySelector('#clockTime');
 const clockWeekday = document.querySelector('#clockWeekday');
 const weatherInfo = document.querySelector('#weatherInfo');
 let categories = [];
+let clockTimeZone = 'Asia/Shanghai';
 
 // 页面结构不完整时直接停止，避免后续事件绑定产生隐性错误。
 if (!categoryList || !emptyState || !searchInput || !searchCount || !clockTime || !clockWeekday || !weatherInfo) {
@@ -14,9 +15,14 @@ if (!categoryList || !emptyState || !searchInput || !searchCount || !clockTime |
 
 const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
 const defaultWeatherPosition = {
-  latitude: 31.2304,
-  longitude: 121.4737
+  latitude: 39.0851,
+  longitude: 117.1994,
+  timeZone: 'Asia/Shanghai'
 };
+const weatherCacheKey = 'blackblues.weather.current.tianjin';
+const weatherCacheMaxAge = 2 * 60 * 60 * 1000;
+const weatherRequestTimeout = 4000;
+const mojiWeatherEndpoint = window.MOJI_WEATHER_ENDPOINT || '';
 
 const weatherLabels = {
   0: '晴',
@@ -49,6 +55,57 @@ const weatherLabels = {
   99: '雷雨'
 };
 
+const wttrWeatherLabels = {
+  113: '晴',
+  116: '晴间多云',
+  119: '多云',
+  122: '阴',
+  143: '雾',
+  176: '阵雨',
+  179: '雨夹雪',
+  182: '冻雨',
+  185: '冻雨',
+  200: '雷雨',
+  227: '吹雪',
+  230: '暴雪',
+  248: '雾',
+  260: '雾',
+  263: '小雨',
+  266: '小雨',
+  281: '冻雨',
+  284: '冻雨',
+  293: '小雨',
+  296: '小雨',
+  299: '雨',
+  302: '雨',
+  305: '大雨',
+  308: '大雨',
+  311: '冻雨',
+  314: '冻雨',
+  317: '冻雨',
+  320: '雪',
+  323: '阵雪',
+  326: '阵雪',
+  329: '大雪',
+  332: '大雪',
+  335: '大雪',
+  338: '大雪',
+  350: '冰雹',
+  353: '阵雨',
+  356: '阵雨',
+  359: '强阵雨',
+  362: '雨夹雪',
+  365: '雨夹雪',
+  368: '阵雪',
+  371: '大雪',
+  374: '冰雹',
+  377: '冰雹',
+  386: '雷雨',
+  389: '雷雨',
+  392: '雷雪',
+  395: '雷雪'
+};
+
 const icons = {
   robot: '<svg viewBox="0 0 24 24" focusable="false"><rect x="5" y="7" width="14" height="11" rx="3"></rect><path d="M12 7V4"></path><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><path d="M9 16h6"></path><path d="M4 12H2"></path><path d="M22 12h-2"></path></svg>',
   code: '<svg viewBox="0 0 24 24" focusable="false"><path d="m8 9-4 3 4 3"></path><path d="m16 9 4 3-4 3"></path><path d="m14 5-4 14"></path></svg>',
@@ -67,13 +124,63 @@ const icons = {
 
 const normalize = value => String(value || '').trim().toLowerCase();
 
+const readJsonStorage = key => {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeJsonStorage = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // 天气缓存只是用于加快首屏显示，写入失败不影响实时请求。
+  }
+};
+
 const updateClock = () => {
   const now = new Date();
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const formatter = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: clockTimeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    weekday: 'long'
+  });
+  const parts = Object.fromEntries(formatter.formatToParts(now).map(part => [part.type, part.value]));
+  const hours = parts.hour || '00';
+  const minutes = parts.minute || '00';
 
   clockTime.textContent = `${hours}:${minutes}`;
-  clockWeekday.textContent = weekdays[now.getDay()];
+  clockWeekday.textContent = parts.weekday || weekdays[now.getDay()];
+};
+
+const formatWeather = weather => {
+  const temperature = Math.round(Number(weather.temperature));
+  const label = weather.label || weatherLabels[Number(weather.weatherCode)] || '天气';
+
+  return Number.isFinite(temperature) ? `${temperature}° ${label}` : '天气 --';
+};
+
+const renderWeather = weather => {
+  const text = formatWeather(weather);
+  weatherInfo.textContent = text;
+  return text !== '天气 --';
+};
+
+const hydrateCachedWeather = () => {
+  const cached = readJsonStorage(weatherCacheKey);
+  if (!cached || Date.now() - Number(cached.updatedAt) > weatherCacheMaxAge) return false;
+
+  if (cached.timeZone) {
+    clockTimeZone = cached.timeZone;
+    updateClock();
+  }
+
+  return renderWeather(cached);
 };
 
 const getGrantedPosition = () =>
@@ -93,7 +200,8 @@ const getGrantedPosition = () =>
         navigator.geolocation.getCurrentPosition(
           position => resolve({
             latitude: position.coords.latitude,
-            longitude: position.coords.longitude
+            longitude: position.coords.longitude,
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || defaultWeatherPosition.timeZone
           }),
           () => resolve(defaultWeatherPosition),
           { maximumAge: 30 * 60 * 1000, timeout: 3000 }
@@ -102,29 +210,105 @@ const getGrantedPosition = () =>
       .catch(() => resolve(defaultWeatherPosition));
   });
 
-const updateWeather = async () => {
+const isSamePosition = (position, reference) =>
+  Math.abs(position.latitude - reference.latitude) < 0.0001 &&
+  Math.abs(position.longitude - reference.longitude) < 0.0001;
+
+const fetchJson = async url => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), weatherRequestTimeout);
+
   try {
-    const { latitude, longitude } = await getGrantedPosition();
-    const params = new URLSearchParams({
-      latitude: latitude.toFixed(4),
-      longitude: longitude.toFixed(4),
-      current: 'temperature_2m,weather_code',
-      timezone: 'auto',
-      forecast_days: '1'
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+const fetchOpenMeteoWeather = async position => {
+  const params = new URLSearchParams({
+    latitude: position.latitude.toFixed(4),
+    longitude: position.longitude.toFixed(4),
+    current: 'temperature_2m,weather_code',
+    timezone: 'auto',
+    forecast_days: '1'
+  });
+
+  const data = await fetchJson(`https://api.open-meteo.com/v1/forecast?${params}`);
+  const current = data.current || {};
+
+  return {
+    temperature: current.temperature_2m,
+    weatherCode: current.weather_code,
+    timeZone: data.timezone || position.timeZone || defaultWeatherPosition.timeZone,
+    updatedAt: Date.now()
+  };
+};
+
+const fetchMojiWeather = async position => {
+  if (!mojiWeatherEndpoint) throw new Error('Moji weather endpoint is not configured');
+
+  const url = new URL(mojiWeatherEndpoint, window.location.origin);
+  url.searchParams.set('latitude', position.latitude.toFixed(4));
+  url.searchParams.set('longitude', position.longitude.toFixed(4));
+
+  const data = await fetchJson(url.toString());
+  const current = data.current || data.data?.current || data.data || data;
+
+  return {
+    temperature: current.temperature ?? current.temp ?? current.temp_C ?? current.tempC,
+    weatherCode: current.weatherCode ?? current.weather_code ?? current.code,
+    label: current.label ?? current.weather ?? current.condition ?? current.weatherText ?? current.weather_desc,
+    timeZone: current.timeZone || current.timezone || position.timeZone || defaultWeatherPosition.timeZone,
+    updatedAt: Date.now()
+  };
+};
+
+const fetchWttrWeather = async position => {
+  const query = `${position.latitude.toFixed(4)},${position.longitude.toFixed(4)}`;
+  const data = await fetchJson(`https://wttr.in/${query}?format=j1`);
+  const current = data.current_condition?.[0] || {};
+  const weatherCode = Number(current.weatherCode);
+
+  return {
+    temperature: current.temp_C,
+    weatherCode,
+    label: wttrWeatherLabels[weatherCode],
+    timeZone: position.timeZone || defaultWeatherPosition.timeZone,
+    updatedAt: Date.now()
+  };
+};
+
+const fetchWeather = position =>
+  fetchOpenMeteoWeather(position)
+    .catch(() => fetchMojiWeather(position))
+    .catch(() => fetchWttrWeather(position));
+
+const renderFetchedWeather = async position => {
+  const weather = await fetchWeather(position);
+  if (!renderWeather(weather)) throw new Error('Invalid weather data');
+
+  clockTimeZone = weather.timeZone;
+  updateClock();
+  writeJsonStorage(weatherCacheKey, weather);
+};
+
+const updateWeather = () => {
+  const hasCachedWeather = hydrateCachedWeather();
+
+  renderFetchedWeather(defaultWeatherPosition)
+    .catch(() => {
+      if (!hasCachedWeather) weatherInfo.textContent = '天气 --';
     });
 
-    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const data = await response.json();
-    const current = data.current || {};
-    const temperature = Math.round(current.temperature_2m);
-    const label = weatherLabels[current.weather_code] || '天气';
-
-    weatherInfo.textContent = Number.isFinite(temperature) ? `${temperature}° ${label}` : '天气 --';
-  } catch {
-    weatherInfo.textContent = '天气 --';
-  }
+  getGrantedPosition()
+    .then(position => {
+      if (isSamePosition(position, defaultWeatherPosition)) return;
+      renderFetchedWeather(position).catch(() => {});
+    })
+    .catch(() => {});
 };
 
 const getAllLinks = () => categories.flatMap(category =>

@@ -215,13 +215,20 @@ body::before {
 
 .clock-widget {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   flex: 0 0 auto;
   color: var(--text-secondary);
   font-size: 12px;
-  line-height: 1;
+  line-height: 16px;
   white-space: nowrap;
+}
+
+.clock-widget > span {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  line-height: 16px;
 }
 
 .clock-time {
@@ -237,6 +244,7 @@ body::before {
 
 .weather-info::before {
   content: "";
+  flex: 0 0 auto;
   width: 1px;
   height: 12px;
   margin: 0 2px;
@@ -1176,7 +1184,8 @@ nav[aria-label="主要导航"] {
   }
 
   .clock-widget {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 6px;
   }
 
   .search {
