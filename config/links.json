@@ -45,6 +45,11 @@
           "name": "DeepSeek",
           "url": "https://chat.deepseek.com",
           "description": "DeepSeek 对话 AI"
+        },
+        {
+          "name": "Kimi",
+          "url": "https://www.kimi.com",
+          "description": "Moonshot AI 长文本对话助手"
         }
       ]
     },
@@ -181,6 +186,16 @@
           "name": "Linux Do",
           "url": "https://linux.do",
           "description": "技术社区与信息交流"
+        },
+        {
+          "name": "知乎",
+          "url": "https://www.zhihu.com",
+          "description": "中文问答社区与知识内容"
+        },
+        {
+          "name": "微信读书",
+          "url": "https://weread.qq.com",
+          "description": "微信读书网页版"
         }
       ]
     },
@@ -208,28 +223,40 @@
       "icon": "pencil",
       "links": [
         {
-          "name": "技术",
-          "url": "blog/index.html?category=技术",
-          "icon": "code",
-          "description": "技术和建站记录"
-        },
-        {
-          "name": "随笔",
-          "url": "blog/index.html?category=随笔",
-          "icon": "clock",
-          "description": "生活缝隙里的片段"
-        },
-        {
           "name": "思考",
           "url": "blog/index.html?category=思考",
           "icon": "wrench",
           "description": "工具、效率和工作方式"
         },
         {
+          "name": "生活",
+          "url": "blog/index.html?category=生活",
+          "icon": "clock",
+          "description": "生活缝隙里的片段"
+        },
+        {
+          "name": "技术",
+          "url": "blog/index.html?category=技术",
+          "icon": "code",
+          "description": "技术和建站记录"
+        },
+        {
+          "name": "音乐",
+          "url": "blog/index.html?category=音乐",
+          "icon": "music",
+          "description": "最近在听的歌"
+        },
+        {
           "name": "阅读",
           "url": "blog/index.html?category=阅读",
           "icon": "book-open",
           "description": "读书笔记和记录"
+        },
+        {
+          "name": "随笔",
+          "url": "blog/index.html?category=随笔",
+          "icon": "pencil",
+          "description": "杂记、心情和短记录"
         }
       ]
     }

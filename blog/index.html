@@ -45,6 +45,15 @@
         const latestTitle = document.querySelector('#latest-title');
         const emptyState = document.querySelector('#blogEmptyState');
         const colors = ['#74c69d', '#b8875f', '#a78bfa', '#60a5fa', '#c9a96e', '#66d9c4'];
+        const preferredCategories = ['思考', '生活', '技术', '音乐', '阅读', '随笔'];
+        const categoryDescriptions = {
+          思考: '工具、效率和工作方式',
+          生活: '生活缝隙里的片段',
+          技术: '技术和建站记录',
+          音乐: '最近在听的歌',
+          阅读: '读书笔记和记录',
+          随笔: '杂记、心情和短记录'
+        };
         let posts = [];
         let currentCategory = new URLSearchParams(window.location.search).get('category') || '';
 
@@ -52,9 +61,25 @@
 
         const formatCount = count => `${count}篇`;
         const categoryColor = category => {
-          const categories = Array.from(new Set(posts.map(post => post.category)));
-          const index = Math.max(0, categories.indexOf(category));
-          return colors[index % colors.length];
+          const categories = sortedCategories();
+          const index = categories.findIndex(([name]) => name === category);
+          return colors[(Math.max(0, index) + 1) % colors.length];
+        };
+        const categoryOrder = category => {
+          const index = preferredCategories.indexOf(category);
+          return index === -1 ? preferredCategories.length : index;
+        };
+        const sortedCategories = () => {
+          const counts = new Map();
+          posts.forEach(post => {
+            counts.set(post.category, (counts.get(post.category) || 0) + 1);
+          });
+          return Array.from(counts.entries()).sort(([categoryA], [categoryB]) => {
+            const orderA = categoryOrder(categoryA);
+            const orderB = categoryOrder(categoryB);
+            if (orderA !== orderB) return orderA - orderB;
+            return categoryA.localeCompare(categoryB, 'zh-Hans-CN');
+          });
         };
 
         const categoryUrl = category => {
@@ -84,7 +109,7 @@
 
           const desc = document.createElement('span');
           desc.className = 'category-desc';
-          desc.textContent = category ? `${category} 分类文章` : '全部文章归档';
+          desc.textContent = category ? (categoryDescriptions[category] || `${category} 分类文章`) : '全部文章归档';
 
           const countEl = document.createElement('span');
           countEl.className = 'category-count';
@@ -104,13 +129,8 @@
         };
 
         const renderCategories = () => {
-          const counts = new Map();
-          posts.forEach(post => {
-            counts.set(post.category, (counts.get(post.category) || 0) + 1);
-          });
-
           categoryGrid.replaceChildren(createCategoryCard('', posts.length, 0));
-          Array.from(counts.entries()).forEach(([category, count], index) => {
+          sortedCategories().forEach(([category, count], index) => {
             categoryGrid.append(createCategoryCard(category, count, index + 1));
           });
         };
