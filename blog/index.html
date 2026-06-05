@@ -17,118 +17,170 @@
 
       <section aria-labelledby="categories-title">
         <h1 class="section-title" id="categories-title">板块</h1>
-        <div class="category-grid">
-          <a class="category-card-link" href="/blog/jianzhan.html">
-            <div class="category-card site-diary">
-              <span class="category-body">
-                <span class="category-name">建站日记</span>
-                <span class="category-desc">记录这个网站从想法、配置到上线的过程</span>
-              </span>
-              <span class="category-count">2篇</span>
-            </div>
-          </a>
-
-          <a class="category-card-link" href="/blog/suibi.html">
-            <div class="category-card timeslot-notes">
-              <span class="category-body">
-                <span class="category-name">时隙随笔</span>
-                <span class="category-desc">生活缝隙里的片段、心情和短记录</span>
-              </span>
-              <span class="category-count">1篇</span>
-            </div>
-          </a>
-
-          <a class="category-card-link" href="/blog/gongju.html">
-            <div class="category-card tools-thinking">
-              <span class="category-body">
-                <span class="category-name">工具与思考</span>
-                <span class="category-desc">关于工具、效率和工作方式的观察</span>
-              </span>
-              <span class="category-count">1篇</span>
-            </div>
-          </a>
-
-          <a class="category-card-link" href="/blog/yinyue.html">
-            <div class="category-card reading-music">
-              <span class="category-body">
-                <span class="category-name">阅读与音乐</span>
-                <span class="category-desc">书、歌和它们留下的余味</span>
-              </span>
-              <span class="category-count">2篇</span>
-            </div>
-          </a>
-        </div>
+        <div id="categoryGrid" class="category-grid" aria-live="polite"></div>
       </section>
 
       <hr class="divider">
 
       <section aria-labelledby="latest-title">
         <h2 class="section-title" id="latest-title">最新文章</h2>
-        <div class="post-list">
-          <a class="post-row" id="tools-thinking" href="../posts/ai-tools-half-year.html">
-            <span class="post-left">
-              <span class="post-date">2026-05-28</span>
-              <span class="post-tag tag-tools-thinking">工具与思考</span>
-              <span class="post-title">我用AI工具工作了半年，有些话想说</span>
-            </span>
-            <span class="post-excerpt">从最初的好奇到现在的依赖，ChatGPT 和 Claude 已经成为我日常工作流不可分割的一部分。</span>
-          </a>
-
-          <a class="post-row" id="timeslot-notes" href="../posts/rain-tea-night.html">
-            <span class="post-left">
-              <span class="post-date">2026-05-14</span>
-              <span class="post-tag tag-timeslot-notes">时隙随笔</span>
-              <span class="post-title">深夜、雨声、一杯茶</span>
-            </span>
-            <span class="post-excerpt">有些时刻不需要记录什么大事，只是想留住窗外的雨声和心里那种说不清楚的平静。</span>
-          </a>
-
-          <a class="post-row" id="site-diary" href="../posts/cloudflare-github-pages.html">
-            <span class="post-left">
-              <span class="post-date">2026-04-30</span>
-              <span class="post-tag tag-site-diary">建站日记</span>
-              <span class="post-title">用 Cloudflare + GitHub 搭建个人主页的全过程</span>
-            </span>
-            <span class="post-excerpt">从购买域名到绑定 Cloudflare，再到连接 GitHub Pages，记录一下这个网站是怎么诞生的。</span>
-          </a>
-
-          <a class="post-row" id="reading-music" href="../posts/recent-songs.html">
-            <span class="post-left">
-              <span class="post-date">2026-04-18</span>
-              <span class="post-tag tag-reading-music">阅读与音乐</span>
-              <span class="post-title">最近在反复听的几首歌</span>
-            </span>
-            <span class="post-excerpt">五月的歌单，有些旧歌，有些新欢。音乐是最诚实的东西，你听什么就是什么心情。</span>
-          </a>
-
-          <a class="post-row" href="../posts/sapiens-notes.html">
-            <span class="post-left">
-              <span class="post-date">2026-03-22</span>
-              <span class="post-tag tag-reading-music">阅读与音乐</span>
-              <span class="post-title">《人类简史》读完之后我想到了什么</span>
-            </span>
-            <span class="post-excerpt">赫拉利让我重新思考故事这件事：很多社会结构都依赖人类共同相信的叙事。</span>
-          </a>
-
-          <a class="post-row" href="../posts/before-building-site.html">
-            <span class="post-left">
-              <span class="post-date">2026-03-01</span>
-              <span class="post-tag tag-site-diary">建站日记</span>
-              <span class="post-title">写在建站之前</span>
-            </span>
-            <span class="post-excerpt">为什么想要一个自己的网站？不是为了流量，不是为了影响力，只是想有个地方安静地说话。</span>
-          </a>
-        </div>
+        <div id="postList" class="post-list" aria-live="polite"></div>
+        <p id="blogEmptyState" class="blog-empty-state" hidden>暂无文章</p>
       </section>
     </main>
     <footer class="site-footer">
       <span>© 2026 blackblues · blackblues.xyz</span>
       <span class="site-footer-links">
-        <a href="/blog/">博客</a> ·
-        <a href="/music/">音乐</a> ·
+        <a href="./index.html">博客</a> ·
+        <a href="../music/index.html">音乐</a> ·
         <a href="https://github.com/blackblues360" target="_blank" rel="noopener noreferrer">GitHub</a>
       </span>
     </footer>
     <script src="../script.js"></script>
+    <script>
+      (() => {
+        const postsEndpoint = '../config/posts.json';
+        const categoryGrid = document.querySelector('#categoryGrid');
+        const postList = document.querySelector('#postList');
+        const latestTitle = document.querySelector('#latest-title');
+        const emptyState = document.querySelector('#blogEmptyState');
+        const colors = ['#74c69d', '#b8875f', '#a78bfa', '#60a5fa', '#c9a96e', '#66d9c4'];
+        let posts = [];
+        let currentCategory = new URLSearchParams(window.location.search).get('category') || '';
+
+        if (!categoryGrid || !postList || !latestTitle || !emptyState) return;
+
+        const formatCount = count => `${count}篇`;
+        const categoryColor = category => {
+          const categories = Array.from(new Set(posts.map(post => post.category)));
+          const index = Math.max(0, categories.indexOf(category));
+          return colors[index % colors.length];
+        };
+
+        const categoryUrl = category => {
+          if (!category) return './index.html';
+          return `./index.html?category=${encodeURIComponent(category)}`;
+        };
+
+        const createCategoryCard = (category, count, index) => {
+          const link = document.createElement('a');
+          link.className = 'category-card-link';
+          link.href = categoryUrl(category);
+          link.style.setProperty('--theme', colors[index % colors.length]);
+
+          const card = document.createElement('span');
+          card.className = 'category-card';
+          if (category === currentCategory || (!category && !currentCategory)) {
+            card.classList.add('is-active');
+            link.setAttribute('aria-current', 'page');
+          }
+
+          const body = document.createElement('span');
+          body.className = 'category-body';
+
+          const name = document.createElement('span');
+          name.className = 'category-name';
+          name.textContent = category || '全部';
+
+          const desc = document.createElement('span');
+          desc.className = 'category-desc';
+          desc.textContent = category ? `${category} 分类文章` : '全部文章归档';
+
+          const countEl = document.createElement('span');
+          countEl.className = 'category-count';
+          countEl.textContent = formatCount(count);
+
+          body.append(name, desc);
+          card.append(body, countEl);
+          link.append(card);
+          link.addEventListener('click', event => {
+            event.preventDefault();
+            currentCategory = category;
+            history.pushState(null, '', categoryUrl(category));
+            render();
+          });
+
+          return link;
+        };
+
+        const renderCategories = () => {
+          const counts = new Map();
+          posts.forEach(post => {
+            counts.set(post.category, (counts.get(post.category) || 0) + 1);
+          });
+
+          categoryGrid.replaceChildren(createCategoryCard('', posts.length, 0));
+          Array.from(counts.entries()).forEach(([category, count], index) => {
+            categoryGrid.append(createCategoryCard(category, count, index + 1));
+          });
+        };
+
+        const createPostRow = post => {
+          const row = document.createElement('a');
+          row.className = 'post-row';
+          row.href = post.url;
+          row.style.setProperty('--theme', categoryColor(post.category));
+
+          const left = document.createElement('span');
+          left.className = 'post-left';
+
+          const date = document.createElement('span');
+          date.className = 'post-date';
+          date.textContent = post.date;
+
+          const tag = document.createElement('span');
+          tag.className = 'post-tag';
+          tag.textContent = post.category;
+
+          const title = document.createElement('span');
+          title.className = 'post-title';
+          title.textContent = post.title;
+
+          const excerpt = document.createElement('span');
+          excerpt.className = 'post-excerpt';
+          excerpt.textContent = post.description;
+
+          left.append(date, tag, title);
+          row.append(left, excerpt);
+          return row;
+        };
+
+        const renderPosts = () => {
+          const visiblePosts = currentCategory
+            ? posts.filter(post => post.category === currentCategory)
+            : posts;
+
+          latestTitle.textContent = currentCategory ? `${currentCategory}文章` : '最新文章';
+          postList.replaceChildren(...visiblePosts.map(createPostRow));
+          emptyState.hidden = visiblePosts.length > 0;
+        };
+
+        const render = () => {
+          renderCategories();
+          renderPosts();
+        };
+
+        window.addEventListener('popstate', () => {
+          currentCategory = new URLSearchParams(window.location.search).get('category') || '';
+          render();
+        });
+
+        fetch(postsEndpoint)
+          .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then(data => {
+            posts = Array.isArray(data) ? data : [];
+            render();
+          })
+          .catch(() => {
+            categoryGrid.replaceChildren();
+            postList.replaceChildren();
+            emptyState.textContent = '文章加载失败';
+            emptyState.hidden = false;
+          });
+      })();
+    </script>
   </body>
 </html>

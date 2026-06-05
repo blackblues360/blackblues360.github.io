@@ -1,0 +1,44 @@
+[
+  {
+    "title": "我用AI工具工作了半年，有些话想说",
+    "date": "2026-05-28",
+    "category": "思考",
+    "description": "从最初的好奇到现在的依赖，ChatGPT 和 Claude 已经成为我日常工作流不可分割的一部分。",
+    "url": "../posts/ai-tools-half-year.html"
+  },
+  {
+    "title": "深夜、雨声、一杯茶",
+    "date": "2026-05-14",
+    "category": "生活",
+    "description": "有些时刻不需要记录什么大事，只是想留住窗外的雨声和心里那种说不清楚的平静。",
+    "url": "../posts/rain-tea-night.html"
+  },
+  {
+    "title": "用 Cloudflare + GitHub 搭建个人主页的全过程",
+    "date": "2026-04-30",
+    "category": "技术",
+    "description": "从购买域名到绑定 Cloudflare，再到连接 GitHub Pages，记录一下这个网站是怎么诞生的。",
+    "url": "../posts/cloudflare-github-pages.html"
+  },
+  {
+    "title": "最近在反复听的几首歌",
+    "date": "2026-04-18",
+    "category": "音乐",
+    "description": "五月的歌单，有些旧歌，有些新欢。音乐是最诚实的东西，你听什么就是什么心情。",
+    "url": "../posts/recent-songs.html"
+  },
+  {
+    "title": "《人类简史》读完之后我想到了什么",
+    "date": "2026-03-22",
+    "category": "阅读",
+    "description": "赫拉利让我重新思考故事这件事：很多社会结构都依赖人类共同相信的叙事。",
+    "url": "../posts/sapiens-notes.html"
+  },
+  {
+    "title": "写在建站之前",
+    "date": "2026-03-01",
+    "category": "随笔",
+    "description": "为什么想要一个自己的网站？不是为了流量，不是为了影响力，只是想有个地方安静地说话。",
+    "url": "../posts/before-building-site.html"
+  }
+]

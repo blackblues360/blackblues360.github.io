@@ -191,7 +191,7 @@
       "links": [
         {
           "name": "我的歌单",
-          "url": "/music/",
+          "url": "music/index.html",
           "icon": "headphones",
           "description": "个人收藏歌单"
         },
@@ -208,28 +208,28 @@
       "icon": "pencil",
       "links": [
         {
-          "name": "建站日记",
-          "url": "/blog/jianzhan.html",
+          "name": "技术",
+          "url": "blog/index.html?category=技术",
           "icon": "code",
-          "description": "从想法到上线的过程"
+          "description": "技术和建站记录"
         },
         {
-          "name": "时隙随笔",
-          "url": "/blog/suibi.html",
+          "name": "随笔",
+          "url": "blog/index.html?category=随笔",
           "icon": "clock",
           "description": "生活缝隙里的片段"
         },
         {
-          "name": "工具与思考",
-          "url": "/blog/gongju.html",
+          "name": "思考",
+          "url": "blog/index.html?category=思考",
           "icon": "wrench",
-          "description": "关于效率和工作方式"
+          "description": "工具、效率和工作方式"
         },
         {
-          "name": "阅读与音乐",
-          "url": "/blog/yinyue.html",
+          "name": "阅读",
+          "url": "blog/index.html?category=阅读",
           "icon": "book-open",
-          "description": "书、歌和它们留下的余味"
+          "description": "读书笔记和记录"
         }
       ]
     }
