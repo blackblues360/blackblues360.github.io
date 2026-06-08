@@ -3,31 +3,160 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="dark light">
-    <title>歌单 | blackblues</title>
+    <meta name="color-scheme" content="dark">
+    <title>Music | blackblues</title>
     <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="../assets/css/theme.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=Noto+Sans+SC:wght@400;500&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <link rel="stylesheet" href="./style.css">
   </head>
-  <body class="music-page">
-    <header class="subpage-header">
-      <a class="back-home" href="../index.html">← 返回主页</a>
-      <button id="theme-btn" class="theme-toggle" type="button" aria-label="切换主题">☀️</button>
-    </header>
+  <body>
+    <aside class="sidebar" aria-label="音乐页面导航">
+      <a class="site-logo" href="../index.html" aria-label="返回 blackblues 首页">
+        <span class="logo-mark">bb</span>
+        <span class="logo-text">blackblues</span>
+      </a>
+      <nav class="side-nav" aria-label="主导航">
+        <a class="is-active" href="#tracks">全部曲目</a>
+        <a href="#tags">按标签</a>
+        <a href="#about">关于</a>
+      </nav>
+      <section class="side-filter" aria-labelledby="sideTagsTitle">
+        <h2 id="sideTagsTitle">标签</h2>
+        <div id="sidebarTagList" class="sidebar-tag-list"></div>
+      </section>
+    </aside>
 
-    <main class="music-shell">
-      <section class="music-placeholder" aria-labelledby="music-title">
-        <h1 class="music-title" id="music-title">歌单</h1>
-        <p class="music-empty">歌单内容建设中...</p>
+    <main class="music-main">
+      <section class="hero-player" aria-labelledby="page-title">
+        <div class="album-stage">
+          <div id="cover-disc" class="album-cover" aria-hidden="true">
+            <span class="album-ring"></span>
+            <span class="album-hole"></span>
+          </div>
+          <div id="lyricsPanel" class="lyrics-panel" aria-live="polite" hidden>
+            <div id="lyricsList" class="lyrics-list"></div>
+          </div>
+        </div>
+        <div class="hero-copy">
+          <p class="kicker">blackblues radio</p>
+          <h1 id="page-title">Midnight Notes</h1>
+          <p>深夜、键盘、低频和一些未完成的片段。</p>
+        </div>
+      </section>
+
+      <section id="tracks" class="track-section" aria-labelledby="tracks-title">
+        <div class="section-heading">
+          <h2 id="tracks-title">全部曲目</h2>
+          <span id="trackCount">0 tracks</span>
+        </div>
+        <label class="search-field" for="trackSearch">
+          <i class="ti ti-search" aria-hidden="true"></i>
+          <input id="trackSearch" type="search" autocomplete="off" placeholder="搜索曲目、艺术家、专辑">
+        </label>
+        <ol id="trackList" class="track-list" aria-live="polite"></ol>
+      </section>
+
+      <section id="tags" class="tag-section" aria-labelledby="tags-title">
+        <h2 id="tags-title">按标签</h2>
+        <div id="tagList" class="tag-list" aria-label="音乐标签"></div>
+      </section>
+
+      <section id="about" class="about-section" aria-labelledby="about-title">
+        <h2 id="about-title">关于</h2>
+        <p>这里将用于收集个人歌单、练习片段和一些适合写作时循环播放的声音。</p>
       </section>
     </main>
-    <footer class="site-footer">
-      <span>© 2026 blackblues · blackblues.xyz</span>
-      <span class="site-footer-links">
-        <a href="../blog/index.html">博客</a> ·
-        <a href="./index.html">音乐</a> ·
-        <a href="https://github.com/blackblues360" target="_blank" rel="noopener noreferrer">GitHub</a>
-      </span>
+
+    <nav class="mobile-tabs" aria-label="移动端导航">
+      <a class="is-active" href="#tracks">曲目</a>
+      <a href="#tags">标签</a>
+      <a href="#about">关于</a>
+    </nav>
+
+    <footer class="player-bar" aria-label="播放器控制栏">
+      <div class="now-playing">
+        <div id="nowCover" class="thumb-cover" aria-hidden="true"></div>
+        <div class="now-meta">
+          <span id="nowTitle" class="now-title">未选择曲目</span>
+          <span id="nowArtist" class="now-artist">blackblues</span>
+        </div>
+      </div>
+      <div class="transport">
+        <div class="controls" aria-label="播放控制">
+          <button id="prevButton" type="button" aria-label="上一首">
+            <i class="ti ti-player-skip-back" aria-hidden="true"></i>
+          </button>
+          <button id="playButton" class="play-button" type="button" aria-label="播放">
+            <i id="playIcon" class="ti ti-player-play" aria-hidden="true"></i>
+          </button>
+          <button id="nextButton" type="button" aria-label="下一首">
+            <i class="ti ti-player-skip-forward" aria-hidden="true"></i>
+          </button>
+          <button id="modeButton" type="button" aria-label="顺序播放" title="顺序播放">
+            <i id="modeIcon" class="ti ti-arrow-right" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="progress-wrap">
+          <span id="currentTime">00:00</span>
+          <div id="progressBar" class="progress" aria-label="播放进度" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+            <span id="progressFill" style="width: 0%"></span>
+          </div>
+          <span id="durationTime">--:--</span>
+        </div>
+      </div>
+      <div class="volume">
+        <span aria-hidden="true">VOL</span>
+        <input id="volumeSlider" class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="音量">
+      </div>
     </footer>
-    <script src="../script.js"></script>
+
+    <section id="mobilePlayerSheet" class="mobile-player-sheet" aria-hidden="true">
+      <div class="mobile-sheet-grip" aria-hidden="true"></div>
+      <button id="sheetCloseButton" class="sheet-close-button" type="button" aria-label="关闭播放器">
+        <i class="ti ti-chevron-down" aria-hidden="true"></i>
+      </button>
+      <div class="sheet-artwork">
+        <div id="sheetCover" class="album-cover sheet-cover" aria-hidden="true">
+          <span class="album-ring"></span>
+          <span class="album-hole"></span>
+        </div>
+      </div>
+      <div class="sheet-meta">
+        <span id="sheetTitle" class="sheet-title">未选择曲目</span>
+        <span id="sheetArtist" class="sheet-artist">blackblues</span>
+      </div>
+      <div id="sheetLyricsPanel" class="lyrics-panel sheet-lyrics" aria-live="polite" hidden>
+        <div id="sheetLyricsList" class="lyrics-list"></div>
+      </div>
+      <div class="sheet-controls" aria-label="完整播放控制">
+        <button id="sheetPrevButton" type="button" aria-label="上一首">
+          <i class="ti ti-player-skip-back" aria-hidden="true"></i>
+        </button>
+        <button id="sheetPlayButton" class="play-button" type="button" aria-label="播放">
+          <i id="sheetPlayIcon" class="ti ti-player-play" aria-hidden="true"></i>
+        </button>
+        <button id="sheetNextButton" type="button" aria-label="下一首">
+          <i class="ti ti-player-skip-forward" aria-hidden="true"></i>
+        </button>
+        <button id="sheetModeButton" type="button" aria-label="顺序播放" title="顺序播放">
+          <i id="sheetModeIcon" class="ti ti-arrow-right" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="sheet-progress-wrap">
+        <span id="sheetCurrentTime">00:00</span>
+        <div id="sheetProgressBar" class="progress" aria-label="播放进度" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+          <span id="sheetProgressFill" style="width: 0%"></span>
+        </div>
+        <span id="sheetDurationTime">--:--</span>
+      </div>
+    </section>
+
+    <audio id="audioPlayer" preload="metadata"></audio>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
+    <script src="./player.js"></script>
   </body>
 </html>

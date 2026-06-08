@@ -1,0 +1,32 @@
+[
+  {
+    "id": "001",
+    "title": "晨雾循环",
+    "artist": "blackblues",
+    "album": "占位专辑",
+    "year": 2024,
+    "tags": ["ambient"],
+    "cover": "music/covers/001.jpg",
+    "src": "music/audio/001.mp3"
+  },
+  {
+    "id": "002",
+    "title": "低频手记",
+    "artist": "blackblues",
+    "album": "占位专辑",
+    "year": 2024,
+    "tags": ["lo-fi", "demo"],
+    "cover": "music/covers/002.jpg",
+    "src": "music/audio/002.mp3"
+  },
+  {
+    "id": "003",
+    "title": "雨夜侧写",
+    "artist": "blackblues",
+    "album": "占位专辑",
+    "year": 2024,
+    "tags": ["ambient", "reading"],
+    "cover": "music/covers/003.jpg",
+    "src": "music/audio/003.mp3"
+  }
+]
