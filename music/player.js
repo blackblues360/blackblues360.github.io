@@ -10,6 +10,23 @@ const PLAY_MODES = [
   { id: "repeat-one", label: "单曲循环", icon: "ti ti-repeat-once" }
 ];
 
+const DEFAULT_TAGS = [
+  "流行",
+  "摇滚",
+  "民谣",
+  "电子",
+  "嘻哈",
+  "爵士",
+  "古典",
+  "R&B",
+  "世界音乐",
+  "轻音乐",
+  "影视原声",
+  "游戏音乐",
+  "国风",
+  "儿童"
+];
+
 const playerState = {
   tracks: [],
   activeIndex: -1,
@@ -316,9 +333,8 @@ function getTrackSearchText(track) {
 }
 
 function getAllTags(tracks) {
-  return [...new Set(tracks.flatMap(track => track.tags || []))]
-    .filter(tag => !isBlank(tag))
-    .sort((first, second) => first.localeCompare(second));
+  return [...new Set([...DEFAULT_TAGS, ...tracks.flatMap(track => track.tags || [])])]
+    .filter(tag => !isBlank(tag));
 }
 
 function trackMatchesActiveTags(track) {

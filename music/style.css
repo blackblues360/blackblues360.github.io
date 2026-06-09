@@ -113,14 +113,17 @@ p {
 
 .sidebar {
   position: fixed;
-  inset: 0 auto 0 0;
+  inset: 0 auto var(--player-height) 0;
   z-index: 20;
   width: var(--sidebar-width);
   padding: 28px 18px;
+  overflow-y: auto;
   border-right: 1px solid var(--line);
   background: var(--glass);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.22) transparent;
 }
 
 .site-logo {
@@ -216,61 +219,52 @@ p {
 
 .music-main {
   min-height: 100vh;
-  padding: 54px clamp(22px, 6vw, 88px) calc(var(--player-height) + 56px);
+  padding: 28px clamp(22px, 5vw, 72px) calc(var(--player-height) + 34px);
   margin-left: var(--sidebar-width);
   background:
     radial-gradient(circle at 72% 12%, rgb(var(--dynamic-r) var(--dynamic-g) var(--dynamic-b) / 0.14), transparent 34%),
     transparent;
 }
 
-.hero-player {
+.album-header {
   display: grid;
-  grid-template-columns: minmax(260px, 420px) minmax(240px, 1fr);
-  gap: clamp(32px, 6vw, 78px);
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 24px;
   align-items: center;
-  min-height: 430px;
-}
-
-.album-stage {
-  display: grid;
-  place-items: center;
-  gap: 22px;
+  min-height: 160px;
+  max-width: 1120px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--glass);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .album-cover {
   position: relative;
-  width: min(72vw, 360px);
+  width: 120px;
   aspect-ratio: 1;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 50%;
+  border-radius: 12px;
   background:
-    radial-gradient(circle at center, #090909 0 8%, transparent 8% 14%, rgba(255, 255, 255, 0.08) 14% 15%, transparent 15%),
-    repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.13) 0 1px, transparent 1px 9px),
-    conic-gradient(from 120deg, #1b1b1b, #d7b56d, #202020, #79b7c5, #111, #d7b56d, #1b1b1b);
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.52);
-  animation: spin 4s linear infinite;
-  animation-play-state: paused;
+    radial-gradient(circle at 30% 22%, rgb(var(--dynamic-r) var(--dynamic-g) var(--dynamic-b) / 0.32), transparent 38%),
+    linear-gradient(135deg, #333, #565656);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
   transition:
     border-color 1s ease,
     box-shadow 1s ease,
-    background 1s ease,
-    transform 260ms ease;
-}
-
-#cover-disc.is-playing {
-  animation-play-state: running;
+    background 1s ease;
 }
 
 .album-cover.has-image {
-  background:
-    radial-gradient(circle at center, #090909 0 8%, transparent 8% 14%, rgba(255, 255, 255, 0.08) 14% 15%, transparent 15%),
-    var(--cover-image) center / cover no-repeat;
+  background: var(--cover-image) center / cover no-repeat;
 }
 
 .album-cover.is-missing {
-  background:
-    radial-gradient(circle at center, #090909 0 8%, transparent 8% 14%, rgba(255, 255, 255, 0.08) 14% 15%, transparent 15%),
-    linear-gradient(135deg, #333, #565656);
+  background: linear-gradient(135deg, #333, #565656);
 }
 
 .album-cover.is-placeholder {
@@ -281,30 +275,11 @@ p {
 
 .album-ring,
 .album-hole {
-  position: absolute;
-  inset: 17%;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 50%;
-}
-
-.album-hole {
-  inset: 43%;
-  background: var(--bg);
-  box-shadow: inset 0 0 0 6px rgba(255, 255, 255, 0.08);
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.hero-copy {
-  max-width: 620px;
+  display: none;
 }
 
 .kicker,
-.section-heading span,
+.search-field span,
 .track-index,
 .track-tag,
 .track-time,
@@ -315,27 +290,41 @@ p {
   text-transform: uppercase;
 }
 
-.hero-copy h1 {
-  margin: 8px 0 14px;
-  font-family: var(--font-title);
-  font-size: clamp(52px, 9vw, 104px);
-  font-weight: 700;
-  line-height: 0.95;
+.album-header-copy {
+  min-width: 0;
 }
 
-.hero-copy p:last-child {
+.album-header-copy h1 {
+  margin: 4px 0 8px;
+  overflow: hidden;
+  font-family: var(--font-title);
+  font-size: clamp(40px, 6vw, 70px);
+  font-weight: 700;
+  line-height: 0.98;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album-header-copy p:last-child {
   max-width: 38em;
   color: var(--muted);
 }
 
-.track-section,
-.tag-section,
-.about-section {
-  max-width: 980px;
-  margin-top: 38px;
+.player-support {
+  display: none;
 }
 
-.section-heading,
+.track-section {
+  max-width: 1120px;
+  margin-top: 0;
+}
+
+.tag-section,
+.about-section {
+  max-width: 1120px;
+  margin-top: 18px;
+}
+
 .tag-section h2,
 .about-section h2 {
   display: flex;
@@ -345,14 +334,23 @@ p {
   margin-bottom: 14px;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .search-field {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  min-height: 44px;
+  min-height: 42px;
   padding: 0 14px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.045);
@@ -389,7 +387,7 @@ h2 {
 
 .track-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   padding: 0;
   margin: 0;
   list-style: none;
@@ -406,10 +404,10 @@ h2 {
 .track-item {
   display: grid;
   grid-template-columns: 36px 40px minmax(0, 1fr) 56px minmax(84px, auto);
-  gap: 18px;
+  gap: 14px;
   align-items: center;
-  min-height: 66px;
-  padding: 12px 16px;
+  min-height: 58px;
+  padding: 9px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.035);
@@ -465,6 +463,10 @@ h2 {
   font-family: var(--font-title);
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.album-cover.is-placeholder::after {
+  font-size: 44px;
 }
 
 .album-cover.is-placeholder .album-ring,
@@ -551,8 +553,8 @@ h2 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 78px;
-  padding: 4px 8px;
+  min-width: 0;
+  padding: 3px 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: transparent;
@@ -591,11 +593,11 @@ h2 {
   left: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: minmax(190px, 280px) minmax(260px, 1fr) minmax(140px, 220px);
-  gap: clamp(18px, 4vw, 54px);
+  grid-template-columns: minmax(210px, 320px) minmax(230px, 1fr) minmax(150px, 220px);
+  gap: 10px clamp(18px, 4vw, 54px);
   align-items: center;
   min-height: var(--player-height);
-  padding: 18px clamp(18px, 4vw, 48px);
+  padding: 12px clamp(18px, 4vw, 48px) 14px;
   border-top: 1px solid var(--line);
   background: var(--glass-strong);
   backdrop-filter: blur(20px);
@@ -616,15 +618,15 @@ h2 {
 .thumb-cover {
   position: relative;
   flex: 0 0 auto;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, #0a0a0a 0 14%, transparent 15%),
-    conic-gradient(from 120deg, #1b1b1b, #d7b56d, #79b7c5, #111, #d7b56d);
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: linear-gradient(135deg, #343434, #5d5d5d);
   transition:
     background 1s ease,
-    transform 260ms ease;
+    border-color 1s ease;
 }
 
 .thumb-cover.has-image {
@@ -637,7 +639,7 @@ h2 {
 }
 
 .thumb-cover.is-placeholder::after {
-  font-size: 24px;
+  font-size: 18px;
 }
 
 .now-meta {
@@ -646,24 +648,27 @@ h2 {
 }
 
 .transport {
-  display: grid;
-  gap: 12px;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
 }
 
 .controls {
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 14px;
 }
 
 .controls button {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   place-items: center;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
+  color: var(--muted);
   cursor: pointer;
   transition:
     border-color 240ms ease,
@@ -676,23 +681,32 @@ h2 {
 .controls button:hover,
 .controls button:focus-visible {
   border-color: var(--glass-border-hover, rgba(255, 255, 255, 0.18));
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
   outline: 0;
 }
 
 .controls button i {
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1;
 }
 
 .controls .play-button {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
+  background: var(--accent);
+  color: #101010;
+}
+
+.controls .play-button:hover,
+.controls .play-button:focus-visible {
+  border-color: transparent;
   background: var(--accent);
   color: #101010;
 }
 
 .progress-wrap {
+  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: 48px minmax(80px, 1fr) 48px;
   gap: 10px;
@@ -733,6 +747,12 @@ h2 {
   grid-template-columns: auto minmax(80px, 1fr);
   gap: 10px;
   align-items: center;
+  justify-self: stretch;
+}
+
+.volume i {
+  color: var(--muted);
+  font-size: 20px;
 }
 
 .volume-slider {
@@ -756,33 +776,24 @@ h2 {
 }
 
 @media (max-width: 900px) {
-  .hero-player {
-    grid-template-columns: 1fr;
-    min-height: auto;
-    text-align: center;
+  .album-header {
+    grid-template-columns: 96px minmax(0, 1fr);
+    min-height: 132px;
+    padding: 16px;
   }
 
-  .hero-copy {
-    justify-self: center;
+  #cover-disc {
+    width: 96px;
   }
 
-  .hero-copy p:last-child {
-    margin: 0 auto;
-  }
-
-  .player-bar {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
-  }
-
-  .volume {
-    display: none;
+  .album-header-copy h1 {
+    font-size: clamp(34px, 7vw, 52px);
   }
 }
 
 @media (max-width: 767px) {
   :root {
-    --player-height: 72px;
+    --player-height: 86px;
   }
 
   .sidebar {
@@ -790,26 +801,41 @@ h2 {
   }
 
   .music-main {
-    padding: 28px 16px calc(var(--player-height) + 72px);
+    padding: 16px 14px calc(var(--player-height) + 76px);
     margin-left: 0;
   }
 
-  .hero-player {
-    gap: 16px;
+  .album-header {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 14px;
+    min-height: 104px;
+    padding: 12px;
   }
 
-  .album-cover {
-    width: min(72vw, 250px);
+  #cover-disc {
+    width: 72px;
+    border-radius: 10px;
   }
 
-  .track-section,
+  #cover-disc.is-placeholder::after {
+    font-size: 30px;
+  }
+
   .tag-section,
   .about-section {
-    margin-top: 28px;
+    margin-top: 16px;
   }
 
-  .hero-copy h1 {
-    font-size: clamp(44px, 16vw, 72px);
+  .track-section {
+    margin-top: 0;
+  }
+
+  .album-header-copy h1 {
+    font-size: clamp(28px, 8vw, 34px);
+  }
+
+  .album-header-copy p:last-child {
+    display: none;
   }
 
   .track-item {
@@ -827,9 +853,13 @@ h2 {
     bottom: 54px;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
-    min-height: 72px;
+    min-height: 86px;
     padding: 10px 14px;
     cursor: pointer;
+  }
+
+  .volume {
+    display: none;
   }
 
   .now-playing {
@@ -856,9 +886,14 @@ h2 {
 
   .controls #prevButton,
   .controls #nextButton,
-  .controls #modeButton,
-  .progress-wrap {
+  .controls #modeButton {
     display: none;
+  }
+
+  .progress-wrap {
+    grid-column: 1 / -1;
+    grid-template-columns: 40px minmax(80px, 1fr) 40px;
+    gap: 8px;
   }
 
   .controls button {

@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=Noto+Sans+SC:wght@400;500&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./style.css?v=20260609-tags">
   </head>
   <body>
     <aside class="sidebar" aria-label="音乐页面导航">
@@ -25,36 +25,39 @@
       </nav>
       <section class="side-filter" aria-labelledby="sideTagsTitle">
         <h2 id="sideTagsTitle">标签</h2>
-        <div id="sidebarTagList" class="sidebar-tag-list"></div>
+        <div id="sidebarTagList" class="sidebar-tag-list">
+          <button class="sidebar-tag-button" type="button" data-filter-tag="流行" aria-pressed="false">流行</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="摇滚" aria-pressed="false">摇滚</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="民谣" aria-pressed="false">民谣</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="电子" aria-pressed="false">电子</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="嘻哈" aria-pressed="false">嘻哈</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="爵士" aria-pressed="false">爵士</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="古典" aria-pressed="false">古典</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="R&B" aria-pressed="false">R&amp;B</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="世界音乐" aria-pressed="false">世界音乐</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="轻音乐" aria-pressed="false">轻音乐</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="影视原声" aria-pressed="false">影视原声</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="游戏音乐" aria-pressed="false">游戏音乐</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="国风" aria-pressed="false">国风</button>
+          <button class="sidebar-tag-button" type="button" data-filter-tag="儿童" aria-pressed="false">儿童</button>
+        </div>
       </section>
     </aside>
 
     <main class="music-main">
-      <section class="hero-player" aria-labelledby="page-title">
-        <div class="album-stage">
-          <div id="cover-disc" class="album-cover" aria-hidden="true">
-            <span class="album-ring"></span>
-            <span class="album-hole"></span>
-          </div>
-          <div id="lyricsPanel" class="lyrics-panel" aria-live="polite" hidden>
-            <div id="lyricsList" class="lyrics-list"></div>
-          </div>
+      <div class="player-support" aria-hidden="true">
+        <div id="cover-disc" class="album-cover"></div>
+        <div id="lyricsPanel" class="lyrics-panel" aria-live="polite" hidden>
+          <div id="lyricsList" class="lyrics-list"></div>
         </div>
-        <div class="hero-copy">
-          <p class="kicker">blackblues radio</p>
-          <h1 id="page-title">Midnight Notes</h1>
-          <p>深夜、键盘、低频和一些未完成的片段。</p>
-        </div>
-      </section>
+      </div>
 
-      <section id="tracks" class="track-section" aria-labelledby="tracks-title">
-        <div class="section-heading">
-          <h2 id="tracks-title">全部曲目</h2>
-          <span id="trackCount">0 tracks</span>
-        </div>
+      <h1 class="visually-hidden">blackblues music</h1>
+      <section id="tracks" class="track-section" aria-label="全部曲目">
         <label class="search-field" for="trackSearch">
           <i class="ti ti-search" aria-hidden="true"></i>
           <input id="trackSearch" type="search" autocomplete="off" placeholder="搜索曲目、艺术家、专辑">
+          <span id="trackCount">0 tracks</span>
         </label>
         <ol id="trackList" class="track-list" aria-live="polite"></ol>
       </section>
@@ -99,17 +102,17 @@
             <i id="modeIcon" class="ti ti-arrow-right" aria-hidden="true"></i>
           </button>
         </div>
-        <div class="progress-wrap">
-          <span id="currentTime">00:00</span>
-          <div id="progressBar" class="progress" aria-label="播放进度" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
-            <span id="progressFill" style="width: 0%"></span>
-          </div>
-          <span id="durationTime">--:--</span>
-        </div>
       </div>
       <div class="volume">
-        <span aria-hidden="true">VOL</span>
+        <i class="ti ti-volume" aria-hidden="true"></i>
         <input id="volumeSlider" class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="音量">
+      </div>
+      <div class="progress-wrap">
+        <span id="currentTime">00:00</span>
+        <div id="progressBar" class="progress" aria-label="播放进度" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+          <span id="progressFill" style="width: 0%"></span>
+        </div>
+        <span id="durationTime">--:--</span>
       </div>
     </footer>
 
@@ -157,6 +160,6 @@
     <audio id="audioPlayer" preload="metadata"></audio>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
-    <script src="./player.js"></script>
+    <script src="./player.js?v=20260609-tags"></script>
   </body>
 </html>
