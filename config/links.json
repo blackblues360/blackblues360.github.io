@@ -35,7 +35,14 @@
           "name": "Perplexity",
           "url": "https://www.perplexity.ai",
           "description": "AI 搜索与问答工具"
-        },
+        }
+      ]
+    },
+    {
+      "id": "domestic-ai",
+      "name": "国产大模型",
+      "icon": "robot",
+      "links": [
         {
           "name": "扣子",
           "url": "https://www.coze.cn",
@@ -50,6 +57,11 @@
           "name": "Kimi",
           "url": "https://www.kimi.com",
           "description": "Moonshot AI 长文本对话助手"
+        },
+        {
+          "name": "智谱清言",
+          "url": "https://chatglm.cn/",
+          "description": "智谱 AI 对话助手"
         }
       ]
     },
