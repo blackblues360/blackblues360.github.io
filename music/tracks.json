@@ -1,32 +1,52 @@
 [
   {
-    "id": "001",
-    "title": "晨雾循环",
-    "artist": "blackblues",
-    "album": "占位专辑",
-    "year": 2024,
-    "tags": ["ambient"],
-    "cover": "music/covers/001.jpg",
-    "src": "music/audio/001.mp3"
+    "id": "clear-air",
+    "title": "Clear Air",
+    "artist": "Kevin MacLeod",
+    "album": "Incompetech",
+    "year": 2010,
+    "tags": ["流行", "明亮", "轻松", "治愈"],
+    "cover": "music/covers/clear-air.svg",
+    "src": "music/audio/clear-air.mp3"
   },
   {
-    "id": "002",
-    "title": "低频手记",
-    "artist": "blackblues",
-    "album": "占位专辑",
-    "year": 2024,
-    "tags": ["lo-fi", "demo"],
-    "cover": "music/covers/002.jpg",
-    "src": "music/audio/002.mp3"
+    "id": "night-in-venice",
+    "title": "Night in Venice",
+    "artist": "Kevin MacLeod",
+    "album": "Incompetech",
+    "year": 2010,
+    "tags": ["爵士", "慵懒", " groove", "放松"],
+    "cover": "music/covers/night-in-venice.svg",
+    "src": "music/audio/night-in-venice.mp3"
   },
   {
-    "id": "003",
-    "title": "雨夜侧写",
-    "artist": "blackblues",
-    "album": "占位专辑",
-    "year": 2024,
-    "tags": ["ambient", "reading"],
-    "cover": "music/covers/003.jpg",
-    "src": "music/audio/003.mp3"
+    "id": "gymnopedie-no-1",
+    "title": "Gymnopedie No. 1",
+    "artist": "Kevin MacLeod",
+    "album": "Incompetech",
+    "year": 2010,
+    "tags": ["古典", "钢琴", "治愈", "放松"],
+    "cover": "music/covers/gymnopedie-no-1.svg",
+    "src": "music/audio/gymnopedie-no-1.mp3"
+  },
+  {
+    "id": "dreamer",
+    "title": "Dreamer",
+    "artist": "Kevin MacLeod",
+    "album": "Incompetech",
+    "year": 2010,
+    "tags": ["当代", "钢琴", "治愈", "放松"],
+    "cover": "music/covers/dreamer.svg",
+    "src": "music/audio/dreamer.mp3"
+  },
+  {
+    "id": "octoblues",
+    "title": "OctoBlues",
+    "artist": "Kevin MacLeod",
+    "album": "Incompetech",
+    "year": 2010,
+    "tags": ["蓝调", "吉他", " groove", "放松"],
+    "cover": "music/covers/octoblues.svg",
+    "src": "music/audio/octoblues.mp3"
   }
 ]
