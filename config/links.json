@@ -62,6 +62,11 @@
           "name": "智谱清言",
           "url": "https://chatglm.cn/",
           "description": "智谱 AI 对话助手"
+        },
+        {
+          "name": "DeepSeek Harness",
+          "url": "https://www.deepseek.com/harness/",
+          "description": "DeepSeek 开源 Agent 框架，一切皆插件"
         }
       ]
     },
