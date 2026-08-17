@@ -1083,3 +1083,49 @@ h2 {
     transition: none;
   }
 }
+
+
+/* ── 网易云歌单区域 ── */
+.playlist-section {
+  padding: 2rem 1.5rem;
+  max-width: 600px;
+}
+
+.playlist-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: var(--fg-primary, #e8e6e3);
+  margin-bottom: 0.25rem;
+}
+
+.playlist-desc {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--fg-muted, #8a8a8a);
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.05em;
+}
+
+.playlist-embed {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.playlist-embed iframe {
+  border-radius: 8px;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .playlist-section {
+    padding: 1.5rem 1rem;
+  }
+  .playlist-embed {
+    padding: 0.5rem;
+  }
+}
