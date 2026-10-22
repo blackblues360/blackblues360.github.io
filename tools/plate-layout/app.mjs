@@ -344,7 +344,10 @@ elements.labelForm.addEventListener('submit', event => {
   event.preventDefault();
   const name = elements.labelName.value;
   const color = elements.labelColor.value;
-  if (change(() => { assignLabel(state, name, color); }, `已为 ${state.ui.selected.length} 个孔位应用标签。`)) {
+  if (change(() => {
+    assignLabel(state, name, color);
+    state.ui.selected = [];
+  }, `已为 ${state.ui.selected.length} 个孔位应用标签，选择已清空。`)) {
     elements.labelName.value = '';
     manualColor = false;
     suggestColor();
@@ -356,7 +359,10 @@ elements.labelLibrary.addEventListener('click', event => {
   if (applyId) {
     const label = state.labels.find(item => item.id === applyId);
     if (!state.ui.selected.length) { notify('请先选择孔位，再点击标签名称应用。'); return; }
-    change(() => { assignLabel(state, label.name, label.color); }, '已将已有标签应用到选中孔位。');
+    change(() => {
+      assignLabel(state, label.name, label.color);
+      state.ui.selected = [];
+    }, '已应用已有标签，选择已清空。');
   }
   const deleteId = event.target.closest('[data-delete-label]')?.dataset.deleteLabel;
   if (deleteId) {

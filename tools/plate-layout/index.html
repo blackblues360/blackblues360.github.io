@@ -6,7 +6,8 @@
     <meta name="color-scheme" content="light">
     <meta name="description" content="在浏览器中设计 6、12、24、96 孔板的实验分组，管理标签并导出高清 PNG/JPG。方案仅保存在本机。">
     <title>孔板铺板设计器 · blackblues</title>
-    <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon.png">
     <link rel="stylesheet" href="plate-layout.css">
     <script type="module" src="app.mjs"></script>
   </head>
@@ -14,16 +15,12 @@
     <div class="workspace">
       <nav class="breadcrumb" aria-label="位置">
         <a href="../../">blackblues<span class="brand-dot">.</span></a>
-        <span class="divider">/</span><span>实验工具</span>
         <span id="saveStatus" class="save-status" role="status">仅保存在此浏览器</span>
       </nav>
 
       <header class="masthead panel">
         <div class="tool-identity">
-          <svg class="tool-mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-            <rect x="3" y="5" width="42" height="38" rx="9" stroke="currentColor" stroke-width="1.5"/>
-            <g fill="currentColor"><circle cx="13" cy="15" r="3"/><circle cx="24" cy="15" r="3"/><circle cx="35" cy="15" r="3"/><circle cx="13" cy="24" r="3"/><circle cx="24" cy="24" r="3"/><circle cx="35" cy="24" r="3"/><circle cx="13" cy="33" r="3"/><circle cx="24" cy="33" r="3"/><circle cx="35" cy="33" r="3"/></g>
-          </svg>
+          <img class="tool-mark" src="icon.png" width="47" height="47" alt="" aria-hidden="true" decoding="async">
           <div><h1>Plate Layout Designer</h1><p class="chinese-title">孔板铺板设计器</p><p class="subtitle">从实验分组，到一张清晰的铺板方案。</p></div>
         </div>
         <div class="plan-title"><label for="planTitle">实验名称 / 方案标题</label><input id="planTitle" maxlength="160" placeholder="为这次实验命名…" autocomplete="off"><span id="titleCount" class="field-hint">0 / 160</span></div>
