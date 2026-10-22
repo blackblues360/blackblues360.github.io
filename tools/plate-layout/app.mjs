@@ -8,7 +8,7 @@ const STORAGE_KEY = 'blackblues.plate-layout.v1';
 const elements = Object.fromEntries([
   'saveStatus', 'planTitle', 'titleCount', 'undo', 'redo', 'reset', 'exportPng', 'exportJpg',
   'plateTypes', 'showIds', 'showAxes', 'showFrame', 'wellScale', 'wellScaleValue', 'selectAll',
-  'deselectAll', 'exportScale', 'plateHeading', 'assignedCount', 'plate', 'plateDimensions',
+  'deselectAll', 'exportScale', 'exportIds', 'exportLegend', 'plateHeading', 'assignedCount', 'plate', 'plateDimensions',
   'legendSummary', 'legend', 'selectionCount', 'selectionList', 'clearSelection', 'labelForm',
   'labelName', 'labelColor', 'colorMode', 'colorHex', 'autoColor', 'applyLabel', 'clearLabels',
   'editorHint', 'labelCount', 'labelLibrary', 'notice'
@@ -216,7 +216,8 @@ function render() {
   elements.plateDimensions.textContent = `${spec.rows} 行 × ${spec.cols} 列`;
   if (document.activeElement !== elements.planTitle) elements.planTitle.value = state.plate.title;
   elements.titleCount.textContent = `${state.plate.title.length} / 160`;
-  for (const key of ['showIds', 'showAxes', 'showFrame']) elements[key].checked = state.ui[key];
+  for (const key of ['showIds', 'showAxes', 'showFrame', 'exportLegend']) elements[key].checked = state.ui[key];
+  elements.exportIds.checked = state.ui.showIds;
   elements.wellScale.value = state.ui.wellScale;
   elements.wellScaleValue.textContent = `${state.ui.wellScale}%`;
   elements.undo.disabled = !undoStack.length;
@@ -328,7 +329,8 @@ elements.plateTypes.addEventListener('click', event => {
 });
 
 elements.planTitle.addEventListener('input', () => change(() => { state.plate.title = cleanText(elements.planTitle.value); }, '', 'title'));
-for (const key of ['showIds', 'showAxes', 'showFrame']) elements[key].addEventListener('change', () => change(() => { state.ui[key] = elements[key].checked; }));
+for (const key of ['showIds', 'showAxes', 'showFrame', 'exportLegend']) elements[key].addEventListener('change', () => change(() => { state.ui[key] = elements[key].checked; }));
+elements.exportIds.addEventListener('change', () => change(() => { state.ui.showIds = elements.exportIds.checked; }));
 elements.wellScale.addEventListener('input', () => change(() => { state.ui.wellScale = Number(elements.wellScale.value); }));
 elements.selectAll.addEventListener('click', () => change(() => { state.ui.selected = wellIds(state.plate.type); }));
 for (const id of ['deselectAll', 'clearSelection']) elements[id].addEventListener('click', () => change(() => { state.ui.selected = []; }));

@@ -47,13 +47,19 @@
             <label class="switch-row" for="showAxes">显示行列标识<input id="showAxes" type="checkbox" checked role="switch"></label>
             <label class="switch-row" for="showFrame">显示孔板边框<input id="showFrame" type="checkbox" checked role="switch"></label>
             <label class="size-label" for="wellScale">孔位大小 <output id="wellScaleValue">100%</output></label><input id="wellScale" class="size-slider" type="range" min="75" max="110" value="100" step="5">
-            <p class="display-note">显示开关仅影响编辑视图；导出始终保留孔位编号与行列标识。</p>
+            <p class="display-note">孔位编号与导出设置同步。行列标识和边框开关仅影响编辑视图。</p>
           </section>
           <section class="panel settings-panel action-panel">
             <h2>选择操作 <span>Selection</span></h2>
             <div class="two-buttons"><button id="selectAll" class="button subtle">全选孔位</button><button id="deselectAll" class="button subtle">取消选择</button></div>
             <p class="selection-tip">点击行号或列号，选择整行或整列。</p>
             <div class="help-box"><span class="help-icon" aria-hidden="true">ⓘ</span><strong>使用提示</strong><ol><li>点击或拖动选择孔位。</li><li>输入标签并应用，或点击已有标签。</li><li>检查图例后导出高清图片。</li></ol><p>选中描边只辅助编辑，不会出现在导出图片中。</p></div>
+            <div class="export-settings">
+              <h3>导出内容</h3>
+              <label class="switch-row" for="exportIds">导出孔位编号<input id="exportIds" type="checkbox" checked role="switch"></label>
+              <label class="switch-row" for="exportLegend">导出标签图例<input id="exportLegend" type="checkbox" checked role="switch"></label>
+              <p class="display-note">编号与显示设置同步；关闭图例后仍保留孔内标签文字。</p>
+            </div>
             <label class="resolution-label" for="exportScale">导出清晰度</label><select id="exportScale"><option value="1">标准 · 1×</option><option value="2" selected>高清 · 2×</option><option value="3">超清 · 3×</option></select>
             <p class="privacy-note">本地生成 · 无需登录 · 不上传方案</p>
           </section>

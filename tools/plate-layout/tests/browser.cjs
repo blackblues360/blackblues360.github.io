@@ -150,6 +150,47 @@ const os = require('node:os');
       assert.ok(dimensions.height > 1600);
       assert.deepEqual(dimensions.corner, [255,255,255,255]);
     }
+    for (const includeIds of [true, false]) {
+      for (const includeLegend of [true, false]) {
+        await page.locator('#exportIds').setChecked(includeIds);
+        await page.locator('#exportLegend').setChecked(includeLegend);
+        assert.equal(await page.locator('#showIds').isChecked(), includeIds);
+        assert.equal(await well('H12').locator('text').count(), includeIds ? 1 : 0);
+        assert.equal(await page.locator('#legend .legend-item').count(), 6, 'export preference leaves the editing legend intact');
+        const artwork = await page.evaluate(async () => {
+          const { buildExportSvg } = await import('../plate-layout/core.mjs');
+          const art = buildExportSvg(JSON.parse(localStorage.getItem('blackblues.plate-layout.v1')));
+          const doc = new DOMParser().parseFromString(art.svg, 'image/svg+xml');
+          return {
+            height: art.height,
+            ids: [...doc.querySelectorAll('svg svg text')].some(text => text.textContent === 'H12'),
+            legend: doc.documentElement.textContent.includes('标签图例 / Legend')
+          };
+        });
+        assert.equal(artwork.ids, includeIds);
+        assert.equal(artwork.legend, includeLegend);
+        for (const format of ['png', 'jpg']) {
+          const event = page.waitForEvent('download');
+          await page.locator(format === 'png' ? '#exportPng' : '#exportJpg').click();
+          const target = path.join(output, `options-${includeIds ? 'ids' : 'no-ids'}-${includeLegend ? 'legend' : 'no-legend'}.${format}`);
+          await (await event).saveAs(target);
+          const bytes = await fs.readFile(target);
+          const height = format === 'png' ? bytes.readUInt32BE(20) : await page.evaluate(async base64 => {
+            const image = new Image(); image.src = `data:image/jpeg;base64,${base64}`; await image.decode(); return image.height;
+          }, bytes.toString('base64'));
+          assert.equal(height, Math.round(artwork.height * 2));
+        }
+      }
+    }
+    await page.reload(); await well('H12').waitFor();
+    assert.equal(await page.locator('#showIds').isChecked(), false);
+    assert.equal(await page.locator('#exportIds').isChecked(), false);
+    assert.equal(await page.locator('#exportLegend').isChecked(), false);
+    await page.locator('#exportLegend').check();
+    await page.locator('#undo').click(); assert.equal(await page.locator('#exportLegend').isChecked(), false);
+    await page.locator('#redo').click(); assert.equal(await page.locator('#exportLegend').isChecked(), true);
+    await page.locator('#showIds').check(); assert.equal(await page.locator('#exportIds').isChecked(), true);
+    console.log('PASS: all four numbering/legend export combinations in PNG and JPG, linked numbering controls, persisted options, undo/redo');
     await page.locator('#notice').waitFor({ state: 'hidden' });
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.screenshot({ path: path.join(output, 'desktop-1280.png'), fullPage: true });

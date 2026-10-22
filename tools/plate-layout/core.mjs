@@ -35,7 +35,7 @@ export function createState(type = '96') {
     plate: { type: String(type), title: '' },
     wells: Object.fromEntries(wellIds(type).map(id => [id, null])),
     labels: [],
-    ui: { selected: [], activeLabelId: null, showIds: true, showAxes: true, showFrame: true, wellScale: 100 }
+    ui: { selected: [], activeLabelId: null, showIds: true, showAxes: true, showFrame: true, exportLegend: true, wellScale: 100 }
   };
 }
 
@@ -66,7 +66,7 @@ export function restoreState(raw) {
   const selected = new Set(Array.isArray(raw.ui?.selected) ? raw.ui.selected : []);
   state.ui.selected = Object.keys(state.wells).filter(id => selected.has(id));
   if (ids.has(raw.ui?.activeLabelId)) state.ui.activeLabelId = raw.ui.activeLabelId;
-  for (const key of ['showIds', 'showAxes', 'showFrame']) {
+  for (const key of ['showIds', 'showAxes', 'showFrame', 'exportLegend']) {
     if (typeof raw.ui?.[key] === 'boolean') state.ui[key] = raw.ui[key];
   }
   if (Number.isFinite(raw.ui?.wellScale)) state.ui.wellScale = Math.max(75, Math.min(110, raw.ui.wellScale));
@@ -188,7 +188,7 @@ export function plateMarkup(state, interactive = true) {
   const height = 64 + rows * step + 28;
   const radius = step * .405 * state.ui.wellScale / 100;
   const showAxes = !interactive || state.ui.showAxes;
-  const showIds = !interactive || state.ui.showIds;
+  const showIds = state.ui.showIds;
   const labels = new Map(state.labels.map(label => [label.id, label]));
   const selected = new Set(interactive ? state.ui.selected : []);
   const content = [];
@@ -238,10 +238,14 @@ export function buildExportSvg(state) {
   const plateY = titleBottom + 57;
   const plateHeight = plate.height * 1.104;
   body.push(`<svg x="48" y="${plateY}" width="1104" height="${plateHeight}" viewBox="0 0 ${plate.width} ${plate.height}">${plate.content}</svg>`);
-  let y = plateY + plateHeight + 45;
-  body.push(`<text x="48" y="${y}" font-size="20" font-weight="600">标签图例 / Legend</text>`);
-  y += 27;
-  const labels = usedLabels(state);
+  const includeLegend = state.ui.exportLegend !== false;
+  let y = plateY + plateHeight;
+  if (includeLegend) {
+    y += 45;
+    body.push(`<text x="48" y="${y}" font-size="20" font-weight="600">标签图例 / Legend</text>`);
+    y += 27;
+  }
+  const labels = includeLegend ? usedLabels(state) : [];
   for (let index = 0; index < labels.length; index += 2) {
     const cards = labels.slice(index, index + 2).map(label => ({
       label,
@@ -259,7 +263,7 @@ export function buildExportSvg(state) {
     });
     y += cardHeight + 13;
   }
-  if (!labels.length) {
+  if (includeLegend && !labels.length) {
     body.push(`<text x="48" y="${y + 23}" font-size="16" fill="#718591">尚未分配实验标签 / No labels assigned</text>`);
     y += 60;
   }

@@ -125,10 +125,47 @@ test('live SVG has accessible coordinates and selected rings; export excludes ed
   assert.ok(!exported.svg.includes('data-well='));
   assert.ok(!exported.svg.includes('aria-pressed'));
   assert.ok(!exported.svg.includes('stroke="#386f61"'));
-  assert.ok(exported.svg.includes('>H12</text>'));
+  assert.ok(!exported.svg.includes('>H12</text>'));
   assert.ok(exported.svg.includes('2 孔位 (2.1%)'));
   assert.ok(exported.svg.includes('A1, H12'));
   assert.ok(exported.svg.includes('fill="#ffffff"'));
+});
+
+test('export respects all combinations of well numbering and legend visibility', () => {
+  const state = createState();
+  state.ui.selected = ['A1', 'H12'];
+  assignLabel(state, 'OVA', '#aabbcc');
+  const withLegend = buildExportSvg(state).height;
+  for (const showIds of [true, false]) {
+    for (const exportLegend of [true, false]) {
+      state.ui.showIds = showIds;
+      state.ui.exportLegend = exportLegend;
+      const result = buildExportSvg(state);
+      assert.equal(result.svg.includes('>H12</text>'), showIds);
+      assert.equal(result.svg.includes('标签图例 / Legend'), exportLegend);
+      assert.equal(result.svg.includes('2 孔位 (2.1%)'), exportLegend);
+      assert.equal(result.svg.includes('A1, H12'), exportLegend);
+      assert.ok(result.svg.includes('>OVA</text>'), 'well labels remain without a legend');
+      assert.equal((result.svg.match(/class="well-circle"/g) || []).length, 96);
+      assert.ok(exportLegend ? result.height === withLegend : result.height < withLegend);
+    }
+  }
+  const blank = createState('6');
+  blank.ui.exportLegend = false;
+  assert.ok(!buildExportSvg(blank).svg.includes('No labels assigned'));
+});
+
+test('export settings restore persistently and older saves keep their numbering preference', () => {
+  const state = createState();
+  state.ui.showIds = false;
+  state.ui.exportLegend = false;
+  const restored = restoreState(JSON.parse(JSON.stringify(state)));
+  assert.equal(restored.ui.showIds, false);
+  assert.equal(restored.ui.exportLegend, false);
+  delete state.ui.exportLegend;
+  const legacy = restoreState(state);
+  assert.equal(legacy.ui.showIds, false);
+  assert.equal(legacy.ui.exportLegend, true);
 });
 
 test('user text is escaped in SVG while full label names remain in the legend', () => {
