@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="description" content="在浏览器中设计 6、12、24、96 孔板的实验分组，管理标签并导出高清 PNG/JPG。方案仅保存在本机。">
+    <title>孔板铺板设计器 · blackblues</title>
+    <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="plate-layout.css">
+    <script type="module" src="app.mjs"></script>
+  </head>
+  <body>
+    <div class="workspace">
+      <nav class="breadcrumb" aria-label="位置">
+        <a href="../../">blackblues<span class="brand-dot">.</span></a>
+        <span class="divider">/</span><span>实验工具</span>
+        <span id="saveStatus" class="save-status" role="status">仅保存在此浏览器</span>
+      </nav>
+
+      <header class="masthead panel">
+        <div class="tool-identity">
+          <svg class="tool-mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <rect x="3" y="5" width="42" height="38" rx="9" stroke="currentColor" stroke-width="1.5"/>
+            <g fill="currentColor"><circle cx="13" cy="15" r="3"/><circle cx="24" cy="15" r="3"/><circle cx="35" cy="15" r="3"/><circle cx="13" cy="24" r="3"/><circle cx="24" cy="24" r="3"/><circle cx="35" cy="24" r="3"/><circle cx="13" cy="33" r="3"/><circle cx="24" cy="33" r="3"/><circle cx="35" cy="33" r="3"/></g>
+          </svg>
+          <div><h1>Plate Layout Designer</h1><p class="chinese-title">孔板铺板设计器</p><p class="subtitle">从实验分组，到一张清晰的铺板方案。</p></div>
+        </div>
+        <div class="plan-title"><label for="planTitle">实验名称 / 方案标题</label><input id="planTitle" maxlength="160" placeholder="为这次实验命名…" autocomplete="off"><span id="titleCount" class="field-hint">0 / 160</span></div>
+        <div class="header-actions">
+          <div class="history-actions"><button id="undo" class="icon-action" title="撤销（Ctrl / ⌘ + Z）" disabled><span aria-hidden="true">↶</span>撤销</button><button id="redo" class="icon-action" title="重做（Ctrl / ⌘ + Shift + Z）" disabled><span aria-hidden="true">↷</span>重做</button><button id="reset" class="icon-action" title="重置当前方案"><span aria-hidden="true">⟲</span>重置</button></div>
+          <div class="export-actions"><button id="exportPng" class="button secondary"><span aria-hidden="true">↓</span> 导出 PNG</button><button id="exportJpg" class="button primary"><span aria-hidden="true">↓</span> 导出 JPG</button></div>
+        </div>
+      </header>
+
+      <main class="designer">
+        <aside class="left-sidebar" aria-label="孔板设置">
+          <section class="panel settings-panel">
+            <h2>孔板类型 <span>Plate type</span></h2>
+            <div id="plateTypes" class="plate-types" role="group" aria-label="选择孔板类型">
+              <button data-type="6" aria-pressed="false"><span class="mini-plate" aria-hidden="true">⠿</span><span><strong>6 孔板</strong><small>2 × 3</small></span></button>
+              <button data-type="12" aria-pressed="false"><span class="mini-plate" aria-hidden="true">⠿</span><span><strong>12 孔板</strong><small>3 × 4</small></span></button>
+              <button data-type="24" aria-pressed="false"><span class="mini-plate" aria-hidden="true">⠿</span><span><strong>24 孔板</strong><small>4 × 6</small></span></button>
+              <button data-type="96" aria-pressed="true"><span class="mini-plate" aria-hidden="true">⠿</span><span><strong>96 孔板</strong><small>8 × 12</small></span></button>
+            </div>
+          </section>
+          <section class="panel settings-panel">
+            <h2>显示设置 <span>Display</span></h2>
+            <label class="switch-row" for="showIds">显示孔位编号<input id="showIds" type="checkbox" checked role="switch"></label>
+            <label class="switch-row" for="showAxes">显示行列标识<input id="showAxes" type="checkbox" checked role="switch"></label>
+            <label class="switch-row" for="showFrame">显示孔板边框<input id="showFrame" type="checkbox" checked role="switch"></label>
+            <label class="size-label" for="wellScale">孔位大小 <output id="wellScaleValue">100%</output></label><input id="wellScale" class="size-slider" type="range" min="75" max="110" value="100" step="5">
+            <p class="display-note">显示开关仅影响编辑视图；导出始终保留孔位编号与行列标识。</p>
+          </section>
+          <section class="panel settings-panel action-panel">
+            <h2>选择操作 <span>Selection</span></h2>
+            <div class="two-buttons"><button id="selectAll" class="button subtle">全选孔位</button><button id="deselectAll" class="button subtle">取消选择</button></div>
+            <p class="selection-tip">点击行号或列号，选择整行或整列。</p>
+            <div class="help-box"><span class="help-icon" aria-hidden="true">ⓘ</span><strong>使用提示</strong><ol><li>点击或拖动选择孔位。</li><li>输入标签并应用，或点击已有标签。</li><li>检查图例后导出高清图片。</li></ol><p>选中描边只辅助编辑，不会出现在导出图片中。</p></div>
+            <label class="resolution-label" for="exportScale">导出清晰度</label><select id="exportScale"><option value="1">标准 · 1×</option><option value="2" selected>高清 · 2×</option><option value="3">超清 · 3×</option></select>
+            <p class="privacy-note">本地生成 · 无需登录 · 不上传方案</p>
+          </section>
+        </aside>
+
+        <div class="canvas-column">
+          <section class="panel plate-panel" aria-labelledby="plateHeading">
+            <div class="section-heading"><h2 id="plateHeading">96 孔板 <span>96-well plate</span></h2><span id="assignedCount" class="small-stat">0 / 96 已标记</span></div>
+            <div class="plate-scroll"><svg id="plate" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="孔板，点击孔位进行多选" aria-describedby="plateInstructions"></svg></div>
+            <div class="plate-caption"><p id="plateInstructions"><span class="selection-key" aria-hidden="true"></span>点击 / 拖动多选 <span class="caption-divider">·</span> 方向键移动，空格选中</p><span id="plateDimensions">8 行 × 12 列</span></div>
+          </section>
+          <section class="panel legend-panel" aria-labelledby="legendHeading">
+            <div class="section-heading"><h2 id="legendHeading">标签图例 <span>Legend &amp; statistics</span></h2><span id="legendSummary" class="small-stat">尚未标记孔位</span></div>
+            <div id="legend" class="legend-grid"></div>
+          </section>
+        </div>
+
+        <aside class="right-sidebar" aria-label="标签与当前选择">
+          <section class="panel selection-panel">
+            <div class="section-heading"><h2>当前选择 <span>Selection</span></h2><strong id="selectionCount" class="selection-count">0 个孔位</strong></div>
+            <div id="selectionList" class="selection-list" aria-label="选中的孔位"></div>
+            <button id="clearSelection" class="button subtle full-width">取消当前选择</button>
+          </section>
+          <section class="panel label-editor">
+            <h2>标签设置 <span>Label settings</span></h2>
+            <form id="labelForm">
+              <label for="labelName">标签名称</label><input id="labelName" maxlength="160" placeholder="例如 OVA + LPS" autocomplete="off" required>
+              <label for="labelColor">标签颜色 <span id="colorMode">自动推荐</span></label><div class="color-field"><input id="labelColor" type="color" value="#a9c9ed" aria-label="新标签颜色"><span id="colorHex">#A9C9ED</span><button id="autoColor" type="button" title="自动选择未使用的浅色">自动配色</button></div>
+              <button id="applyLabel" class="button primary full-width" type="submit">＋ 创建并应用到选中孔位</button>
+            </form>
+            <button id="clearLabels" class="button subtle full-width">清除选中孔位的标签</button>
+            <p id="editorHint" class="editor-hint">先在孔板上选择需要分组的孔位。</p>
+          </section>
+          <section class="panel labels-panel">
+            <div class="section-heading"><h2>已有标签 <span>Label library</span></h2><span id="labelCount" class="small-stat">0</span></div>
+            <p class="library-tip">点击名称应用；色块可修改颜色。未使用标签保留在库中。</p>
+            <div id="labelLibrary" class="label-library"></div>
+          </section>
+        </aside>
+      </main>
+      <footer class="workspace-footer"><span>BLACKBLUES / LAB TOOLS</span><span>让实验设计清晰可见。</span><a href="../../">返回导航站 ↗</a></footer>
+    </div>
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <noscript><p class="noscript">请启用 JavaScript 以使用孔板设计和图片导出功能。</p></noscript>
+  </body>
+</html>
