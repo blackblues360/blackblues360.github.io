@@ -1,4 +1,4 @@
-import {end,total,formatDuration,environmentRuns,primaryObject} from './core.mjs?v=3';
+import {end,total,formatDuration,getEnvironmentRanges} from './core.mjs?v=4';
 const W=744,esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 const text=(x,y,value,size=13,color='#3f506f',extra='')=>`<text x="${x}" y="${y}" font-size="${size}" fill="${color}" ${extra}>${esc(value)}</text>`;
 function richTokens(html){const template=document.createElement('template');template.innerHTML=html;const tokens=[];function walk(node,bold=false,italic=false){if(node.nodeType===3){for(const char of node.textContent)tokens.push({char,bold,italic});return;}if(node.nodeType!==1&&node.nodeType!==11)return;const tag=node.tagName?.toLowerCase();if(['script','style','iframe','object'].includes(tag))return;if(tag==='br')tokens.push({char:'\n'});for(const child of node.childNodes)walk(child,bold||['b','strong'].includes(tag),italic||['i','em'].includes(tag));if(['div','p'].includes(tag))tokens.push({char:'\n'});}walk(template.content);return tokens;}
@@ -29,7 +29,7 @@ function groupSlice(d,g,start,stop,offset,continuation){
     shapes+=`<rect x="${x}" y="${sy}" width="${w}" height="${Math.max(20,ey-sy)}" rx="6" fill="${b.lane==='operation'?opFill:'#ffe0bd'}" stroke="${b.lane==='operation'?'#a5c3e5':'#efbc88'}"/>${text(x+w/2,sy+21,`${top<start?'↳ ':''}${formatDuration(b.duration)}`,11,b.lane==='operation'?'#355b88':'#875635','text-anchor="middle" font-weight="700"')}`;
     if(bottom>stop)shapes+=text(x+w/2,ey-5,'续下页 ↓',9,'#8b9ab0','text-anchor="middle"');
   }
-  for(const run of environmentRuns(d.doc.blocks.filter(b=>b.object===primaryObject(d.doc)))){
+  for(const run of getEnvironmentRanges(d.doc).filter(r=>r.group===g.id)){
     if(!g.nodes.length)continue;const ts=Math.max(run.start,g.nodes[0]),te=Math.min(run.end,g.nodes.at(-1));if(ts>=te)continue;const top=y(ts),bottom=y(te);if(bottom<=start||top>=stop)continue;
     const sy=Math.max(start,top)+6,ey=Math.min(stop,bottom)-6,cold=/4|冰|避光/.test(run.environment),color=cold?'#9478bf':'#509d87';
     shapes+=`<rect x="${W-env+9}" y="${sy}" width="${env-18}" height="${Math.max(25,ey-sy)}" rx="6" fill="${cold?'#f0eafa':'#edf8f3'}"/>${text(W-env/2,sy+15,top<start||run.start<g.nodes[0]?'↑ 续':'↑',11,color,'text-anchor="middle"')}`;

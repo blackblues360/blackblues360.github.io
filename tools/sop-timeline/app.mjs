@@ -1,7 +1,7 @@
-import {defaults,clone,uid,end,total,formatDuration,parseDuration,validate,emptyDocument,sampleDocument,endpoints,resizeBlock,deleteBlock,deleteGroup,addBlock,insertBlock,moveBlock,reorderGroup,importDocument,environmentRuns,primaryObject,groupLayout} from './core.mjs?v=3';
-import {exportPNG,printPDF} from './export.mjs?v=3';
+import {defaults,clone,uid,end,total,formatDuration,parseDuration,validate,emptyDocument,sampleDocument,endpoints,resizeBlock,deleteBlock,deleteGroup,addBlock,insertBlock,moveBlock,reorderGroup,importDocument,getEnvironmentRanges,setEnvironmentRange,resizeEnvironmentRange,removeEnvironmentRange,groupLayout} from './core.mjs?v=4';
+import {exportPNG,printPDF} from './export.mjs?v=4';
 const $=s=>document.querySelector(s), paper=$('#paper'),viewport=$('#viewport'),storageKey='blackblues.sop-timeline.v1';
-let doc=sampleDocument(), selected=null, activeGroup=doc.groups[0].id, past=[],future=[],clipboard=null,zoom=1,drag=null,toastTimer,editSnapshot=null,fileHandle=null,space=false,pointerHeld=false,needsRefresh=false,environmentTargetIds=[];
+let doc=sampleDocument(), selected=null, activeGroup=doc.groups[0].id, past=[],future=[],clipboard=null,zoom=1,drag=null,toastTimer,editSnapshot=null,fileHandle=null,space=false,pointerHeld=false,needsRefresh=false,environmentSelection=null;
 let recoveryMessage='';
 try {const stored=localStorage.getItem(storageKey);if(stored){doc=importDocument(stored);recoveryMessage='已恢复本机自动保存的草稿';}activeGroup=doc.groups[0]?.id;}catch{recoveryMessage='草稿读取失败，已保留原存储。请先保存当前文件。';}
 const esc=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -36,7 +36,7 @@ function render(){
   if(!doc.groups.some(g=>g.id===activeGroup))activeGroup=doc.groups[0]?.id;
   const l=doc.layout;paper.style.setProperty('--ow',`${l.operationWidth}px`);paper.style.setProperty('--ww',`${l.waitWidth}px`);paper.style.setProperty('--gap',`${l.laneGap}px`);paper.style.setProperty('--ew',`${l.environmentWidth}px`);paper.style.setProperty('--fs',`${l.fontSize}px`);document.body.dataset.theme=l.theme;
   paper.innerHTML=`<header class="paper-heading"><div class="paper-title"><h1 contenteditable="plaintext-only" data-doc="name" aria-label="实验名称">${esc(doc.name)}</h1><p>SOP 实验流程</p></div><div class="metadata">${[['revision','版本'],['date','日期'],['author','作者']].map(([key,label])=>`<label><span>${label}</span><input data-doc="${key}" value="${esc(doc[key])}" aria-label="${label}" placeholder="点击填写"></label>`).join('')}</div></header><div class="columns"><span>等待</span><span>操作</span><span>实验操作</span><span>环境</span></div>`;
-  const allRuns=environmentRuns(doc.blocks.filter(b=>b.object===primaryObject(doc)));
+  const allRuns=getEnvironmentRanges(doc);
   doc.groups.forEach((g,index)=>{
     const layout=groupLayout(doc,g.id), section=document.createElement('section');section.className='step-group';section.dataset.group=g.id;
     section.innerHTML=`<header class="group-heading"><span class="group-grip" draggable="true" data-group-drag="${g.id}" title="拖动大步骤排序">⠿</span><span class="number">${String(index+1).padStart(2,'0')}</span><span class="group-title" contenteditable="plaintext-only" data-group-title="${g.id}" aria-label="大步骤标题">${esc(g.title)}</span><span class="group-time">${layout.blocks.length?formatDuration(Math.max(...layout.blocks.map(end))-Math.min(...layout.blocks.map(b=>b.start))):'空步骤'}</span><button class="remove-group" data-remove-group="${g.id}" title="删除整个大步骤（Ctrl+Z 撤销）">×</button><button data-collapse="${g.id}" aria-label="${g.collapsed?'展开':'折叠'}大步骤" aria-expanded="${!g.collapsed}">${g.collapsed?'⌄':'⌃'}</button></header>`;
@@ -53,8 +53,8 @@ function render(){
         texts.innerHTML=simultaneous.map(b=>`<div class="text-item ${b.lane==='wait'?'wait-text':''}" data-text-id="${b.id}"><div class="block-description" contenteditable="true" data-text="${b.id}" data-placeholder="点击输入实验操作…" aria-label="实验操作文字">${safeHTML(b.text)}</div></div>`).join('');body.append(texts);
       }
       const start=layout.nodes[0], finish=layout.nodes.at(-1);
-      for(const run of allRuns.filter(r=>finish>start&&r.start<finish&&r.end>start)){
-        const top=Math.max(run.start,start),bottom=Math.min(run.end,finish),env=document.createElement('div');env.className=`env-run ${/4|冰|避光/.test(run.environment)?'cold':/37/.test(run.environment)?'warm':''}`;env.style.top=`${layout.toY(top)+7}px`;env.style.height=`${Math.max(36,layout.toY(bottom)-layout.toY(top)-14)}px`;env.innerHTML=`<button class="environment-label" data-edit-environment="${run.ids.join(',')}" title="选择环境">${esc(run.environment)}</button><small class="env-object">${run.start<start?'↑ 接上步骤':run.end>finish?'↓ 续下步骤':''}</small>`;body.append(env);
+      for(const run of allRuns.filter(r=>r.group===g.id&&finish>start)){
+        const env=document.createElement('div');env.className=`env-run ${/4|冰|避光/.test(run.environment)?'cold':/37/.test(run.environment)?'warm':''}`;env.dataset.environmentId=run.id;env.style.top=`${layout.toY(run.start)+7}px`;env.style.height=`${Math.max(36,layout.toY(run.end)-layout.toY(run.start)-14)}px`;env.innerHTML=`<button class="environment-resize start" data-environment-resize="start" data-range-id="${run.id}" aria-label="拖动环境上边界" title="拖动上边界，调整环境开始范围">↑</button><button class="environment-label" data-edit-environment="${run.id}" title="选择环境">${esc(run.environment)}</button><button class="environment-resize end" data-environment-resize="end" data-range-id="${run.id}" aria-label="拖动环境下边界" title="拖动下边界，调整环境结束范围">↓</button>`;body.append(env);
       }
       section.append(body);
       doc.notes.filter(n=>n.group===g.id).forEach(n=>{const note=document.createElement('div');note.className='group-note';note.innerHTML=`<span>!</span><span contenteditable="plaintext-only" data-note="${n.id}" aria-label="备注">${esc(n.text)}</span><button data-remove-note="${n.id}" aria-label="删除备注">×</button>`;section.append(note);});
@@ -83,25 +83,25 @@ function measureText(){
       for(const el of body.querySelectorAll('.block-texts,.time-line'))el.style.top=`${y(Number(el.dataset.time))}px`;
       body.style.height=`${layout.height+extra}px`;
     }
-    const runs=environmentRuns(doc.blocks.filter(b=>b.object===primaryObject(doc))).filter(r=>layout.nodes.at(-1)>layout.nodes[0]&&r.start<layout.nodes.at(-1)&&r.end>layout.nodes[0]);
-    [...body.querySelectorAll('.env-run')].forEach((el,i)=>{const r=runs[i];el.style.top=`${y(Math.max(r.start,layout.nodes[0]))+7}px`;el.style.height=`${y(Math.min(r.end,layout.nodes.at(-1)))-y(Math.max(r.start,layout.nodes[0]))-14}px`;});
+    const runs=getEnvironmentRanges(doc).filter(r=>r.group===section.dataset.group);
+    for(const el of body.querySelectorAll('.env-run')){const r=runs.find(r=>r.id===el.dataset.environmentId);el.style.top=`${y(r.start)+7}px`;el.style.height=`${y(r.end)-y(r.start)-14}px`;}
     body._mapping={nodes:layout.nodes,ys:layout.nodes.map(y)};
   }
 }
 function bodyTime(body,clientY){const m=body._mapping, pos=(clientY-body.getBoundingClientRect().top)/zoom;if(!m?.nodes.length)return 0;for(let i=1;i<m.nodes.length;i++)if(pos<=m.ys[i])return m.nodes[i-1]+(pos-m.ys[i-1])/(m.ys[i]-m.ys[i-1])*(m.nodes[i]-m.nodes[i-1]);const i=m.nodes.length-1;return i>0?m.nodes[i]+(pos-m.ys[i])/(m.ys[i]-m.ys[i-1])*(m.nodes[i]-m.nodes[i-1]):m.nodes[0];}
 function nearestTime(body,clientY,duration=0){const time=bodyTime(body,clientY);const nodes=[...new Set(endpoints(doc).flatMap(t=>[t,t-duration]))].filter(t=>t>=0);return nodes.reduce((a,b)=>Math.abs(b-time)<Math.abs(a-time)?b:a,0);}
 function newBlock(lane,group){return {id:uid(),lane,group,start:0,duration:lane==='wait'?1800:300,text:'',environment:'',object:'样本'};}
-function chooseEnvironment(ids){
-  environmentTargetIds=ids.filter(id=>doc.blocks.some(b=>b.id===id));if(!environmentTargetIds.length){toast('请先添加时间块，再拖入环境块');return;}
+function chooseEnvironment(range){
+  if(!range||range.start>=range.end){toast('请先添加时间块，再拖入环境块');return;}environmentSelection=clone(range);$('#clearEnvironment').disabled=!range.id;
   $('#environmentChoices').innerHTML=doc.environmentTerms.map((term,index)=>`<button data-environment-choice="${index}">${esc(term)}</button>`).join('')||'<p>请先在设置中添加环境词条。</p>';
   $('#environmentDialog').showModal();
 }
-function environmentBlockAt(body,clientY){const time=bodyTime(body,clientY),blocks=doc.blocks.filter(b=>b.group===body.dataset.group&&b.object===primaryObject(doc)).sort((a,b)=>(a.lane==='wait'?0:1)-(b.lane==='wait'?0:1)||a.start-b.start);return blocks.find(b=>b.start<=time&&end(b)>time)||blocks.at(-1);}
+function environmentIntervalAt(body,clientY){const nodes=body._mapping?.nodes;if(!nodes||nodes.length<2)return null;const time=bodyTime(body,clientY),index=nodes.findIndex((t,i)=>i>0&&t>time),last=index<0?nodes.length-1:index;return {group:body.dataset.group,start:nodes[last-1],end:nodes[last]};}
 function addComponent(type,group=activeGroup,time){
   finishEdit();
   if(type==='group'){const id=uid();mutate(d=>d.groups.push({id,title:'新大步骤',collapsed:false}));activeGroup=id;return;}
   if(!group){toast('请先添加一个大步骤容器');return;}
-  if(type==='environment'){const b=doc.blocks.find(b=>b.id===selected)||doc.blocks.find(b=>b.group===group&&b.object===primaryObject(doc));chooseEnvironment(b?[b.id]:[]);return;}
+  if(type==='environment'){const b=doc.blocks.find(b=>b.id===selected)||doc.blocks.find(b=>b.group===group);if(!b){chooseEnvironment(null);return;}const nodes=groupLayout(doc,b.group).nodes,index=nodes.indexOf(b.start);chooseEnvironment({group:b.group,start:b.start,end:nodes[index+1]});return;}
   if(type==='note'){mutate(d=>d.notes.push({id:uid(),group,text:'点击输入备注'}));return;}
   const blocks=doc.blocks.filter(b=>b.group===group), groupEnd=blocks.length?Math.max(...blocks.map(end)):groupLayout(doc,group).nodes[0],wait=blocks.find(b=>b.lane==='wait'&&!doc.blocks.some(o=>o.lane==='operation'&&o.start<=b.start&&end(o)>b.start));
   const target=time??(type==='operation'&&wait?wait.start:groupEnd), b=newBlock(type,group);
@@ -127,7 +127,7 @@ paper.addEventListener('paste',e=>{if(!e.target.matches('[contenteditable]'))ret
 paper.addEventListener('click',e=>{
   const el=e.target, b=el.closest('.time-block');if(b)select(b.dataset.id);
   if(el.dataset.select)select(el.dataset.select);
-  if(el.dataset.editEnvironment)chooseEnvironment(el.dataset.editEnvironment.split(','));
+  if(el.dataset.editEnvironment)chooseEnvironment(getEnvironmentRanges(doc).find(r=>r.id===el.dataset.editEnvironment));
   if(el.dataset.collapse)mutate(d=>{const g=d.groups.find(g=>g.id===el.dataset.collapse);g.collapsed=!g.collapsed;});
   if(el.dataset.removeGroup)commit(deleteGroup(doc,el.dataset.removeGroup),'已删除大步骤及其内容，Ctrl+Z 可撤销');
   if(el.dataset.removeNote)mutate(d=>d.notes=d.notes.filter(n=>n.id!==el.dataset.removeNote));
@@ -135,7 +135,7 @@ paper.addEventListener('click',e=>{
 });
 document.querySelectorAll('[data-component]').forEach(el=>{el.addEventListener('click',()=>addComponent(el.dataset.component));el.addEventListener('dragstart',e=>{finishEdit();drag={type:el.dataset.component};e.dataTransfer.setData('text/plain',el.dataset.component);e.dataTransfer.effectAllowed='copy';});});
 paper.addEventListener('dragstart',e=>{
-  if(e.target.closest('input,[contenteditable],.resize')){e.preventDefault();return;}
+  if(e.target.closest('input,[contenteditable],.resize,.environment-resize')){e.preventDefault();return;}
   finishEdit();const grip=e.target.closest('[data-group-drag]'),b=e.target.closest('.time-block');
   if(grip)drag={group:grip.dataset.groupDrag};else if(b){drag={id:b.dataset.id,type:doc.blocks.find(x=>x.id===b.dataset.id).lane};select(b.dataset.id);}else return;
   e.dataTransfer.setData('text/plain',JSON.stringify(drag));e.dataTransfer.effectAllowed='move';
@@ -143,7 +143,7 @@ paper.addEventListener('dragstart',e=>{
 function clearGuide(){paper.querySelectorAll('.drop-guide').forEach(el=>el.remove());}
 paper.addEventListener('dragover',e=>{
   if(!drag)return;e.preventDefault();clearGuide();const body=e.target.closest('.timeline-body');if(!body||drag.group||drag.type==='group'||drag.type==='note')return;
-  if(drag.type==='environment'){const b=environmentBlockAt(body,e.clientY),valid=e.clientX>=body.getBoundingClientRect().right-doc.layout.environmentWidth*zoom&&b,guide=document.createElement('div');guide.className=`drop-guide${valid?'':' invalid'}`;const m=body._mapping;guide.style.top=`${b?m.ys[m.nodes.indexOf(b.start)]:0}px`;guide.innerHTML=`<span>${valid?'放入环境块 · 选择词条':'请拖到最右侧环境区'}</span>`;body.append(guide);return;}
+  if(drag.type==='environment'){const range=environmentIntervalAt(body,e.clientY),valid=e.clientX>=body.getBoundingClientRect().right-doc.layout.environmentWidth*zoom&&range,guide=document.createElement('div');guide.className=`drop-guide${valid?'':' invalid'}`;const m=body._mapping;guide.style.top=`${range?m.ys[m.nodes.indexOf(range.start)]:0}px`;guide.innerHTML=`<span>${valid?`环境范围 ${formatDuration(range.start)}–${formatDuration(range.end)}`:'请拖到最右侧环境区'}</span>`;body.append(guide);return;}
   const x=(e.clientX-body.getBoundingClientRect().left)/zoom,l=doc.layout,lane=x<l.waitWidth?'wait':x>=l.waitWidth+l.laneGap&&x<l.waitWidth+l.laneGap+l.operationWidth?'operation':null;
   const b=drag.id?{...doc.blocks.find(b=>b.id===drag.id),group:body.dataset.group}:newBlock(drag.type,body.dataset.group),time=nearestTime(body,e.clientY,b.duration);
   const next=drag.id?moveBlock(doc,b.id,body.dataset.group,time):insertBlock(doc,b,time),valid=lane===drag.type&&!next.error;
@@ -153,12 +153,21 @@ paper.addEventListener('drop',e=>{
   if(!drag)return;e.preventDefault();clearGuide();const target=e.target.closest('.step-group'),body=e.target.closest('.timeline-body'),group=target?.dataset.group||activeGroup;
   if(drag.group){commit(reorderGroup(doc,drag.group,target?.dataset.group));}
   else if(drag.type==='group'||drag.type==='note')addComponent(drag.type,group);
-  else if(drag.type==='environment'&&body){if(e.clientX<body.getBoundingClientRect().right-doc.layout.environmentWidth*zoom)toast('环境块只能放入最右侧环境区');else {const b=environmentBlockAt(body,e.clientY);chooseEnvironment(b?[b.id]:[]);}}
+  else if(drag.type==='environment'&&body){if(e.clientX<body.getBoundingClientRect().right-doc.layout.environmentWidth*zoom)toast('环境块只能放入最右侧环境区');else chooseEnvironment(environmentIntervalAt(body,e.clientY));}
   else if(body){const x=(e.clientX-body.getBoundingClientRect().left)/zoom,l=doc.layout,lane=x<l.waitWidth?'wait':x>=l.waitWidth+l.laneGap&&x<l.waitWidth+l.laneGap+l.operationWidth?'operation':null;if(lane!==drag.type)toast('时间块只能放入对应的操作或等待泳道');else {const duration=drag.id?doc.blocks.find(b=>b.id===drag.id).duration:drag.type==='wait'?1800:300,t=nearestTime(body,e.clientY,duration);if(drag.id)commit(moveBlock(doc,drag.id,group,t));else addComponent(drag.type,group,t);}}
   drag=null;
 });
 document.addEventListener('dragend',()=>{drag=null;pointerHeld=false;clearGuide();setTimeout(refreshAfterEdit,0);});
 paper.addEventListener('pointerdown',e=>{
+  const environmentHandle=e.target.closest('[data-environment-resize]');
+  if(environmentHandle){
+    e.preventDefault();finishEdit();const before=clone(doc),id=environmentHandle.dataset.rangeId,edge=environmentHandle.dataset.environmentResize,body=environmentHandle.closest('.timeline-body'),element=environmentHandle.closest('.env-run'),mapping=body._mapping,startY=e.clientY;let final={doc:before},moved=false;
+    environmentHandle.setPointerCapture(e.pointerId);
+    const move=event=>{if(Math.abs(event.clientY-startY)>2)moved=true;final=resizeEnvironmentRange(before,id,edge,bodyTime(body,event.clientY));if(final.error)return;const r=getEnvironmentRanges(final.doc).find(r=>r.id===id),top=mapping.ys[mapping.nodes.indexOf(r.start)],bottom=mapping.ys[mapping.nodes.indexOf(r.end)];element.style.top=`${top+7}px`;element.style.height=`${bottom-top-14}px`;let guide=body.querySelector('.drop-guide');if(!guide){guide=document.createElement('div');body.append(guide);}guide.className='drop-guide';guide.style.top=`${edge==='start'?top:bottom}px`;guide.innerHTML=`<span>环境 ${formatDuration(r.start)}–${formatDuration(r.end)}</span>`;};
+    const cleanup=()=>{environmentHandle.removeEventListener('pointermove',move);environmentHandle.removeEventListener('pointerup',finish);environmentHandle.removeEventListener('pointercancel',cancel);clearGuide();};
+    const finish=()=>{cleanup();if(moved)commit(final);else render();};
+    const cancel=()=>{cleanup();render();};environmentHandle.addEventListener('pointermove',move);environmentHandle.addEventListener('pointerup',finish);environmentHandle.addEventListener('pointercancel',cancel);return;
+  }
   const handle=e.target.closest('[data-resize]');if(!handle)return;e.preventDefault();finishEdit();select(handle.dataset.resize);
   const before=clone(doc),b=before.blocks.find(b=>b.id===handle.dataset.resize),body=handle.closest('.timeline-body'),startY=e.clientY,atEnd=bodyTime(body,e.clientY);let final={doc:before};
   handle.setPointerCapture(e.pointerId);
@@ -192,8 +201,8 @@ $('#settingFields').addEventListener('input',e=>{const el=e.target;if(!el.datase
 $('#settingFields').addEventListener('change',e=>{if(e.target.dataset.setting){finishEdit();render();}});
 $('#settingFields').addEventListener('submit',e=>{if(e.target.id!=='environmentTermForm')return;e.preventDefault();const term=$('#environmentTermInput').value.trim();if(!term){toast('请输入环境词条');return;}if(doc.environmentTerms.includes(term)){toast('这个环境词条已存在');return;}if(doc.environmentTerms.length>=100){toast('最多添加 100 个环境词条');return;}mutate(d=>d.environmentTerms.push(term));});
 $('#settingFields').addEventListener('click',e=>{if(e.target.dataset.removeTerm!==undefined)mutate(d=>d.environmentTerms.splice(Number(e.target.dataset.removeTerm),1));});
-$('#environmentChoices').addEventListener('click',e=>{const index=e.target.dataset.environmentChoice;if(index===undefined)return;const term=doc.environmentTerms[Number(index)];if(term===undefined)return;mutate(d=>{for(const b of d.blocks)if(environmentTargetIds.includes(b.id))b.environment=term;});$('#environmentDialog').close();});
-$('#clearEnvironment').onclick=()=>{mutate(d=>{for(const b of d.blocks)if(environmentTargetIds.includes(b.id))b.environment='';});$('#environmentDialog').close();};
+$('#environmentChoices').addEventListener('click',e=>{const index=e.target.dataset.environmentChoice;if(index===undefined)return;const term=doc.environmentTerms[Number(index)];if(term===undefined||!environmentSelection)return;commit(setEnvironmentRange(doc,{...environmentSelection,environment:term}));$('#environmentDialog').close();});
+$('#clearEnvironment').onclick=()=>{if(environmentSelection?.id)commit(removeEnvironmentRange(doc,environmentSelection.id));$('#environmentDialog').close();};
 $('#resetLayout').onclick=()=>mutate(d=>d.layout={...defaults});$('#saveDefaults').onclick=()=>{try{localStorage.setItem(`${storageKey}.defaults`,JSON.stringify(doc.layout));toast('已设为新 SOP 的默认布局');}catch{toast('浏览器无法保存默认布局');}};
 $('#help').onclick=()=>$('#helpDialog').showModal();
 $('#new').onclick=()=>{finishEdit();if(!confirm('新建空白 SOP？当前内容可用撤销恢复；建议先保存原始文件。'))return;const next=emptyDocument();next.environmentTerms=[...doc.environmentTerms];try{const saved=localStorage.getItem(`${storageKey}.defaults`);if(saved)next.layout=importDocument(JSON.stringify({...next,layout:JSON.parse(saved)})).layout;}catch{}fileHandle=null;commit({doc:next});activeGroup=doc.groups[0].id;};

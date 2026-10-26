@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="拖拽时间块、直接编辑实验步骤，制作可打印的双泳道实验 SOP 时间轴。支持本地保存、PNG 和 A4 PDF。"><title>SOP Timeline Editor · blackblues</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=3"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="拖拽时间块、直接编辑实验步骤，制作可打印的双泳道实验 SOP 时间轴。支持本地保存、PNG 和 A4 PDF。"><title>SOP Timeline Editor · blackblues</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=4"></head>
 <body>
 <header class="toolbar">
   <a class="brand" href="../../" title="返回 blackblues"><img src="icon.svg" alt=""><span><strong>SOP Timeline Editor</strong><small>可视化设计 · 实验标准操作流程</small></span></a>
@@ -20,7 +20,7 @@
   <aside id="settings" class="settings"><div class="panel-title"><h2>布局设置</h2><button id="settingsClose" aria-label="关闭设置">×</button></div><div id="settingFields"></div><button id="resetLayout" class="reset">恢复默认布局</button><button id="saveDefaults" class="reset">设为新 SOP 默认布局</button><p class="settings-note">仅调整视觉排版，实验时间保持不变。<br>文件与草稿保存在本机浏览器。</p></aside>
 </main>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div><input id="fileInput" type="file" accept=".soptime,application/json" hidden>
-<dialog id="helpDialog"><h2>在画布中编排实验</h2><p>先拖入大步骤，再把操作块或等待块拖到对应泳道。蓝色参考线表示合法端点；红色表示当前位置冲突。也可以点击左侧组件，在当前大步骤中添加。</p><p>点击时间输入 <b>5 min / 30 min / 2 h</b>。拖动时间块的底部手柄，只改变该块时长；相接的后继块自动移动。并行块的时长保持不变。</p><p>实验文字区直接输入文字。等待泳道在左，操作泳道在右。将环境块拖到最右侧环境区，从词条中选择；点击已有环境标注可以修改或移除。设置中可以添加和删除环境词条。</p><p>拖动容器标题的 ⠿ 调整大步骤顺序；点击 × 直接删除整个大步骤及内容，Ctrl+Z 可一次恢复。选择文字后使用左侧 B / I 加粗与强调。空格拖动画布；Ctrl + 滚轮缩放；Ctrl C / V、Delete、Ctrl Z / Y 管理选中块。</p><p>保存为 <b>.soptime</b> 可以随时恢复编辑。导出 PDF 会打开 A4 打印窗口，在目标打印机中选择“另存为 PDF”，关闭浏览器页眉页脚。长流程按时间节点分页，并重复标题、列头与环境延续标记。</p><p class="muted">示例仅用于展示编辑功能；实验参数请按经过确认的 SOP 填写。</p><form method="dialog"><button>开始编辑</button></form></dialog>
+<dialog id="helpDialog"><h2>在画布中编排实验</h2><p>先拖入大步骤，再把操作块或等待块拖到对应泳道。蓝色参考线表示合法端点；红色表示当前位置冲突。也可以点击左侧组件，在当前大步骤中添加。</p><p>点击时间输入 <b>5 min / 30 min / 2 h</b>。拖动时间块的底部手柄，只改变该块时长；相接的后继块自动移动。并行块的时长保持不变。</p><p>实验文字区直接输入文字。等待泳道在左，操作泳道在右。将环境块拖到最右侧环境区，从词条中选择。拖动环境顶部 ↑ 和底部 ↓ 可独立调整范围，最小覆盖相邻时间节点间的区间；其他时间块和文字保持不动。点击环境名称可以修改或移除，设置中可以添加和删除环境词条。</p><p>拖动容器标题的 ⠿ 调整大步骤顺序；点击 × 直接删除整个大步骤及内容，Ctrl+Z 可一次恢复。选择文字后使用左侧 B / I 加粗与强调。空格拖动画布；Ctrl + 滚轮缩放；Ctrl C / V、Delete、Ctrl Z / Y 管理选中块。</p><p>保存为 <b>.soptime</b> 可以随时恢复编辑。导出 PDF 会打开 A4 打印窗口，在目标打印机中选择“另存为 PDF”，关闭浏览器页眉页脚。长流程按时间节点分页，并重复标题、列头与环境延续标记。</p><p class="muted">示例仅用于展示编辑功能；实验参数请按经过确认的 SOP 填写。</p><form method="dialog"><button>开始编辑</button></form></dialog>
 <dialog id="environmentDialog"><h2>选择环境</h2><p>词条可在右侧设置中添加。</p><div id="environmentChoices"></div><form method="dialog"><button type="button" id="clearEnvironment">移除环境标注</button><button>取消</button></form></dialog>
-<script type="module" src="app.mjs?v=3"></script>
+<script type="module" src="app.mjs?v=4"></script>
 </body></html>

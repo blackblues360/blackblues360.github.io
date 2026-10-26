@@ -13,7 +13,7 @@ const os=require('node:os');
     const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
     const base=process.env.SOP_TEST_URL||'http://127.0.0.1:8000',url=`${base}/tools/sop-timeline/`,key='blackblues.sop-timeline.v1';
     const stored=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
-    const load=async doc=>{await page.locator('#fileInput').setInputFiles({name:'test.soptime',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(doc))});await page.waitForFunction(({key,count,first})=>{const d=JSON.parse(localStorage.getItem(key));return d?.blocks.length===count&&d.blocks[0]?.id===first;},{key,count:doc.blocks.length,first:doc.blocks[0]?.id});await page.locator('.time-block').first().waitFor();};
+    const load=async doc=>{await page.locator('#fileInput').setInputFiles({name:'test.soptime',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(doc))});await page.waitForFunction(({key,doc})=>{const d=JSON.parse(localStorage.getItem(key));return d&&JSON.stringify(d.blocks)===JSON.stringify(doc.blocks)&&JSON.stringify(d.groups)===JSON.stringify(doc.groups)&&JSON.stringify(d.environmentRanges)===JSON.stringify(doc.environmentRanges);},{key,doc});await page.locator('.time-block').first().waitFor();};
     await page.goto(url);await page.locator('.time-block').first().waitFor();
     assert.equal(await page.locator('.time-block').count(),8);assert.match(await page.locator('#summary').textContent(),/52 min/);
     assert.deepEqual(await page.locator('.columns>span').allTextContents(),['等待','操作','实验操作','环境']);
@@ -27,7 +27,7 @@ const os=require('node:os');
     const initial=await stored();
     // Empty later groups must start after their predecessors, including when
     // a populated group follows them. Match the reported 10 min / 6 min case.
-    const emptySecond={...structuredClone(initial),groups:[{id:'first',title:'细胞收集',collapsed:false},{id:'second',title:'抗体染色',collapsed:false}],notes:[],layout:{...initial.layout,waitWidth:85,operationWidth:87,laneGap:12},blocks:[
+    const emptySecond={...structuredClone(initial),groups:[{id:'first',title:'细胞收集',collapsed:false},{id:'second',title:'抗体染色',collapsed:false}],notes:[],environmentRanges:[],layout:{...initial.layout,waitWidth:85,operationWidth:87,laneGap:12},blocks:[
       {...initial.blocks[0],id:'first-wait',group:'first',lane:'wait',start:0,duration:600},
       {...initial.blocks[0],id:'first-operation',group:'first',lane:'operation',start:0,duration:360}]};
     await load(emptySecond);await page.locator('#zoomOut').click();
@@ -47,10 +47,10 @@ const os=require('node:os');
     const deleteGroup=initial.groups[0].id;await page.locator(`[data-remove-group="${deleteGroup}"]`).click();assert.equal((await stored()).groups.length,2);assert.equal((await stored()).notes.some(n=>n.group===deleteGroup),false);await page.keyboard.press('Control+z');assert.deepEqual(await stored(),initial);
     // Custom environment term, palette drag, selection, removal and undo.
     const term='25°C · 振荡';await page.locator('#environmentTermInput').fill(term);await page.locator('#environmentTermForm button').click();assert.ok((await stored()).environmentTerms.includes(term));
-    await page.locator('.env-run').first().scrollIntoViewIfNeeded();await page.locator('[data-component="environment"]').dragTo(page.locator('.env-run').first(),{targetPosition:{x:20,y:20}});await page.locator('#environmentDialog').waitFor({state:'visible'});await page.locator('#environmentChoices button').filter({hasText:term}).click();assert.equal((await stored()).blocks[0].environment,term);
-    await page.locator('.environment-label').first().click();await page.locator('#clearEnvironment').click();assert.equal((await stored()).blocks[0].environment,'');
-    const emptyEnvironment=page.locator('.timeline-body').first(),emptyBox=await emptyEnvironment.boundingBox();await page.locator('[data-component="environment"]').dragTo(emptyEnvironment,{targetPosition:{x:emptyBox.width-15,y:20}});await page.locator('#environmentChoices button').filter({hasText:term}).click();assert.equal((await stored()).blocks[0].environment,term);
-    const termIndex=(await stored()).environmentTerms.indexOf(term);await page.locator(`[data-remove-term="${termIndex}"]`).click();assert.equal((await stored()).environmentTerms.includes(term),false);assert.equal((await stored()).blocks[0].environment,term);await page.locator('#undo').click();assert.ok((await stored()).environmentTerms.includes(term));
+    await page.locator('.env-run').first().scrollIntoViewIfNeeded();await page.locator('[data-component="environment"]').dragTo(page.locator('.env-run').first(),{targetPosition:{x:20,y:20}});await page.locator('#environmentDialog').waitFor({state:'visible'});await page.locator('#environmentChoices button').filter({hasText:term}).click();assert.equal((await stored()).environmentRanges.find(r=>r.start===0).environment,term);
+    await page.locator('.environment-label').first().click();await page.locator('#clearEnvironment').click();assert.equal((await stored()).environmentRanges.some(r=>r.start===0),false);
+    const emptyEnvironment=page.locator('.timeline-body').first(),emptyBox=await emptyEnvironment.boundingBox();await page.locator('[data-component="environment"]').dragTo(emptyEnvironment,{targetPosition:{x:emptyBox.width-15,y:20}});await page.locator('#environmentChoices button').filter({hasText:term}).click();assert.equal((await stored()).environmentRanges.find(r=>r.start===0).environment,term);
+    const termIndex=(await stored()).environmentTerms.indexOf(term);await page.locator(`[data-remove-term="${termIndex}"]`).click();assert.equal((await stored()).environmentTerms.includes(term),false);assert.equal((await stored()).environmentRanges.find(r=>r.start===0).environment,term);await page.locator('#undo').click();assert.ok((await stored()).environmentTerms.includes(term));
     await load(initial);
     // Rich text grows immediately while focused and shrinks without changing time.
     const first=page.locator('[data-text]').first(),body=page.locator('.timeline-body').first();const oldHeight=await body.evaluate(el=>el.offsetHeight);
@@ -62,7 +62,7 @@ const os=require('node:os');
     await page.locator(`[data-group-drag="${lastGroup}"]`).dragTo(page.locator(`[data-group-drag="${firstGroup}"]`));assert.equal((await stored()).groups[0].id,lastGroup);await page.locator('#undo').click();assert.equal((await stored()).groups[0].id,firstGroup);
     // C / D: direct duration edit and downstream behavior via real UI.
     const group=initial.groups[0].id;
-    const model={...initial,groups:[{id:group,title:'联动测试',collapsed:false}],notes:[],blocks:[
+    const model={...initial,groups:[{id:group,title:'联动测试',collapsed:false}],notes:[],environmentRanges:[],blocks:[
       {id:'a',group,lane:'operation',start:0,duration:1800,text:'保持不变',environment:'室温',object:'试剂'},
       {id:'b',group,lane:'wait',start:0,duration:1800,text:'中文避光孵育',environment:'4°C 避光',object:'样本'},
       {id:'c',group,lane:'operation',start:1800,duration:300,text:'后继操作',environment:'室温',object:'样本'}]};

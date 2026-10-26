@@ -33,6 +33,17 @@ export function validate(doc) {
     blockIds.add(b.id);
   }
   const noteIds=new Set();for (const n of doc.notes) {if (!n || typeof n.id !== 'string' || !/^[\w-]{1,100}$/.test(n.id) || noteIds.has(n.id) || !ids.has(n.group) || typeof n.text !== 'string' || n.text.length > 20000) return '备注数据无效';noteIds.add(n.id);}
+  if(doc.environmentRanges!==undefined){
+    if(!Array.isArray(doc.environmentRanges)||doc.environmentRanges.length>2000)return '环境范围数据无效';
+    const rangeIds=new Set();
+    for(const r of doc.environmentRanges){
+      const blocks=doc.blocks.filter(b=>b.group===r?.group),nodes=blocks.flatMap(b=>[b.start,end(b)]);
+      if(!r||typeof r.id!=='string'||!/^[\w-]{1,100}$/.test(r.id)||rangeIds.has(r.id)||!ids.has(r.group)||!Number.isSafeInteger(r.start)||!Number.isSafeInteger(r.end)||r.start>=r.end||!nodes.includes(r.start)||!nodes.includes(r.end)||typeof r.environment!=='string'||!r.environment.trim()||r.environment.length>20000)return '环境范围必须吸附到对应大步骤的时间节点';
+      for(const edge of ['start','end'])if(r[`${edge}Anchor`]){const a=r[`${edge}Anchor`],b=blocks.find(b=>b.id===a.blockId);if(!b||!['start','end'].includes(a.edge)||(a.edge==='start'?b.start:end(b))!==r[edge])return '环境范围锚点无效';}
+      rangeIds.add(r.id);
+    }
+    for(const g of doc.groups){const ranges=doc.environmentRanges.filter(r=>r.group===g.id).sort((a,b)=>a.start-b.start);for(let i=1;i<ranges.length;i++)if(ranges[i].start<ranges[i-1].end)return '同一大步骤的环境范围不能重叠';}
+  }
   for (const lane of ['operation', 'wait']) {
     const blocks = doc.blocks.filter(b => b.lane === lane).sort((a,b) => a.start-b.start);
     for (let i=1;i<blocks.length;i++) if (blocks[i].start < end(blocks[i-1])) return '同一泳道的时间块不能重叠';
@@ -52,7 +63,7 @@ export function validate(doc) {
   return null;
 }
 export function emptyDocument() {
-  return { version: VERSION, name: '未命名实验 SOP', author: '', date: new Date().toLocaleDateString('sv-SE'), revision: 'v1.0', groups: [{id:uid(),title:'实验准备',collapsed:false}], blocks: [], notes: [], environmentTerms:[...defaultEnvironmentTerms], layout: {...defaults} };
+  return { version: VERSION, name: '未命名实验 SOP', author: '', date: new Date().toLocaleDateString('sv-SE'), revision: 'v1.0', groups: [{id:uid(),title:'实验准备',collapsed:false}], blocks: [], notes: [], environmentTerms:[...defaultEnvironmentTerms], environmentRanges:[], layout: {...defaults} };
 }
 export function sampleDocument() {
   const d = emptyDocument(); d.name='流式细胞术 · 细胞表面抗体染色';
@@ -66,10 +77,10 @@ export function sampleDocument() {
   add(1,'operation',14,5,'孵育期间配制洗涤液。','室温','试剂');
   add(2,'operation',44,5,'洗涤细胞，离心后弃上清，并重悬于 PBS 中。');
   add(2,'operation',49,3,'上机检测，保存流式数据。');
-  d.notes=[{id:uid(),group:d.groups[0].id,text:'可根据细胞类型调整离心条件。'}]; return d;
+  d.notes=[{id:uid(),group:d.groups[0].id,text:'可根据细胞类型调整离心条件。'}];d.environmentRanges=legacyEnvironmentRanges(d);return d;
 }
 export function endpoints(doc) { return [...new Set([0,...doc.blocks.flatMap(b=>[b.start,end(b)])])].sort((a,b)=>a-b); }
-function result(doc) { const error=validate(doc); return error ? {error} : {doc}; }
+function result(doc,before) { if(before)syncEnvironmentRanges(before,doc);const error=validate(doc); return error ? {error} : {doc}; }
 // Directed dependency closure: starts on a moved tail (or a moved head) follow it.
 // Blocks ending at the original tail are deliberately not included.
 function followers(doc, source) {
@@ -83,7 +94,7 @@ export function resizeBlock(doc,id,duration) {
   const wanted=Math.max(1,Math.min(604800,Math.round(duration))), delta=wanted-original.duration;
   if(!delta) return {doc:clone(doc),limited:false};
   const moved=followers(doc,original);
-  const at=change=>{const d=clone(doc);for(const b of d.blocks) {if(b.id===id)b.duration+=change;else if(moved.has(b.id))b.start+=change;}return d;};
+  const at=change=>{const d=clone(doc);for(const b of d.blocks) {if(b.id===id)b.duration+=change;else if(moved.has(b.id))b.start+=change;}syncEnvironmentRanges(doc,d);return d;};
   // Legality changes only where affine endpoint coordinates cross. Visit each
   // interval in order, so a drag cannot jump over an illegal region.
   const points=doc.blocks.flatMap(b=>[{v:b.start,k:moved.has(b.id)?1:0},{v:end(b),k:b.id===id||moved.has(b.id)?1:0}]);
@@ -107,20 +118,20 @@ function closeGaps(doc) {
     covered=Math.max(covered,end(b));
   } return d;
 }
-export function deleteBlock(doc,id) { const d=clone(doc);d.blocks=d.blocks.filter(b=>b.id!==id);return result(closeGaps(d)); }
-export function deleteGroup(doc,id) { const d=clone(doc);d.groups=d.groups.filter(g=>g.id!==id);d.blocks=d.blocks.filter(b=>b.group!==id);d.notes=d.notes.filter(n=>n.group!==id);return result(closeGaps(d)); }
+export function deleteBlock(doc,id) { const d=clone(doc);d.blocks=d.blocks.filter(b=>b.id!==id);return result(closeGaps(d),doc); }
+export function deleteGroup(doc,id) { const d=clone(doc);d.groups=d.groups.filter(g=>g.id!==id);d.blocks=d.blocks.filter(b=>b.group!==id);d.notes=d.notes.filter(n=>n.group!==id);return result(closeGaps(d),doc); }
 export function addBlock(doc,block,target=total(doc)) {
   const candidates=endpoints(doc).flatMap(t=>[t,t-block.duration]).filter(t=>t>=0);
   const ordered=[...new Set(candidates)].sort((a,b)=>Math.abs(a-target)-Math.abs(b-target)||a-b);
-  for(const start of ordered) {const d=clone(doc);d.blocks.push({...block,start});if(!validate(d))return {doc:d,start};}
+  for(const start of ordered) {const d=clone(doc);d.blocks.push({...block,start});const next=result(d,doc);if(!next.error)return {...next,start};}
   return {error:'没有合法落点。请在当前大步骤末端添加，或先缩短同泳道时间块。'};
 }
 export function insertBlock(doc,block,target) {
   const parallel=clone(doc); parallel.blocks.push({...block,start:target});
-  if(endpoints(doc).some(t=>t===target||t===target+block.duration)&&!validate(parallel))return {doc:parallel,start:target};
+  if(endpoints(doc).some(t=>t===target||t===target+block.duration)&&!validate(parallel))return {...result(parallel,doc),start:target};
   if(!endpoints(doc).includes(target)) return {error:'请吸附到已有时间块的端点'};
   const d=clone(doc);for(const b of d.blocks)if(b.start>=target)b.start+=block.duration;
-  d.blocks.push({...block,start:target});return result(d);
+  d.blocks.push({...block,start:target});return result(d,doc);
 }
 export function moveBlock(doc,id,group,target) {
   const block=doc.blocks.find(b=>b.id===id);if(!block)return {error:'找不到时间块'};
@@ -129,13 +140,13 @@ export function moveBlock(doc,id,group,target) {
   let adjusted=target,covered=0;
   for(const b of doc.blocks.filter(b=>b.id!==id).sort((a,b)=>a.start-b.start)){if(b.start>covered)adjusted-=Math.max(0,Math.min(target,b.start)-covered);covered=Math.max(covered,end(b));}
   const nodes=endpoints(removed.doc).flatMap(t=>[t,t-block.duration]).filter(t=>t>=0), snapped=nodes.reduce((a,b)=>Math.abs(b-adjusted)<Math.abs(a-adjusted)?b:a,0);
-  return insertBlock(removed.doc,{...block,group},snapped);
+  const next=insertBlock(removed.doc,{...block,group},snapped);return next.error?next:result(next.doc,doc);
 }
 export function reorderGroup(doc,id,beforeId) {
   const d=clone(doc), group=d.groups.find(g=>g.id===id);if(!group||id===beforeId)return {doc:d};
   d.groups=d.groups.filter(g=>g.id!==id);const index=d.groups.findIndex(g=>g.id===beforeId);d.groups.splice(index<0?d.groups.length:index,0,group);
   let cursor=0;for(const g of d.groups) {const blocks=d.blocks.filter(b=>b.group===g.id);if(!blocks.length)continue;const start=Math.min(...blocks.map(b=>b.start)),finish=Math.max(...blocks.map(end));for(const b of blocks)b.start+=cursor-start;cursor+=finish-start;}
-  return result(d);
+  return result(d,doc);
 }
 export function importDocument(text) {
   if(text.length>5000000)throw new Error('文件不能超过 5 MB');
@@ -149,7 +160,8 @@ export function importDocument(text) {
   if(['blue','sage','lavender'].includes(doc.layout?.theme))layout.theme=doc.layout.theme;
   if(doc.layout?.orientation==='landscape')layout.orientation='landscape';
   doc.environmentTerms=doc.environmentTerms?[...new Set(doc.environmentTerms.map(term=>term.trim()))]:[...defaultEnvironmentTerms];
-  doc.layout=layout;return doc;
+  doc.environmentRanges=getEnvironmentRanges(doc);
+  doc.layout=layout;const migratedError=validate(doc);if(migratedError)throw new Error(migratedError);return doc;
 }
 export function environmentRuns(blocks) {
   const runs=[];
@@ -159,6 +171,61 @@ export function environmentRuns(blocks) {
   }return runs;
 }
 export function primaryObject(doc) { return doc.blocks.find(b=>b.lane==='wait')?.object||doc.blocks[0]?.object||'样本'; }
+function environmentAnchor(doc,group,time,edge,opposite){
+  const blocks=doc.blocks.filter(b=>b.group===group).sort((a,b)=>b.duration-a.duration);
+  const exact=blocks.find(b=>edge==='start'?b.start===time&&end(b)===opposite:end(b)===time&&b.start===opposite);if(exact)return {blockId:exact.id,edge};
+  for(const kind of [edge,edge==='start'?'end':'start']){const b=blocks.find(b=>(kind==='start'?b.start:end(b))===time);if(b)return {blockId:b.id,edge:kind};}
+}
+function legacyEnvironmentRanges(doc){
+  const runs=environmentRuns(doc.blocks.filter(b=>b.object===primaryObject(doc))),ranges=[];
+  for(const [gi,g]of doc.groups.entries()){
+    const blocks=doc.blocks.filter(b=>b.group===g.id);if(!blocks.length)continue;
+    const first=Math.min(...blocks.map(b=>b.start)),last=Math.max(...blocks.map(end));
+    for(const [ri,r]of runs.entries()){const start=Math.max(first,r.start),finish=Math.min(last,r.end);if(start<finish)ranges.push({id:`environment-${gi}-${ri}`,group:g.id,start,end:finish,environment:r.environment,startAnchor:environmentAnchor(doc,g.id,start,'start'),endAnchor:environmentAnchor(doc,g.id,finish,'end')});}
+  }
+  // Legacy parallel blocks could paint overlapping arrows. Keep their visible
+  // order while migrating to a single, unambiguous environment column.
+  const ordered=[];for(const r of ranges.sort((a,b)=>a.start-b.start||b.end-a.end)){const previous=ordered.at(-1);if(previous?.group===r.group&&r.start<previous.end)r.start=previous.end;if(r.start<r.end){r.startAnchor=environmentAnchor(doc,r.group,r.start,'start');ordered.push(r);}}return ordered;
+}
+export function getEnvironmentRanges(doc){return doc.environmentRanges??legacyEnvironmentRanges(doc);}
+// Called only by time-model mutations. An environment edit never enters this
+// path and cannot move blocks, text, groups, notes, or layout coordinates.
+function syncEnvironmentRanges(before,after){
+  const mapped=[];
+  for(const original of getEnvironmentRanges(before)){
+    const r=clone(original),oldBlocks=before.blocks.filter(b=>b.group===r.group),oldStart=Math.min(...oldBlocks.map(b=>b.start));
+    const sa=r.startAnchor||environmentAnchor(before,r.group,r.start,'start'),ea=r.endAnchor||environmentAnchor(before,r.group,r.end,'end');
+    const moved=sa?.blockId===ea?.blockId?after.blocks.find(b=>b.id===sa?.blockId):null;if(moved&&moved.group!==r.group)r.group=moved.group;
+    const blocks=after.blocks.filter(b=>b.group===r.group);if(!blocks.length)continue;
+    if(!oldBlocks.some(b=>b.start<r.end&&end(b)>r.start&&after.blocks.some(n=>n.id===b.id&&n.group===r.group)))continue;
+    const nodes=[...new Set(blocks.flatMap(b=>[b.start,end(b)]))].sort((a,b)=>a-b),shift=nodes[0]-oldStart;
+    for(const [edge,anchor]of [['start',sa],['end',ea]]){const b=blocks.find(b=>b.id===anchor?.blockId),target=b?(anchor.edge==='start'?b.start:end(b)):r[edge]+shift;r[edge]=nodes.reduce((a,b)=>Math.abs(b-target)<Math.abs(a-target)?b:a,nodes[0]);}
+    if(r.start<r.end)mapped.push(r);
+  }
+  after.environmentRanges=[];
+  for(const g of after.groups)for(const r of mapped.filter(r=>r.group===g.id).sort((a,b)=>a.start-b.start)){
+    const previous=after.environmentRanges.at(-1);if(previous?.group===r.group)r.start=Math.max(r.start,previous.end);
+    if(r.start>=r.end)continue;r.startAnchor=environmentAnchor(after,r.group,r.start,'start',r.end);r.endAnchor=environmentAnchor(after,r.group,r.end,'end',r.start);after.environmentRanges.push(r);
+  }
+}
+export function setEnvironmentRange(doc,range){
+  const d=clone(doc),id=range.id||uid(),ranges=[];
+  for(const r of getEnvironmentRanges(doc)){
+    if(r.id===id)continue;
+    if(r.group!==range.group||r.end<=range.start||r.start>=range.end){ranges.push(clone(r));continue;}
+    if(r.start<range.start)ranges.push({...clone(r),end:range.start,endAnchor:environmentAnchor(doc,r.group,range.start,'end')});
+    if(r.end>range.end)ranges.push({...clone(r),id:r.start<range.start?uid():r.id,start:range.end,startAnchor:environmentAnchor(doc,r.group,range.end,'start')});
+  }
+  ranges.push({...range,id,startAnchor:environmentAnchor(doc,range.group,range.start,'start',range.end),endAnchor:environmentAnchor(doc,range.group,range.end,'end',range.start)});d.environmentRanges=ranges.sort((a,b)=>doc.groups.findIndex(g=>g.id===a.group)-doc.groups.findIndex(g=>g.id===b.group)||a.start-b.start);return result(d);
+}
+export function resizeEnvironmentRange(doc,id,edge,target){
+  const r=getEnvironmentRanges(doc).find(r=>r.id===id);if(!r||!['start','end'].includes(edge))return {error:'找不到环境范围'};
+  const others=getEnvironmentRanges(doc).filter(other=>other.group===r.group&&other.id!==id),previous=Math.max(0,...others.filter(o=>o.end<=r.start).map(o=>o.end)),next=Math.min(Infinity,...others.filter(o=>o.start>=r.end).map(o=>o.start));
+  const nodes=[...new Set(doc.blocks.filter(b=>b.group===r.group).flatMap(b=>[b.start,end(b)]))].filter(t=>edge==='start'?t>=previous&&t<r.end:t>r.start&&t<=next);
+  const value=nodes.reduce((a,b)=>Math.abs(b-target)<Math.abs(a-target)?b:a,r[edge]),d=clone(doc);d.environmentRanges=clone(getEnvironmentRanges(doc));
+  const edited=d.environmentRanges.find(r=>r.id===id);edited[edge]=value;edited.startAnchor=environmentAnchor(doc,r.group,edited.start,'start',edited.end);edited.endAnchor=environmentAnchor(doc,r.group,edited.end,'end',edited.start);return {...result(d),limited:value!==target};
+}
+export function removeEnvironmentRange(doc,id){const d=clone(doc);d.environmentRanges=clone(getEnvironmentRanges(doc).filter(r=>r.id!==id));return result(d);}
 export function plainText(html) { return String(html).replace(/<br\s*\/?\s*>/gi,'\n').replace(/<\/div>/gi,'\n').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&'); }
 export function groupLayout(doc,groupId) {
   const blocks=doc.blocks.filter(b=>b.group===groupId), nodes=[...new Set(blocks.flatMap(b=>[b.start,end(b)]))].sort((a,b)=>a-b);
