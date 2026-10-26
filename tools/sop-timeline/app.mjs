@@ -1,5 +1,5 @@
-import {defaults,clone,uid,end,total,formatDuration,parseDuration,validate,emptyDocument,sampleDocument,endpoints,resizeBlock,deleteBlock,deleteGroup,addBlock,insertBlock,moveBlock,reorderGroup,importDocument,getEnvironmentRanges,setEnvironmentRange,resizeEnvironmentRange,removeEnvironmentRange,groupLayout} from './core.mjs?v=4';
-import {exportPNG,printPDF} from './export.mjs?v=4';
+import {defaults,clone,uid,end,total,formatDuration,parseDuration,validate,emptyDocument,sampleDocument,endpoints,resizeBlock,deleteBlock,deleteGroup,addBlock,insertBlock,moveBlock,reorderGroup,importDocument,getEnvironmentRanges,setEnvironmentRange,resizeEnvironmentRange,removeEnvironmentRange,groupLayout} from './core.mjs?v=5';
+import {exportPNG,printPDF} from './export.mjs?v=5';
 const $=s=>document.querySelector(s), paper=$('#paper'),viewport=$('#viewport'),storageKey='blackblues.sop-timeline.v1';
 let doc=sampleDocument(), selected=null, activeGroup=doc.groups[0].id, past=[],future=[],clipboard=null,zoom=1,drag=null,toastTimer,editSnapshot=null,fileHandle=null,space=false,pointerHeld=false,needsRefresh=false,environmentSelection=null;
 let recoveryMessage='';
@@ -7,7 +7,7 @@ try {const stored=localStorage.getItem(storageKey);if(stored){doc=importDocument
 const esc=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function safeHTML(html) {
   const template=document.createElement('template');template.innerHTML=html;
-  const visit=node=>{if(node.nodeType===3)return esc(node.textContent);if(node.nodeType!==1)return '';const tag=node.tagName.toLowerCase();if(['script','style','iframe','object'].includes(tag))return '';const children=[...node.childNodes].map(visit).join('');return ['b','strong','i','em'].includes(tag)?`<${tag}>${children}</${tag}>`:tag==='br'?'<br>':tag==='div'||tag==='p'?`${children}<br>`:children;};
+  const visit=node=>{if(node.nodeType===3)return esc(node.textContent);if(node.nodeType!==1)return '';const tag=node.tagName.toLowerCase();if(['script','style','iframe','object'].includes(tag))return '';const children=[...node.childNodes].map(visit).join('');return ['b','strong','i','em'].includes(tag)?`<${tag}>${children}</${tag}>`:tag==='br'?'<br>':tag==='div'||tag==='p'?`<div>${children}</div>`:children;};
   return [...template.content.childNodes].map(visit).join('');
 }
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').hidden=true,4500);}
