@@ -30,7 +30,8 @@ const os = require('node:os');
     await well('H12').waitFor();
     assert.equal(await page.locator('link[rel="icon"]').getAttribute('href'), 'icon.png');
     assert.equal(await page.locator('img.tool-mark').evaluate(image => image.complete && image.naturalWidth > 0), true);
-    assert.ok(!(await page.locator('.breadcrumb').textContent()).includes('实验工具'));
+    assert.equal(await page.locator('.breadcrumb').isHidden(), true);
+    assert.equal(await page.locator('#saveStatus').isHidden(), true);
     assert.equal(await page.locator('#plate [data-well]').count(), 96);
     for (const [type, last] of [['6', 'B3'], ['12', 'C4'], ['24', 'D6'], ['96', 'H12']]) {
       await page.locator(`[data-type="${type}"]`).click();

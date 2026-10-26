@@ -26,13 +26,14 @@ input:not([type="color"]):not([type="checkbox"]):not([type="range"]), select { w
 input::placeholder { color: #97a6ae; }
 .workspace { max-width: 1800px; margin: auto; padding: 0 24px; }
 .breadcrumb { display: flex; align-items: center; min-height: 56px; gap: 13px; color: var(--muted); font-size: 12px; }
+.breadcrumb[hidden] { display: none; }
 .breadcrumb a { font-family: Georgia, serif; font-size: 23px; font-weight: bold; letter-spacing: -.8px; color: var(--ink); }
 .brand-dot { color: var(--green); }
 .save-status { margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: 11px; }
 .save-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #7eaa9b; }
 .save-status.warning::before { background: #c89955; }
 .panel { min-width: 0; background: rgba(255,255,255,.94); border: 1px solid rgba(221,232,234,.85); border-radius: 13px; box-shadow: 0 3px 18px #234f5d04; }
-.masthead { min-height: 129px; padding: 23px 25px; display: flex; align-items: center; gap: 24px; margin-bottom: 18px; }
+.masthead { min-height: 129px; padding: 23px 25px; display: flex; align-items: center; gap: 24px; margin: 24px 0 18px; }
 .tool-identity { display: flex; align-items: center; gap: 17px; flex: 1 1 auto; }
 .tool-mark { width: 47px; height: 47px; object-fit: contain; border-radius: 10px; flex-shrink: 0; }
 h1 { font-size: clamp(20px, 1.8vw, 29px); line-height: 1.2; letter-spacing: -.9px; margin: 0 0 5px; font-weight: 680; }

@@ -207,6 +207,23 @@ test('download names use local calendar dates and replace filesystem-unsafe char
   assert.equal(textColor('#ffffff'), '#20343c');
 });
 
+test('export titles append the export day in Chinese without changing the saved title', () => {
+  const state = createState('6');
+  state.plate.title = 'BMDC 实验';
+  const first = buildExportSvg(state, new Date(2026, 9, 22, 0, 1));
+  const next = buildExportSvg(state, new Date(2026, 9, 23, 0, 1));
+  assert.ok(first.svg.includes('BMDC 实验 · 2026年10月22日'));
+  assert.ok(next.svg.includes('BMDC 实验 · 2026年10月23日'));
+  assert.equal(state.plate.title, 'BMDC 实验');
+  state.plate.title = '';
+  assert.ok(buildExportSvg(state, new Date(2027, 0, 2)).svg.includes('孔板铺板方案 · 2027年1月2日'));
+  state.plate.title = '中文长标题'.repeat(32);
+  const long = buildExportSvg(state, new Date(2026, 9, 22));
+  const lines = [...long.svg.matchAll(/font-size="31" font-weight="650">(.*?)<\/text>/g)].map(match => match[1]);
+  assert.ok(lines.join('').endsWith('2026年10月22日'));
+  assert.ok(lines.length > 1);
+});
+
 test('XML-forbidden characters and split surrogate pairs cannot corrupt image exports', () => {
   assert.equal(cleanText('A\ufffe B\uffff C\ud800 D\udc00'), 'A B C D');
   assert.equal(cleanText('😀'), '😀');

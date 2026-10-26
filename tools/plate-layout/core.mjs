@@ -224,10 +224,10 @@ export function plateMarkup(state, interactive = true) {
 }
 
 // 导出独立的 SVG 图稿，而非截取编辑界面；图例按内容计算高度。
-export function buildExportSvg(state) {
+export function buildExportSvg(state, date = new Date()) {
   const width = 1200;
   const body = [];
-  const title = cleanText(state.plate.title) || '孔板铺板方案';
+  const title = `${cleanText(state.plate.title) || '孔板铺板方案'} · ${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
   const titleLines = wrapText(title, 1100, 31);
   titleLines.forEach((line, index) => body.push(`<text x="48" y="${66 + index * 41}" font-size="31" font-weight="650">${escapeXml(line)}</text>`));
   const titleBottom = 66 + (titleLines.length - 1) * 41;

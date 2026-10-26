@@ -410,7 +410,8 @@ async function exportImage(format) {
   let imageUrl;
   try {
     const exportState = JSON.parse(JSON.stringify(state));
-    const artwork = buildExportSvg(exportState);
+    const exportedAt = new Date();
+    const artwork = buildExportSvg(exportState, exportedAt);
     const requestedScale = Number(elements.exportScale.value);
     // 极长图例自动控制画布内存和边长，不裁切或省略任何标签。
     const scale = Math.min(requestedScale, 16000 / artwork.height, Math.sqrt(24000000 / (artwork.width * artwork.height)));
@@ -436,7 +437,7 @@ async function exportImage(format) {
     const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = downloadUrl;
-    link.download = exportFilename(exportState.plate.title, format);
+    link.download = exportFilename(exportState.plate.title, format, exportedAt);
     document.body.append(link);
     link.click();
     link.remove();
