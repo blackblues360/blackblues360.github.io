@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="拖拽时间块、直接编辑实验步骤，制作可打印的双泳道实验 SOP 时间轴。支持本地保存、PNG 和 A4 PDF。"><title>SOP Timeline Editor · blackblues</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css"></head>
+<body>
+<header class="toolbar">
+  <a class="brand" href="../../" title="返回 blackblues"><img src="icon.svg" alt=""><span><strong>SOP Timeline Editor</strong><small>可视化设计 · 实验标准操作流程</small></span></a>
+  <nav aria-label="文件工具"><button id="new">⊞ <span>新建</span></button><button id="open">▱ <span>打开</span></button><button id="save">▣ <span>保存</span></button><button id="saveAs" title="另存为新的 .soptime 文件">另存为</button><i></i><button id="png">⇩ <span>导出 PNG</span></button><button id="pdf">♧ <span>导出 PDF</span></button><i></i><button id="undo" title="Ctrl + Z">↶ <span>撤销</span></button><button id="redo" title="Ctrl + Y">↷ <span>重做</span></button><button id="settingsToggle" aria-expanded="true">⚙ <span>设置</span></button></nav>
+</header>
+<main class="workspace">
+  <aside class="components"><div class="panel-title"><h2>组件</h2><span>☷</span></div><p class="hint">拖拽到泳道，或点击添加</p><p class="eyebrow">时间块</p>
+    <button class="component" draggable="true" data-component="operation"><span class="swatch operation"></span><span><strong>操作时间块</strong><small>执行具体实验操作</small></span><b>⠿</b></button>
+    <button class="component" draggable="true" data-component="wait"><span class="swatch wait"></span><span><strong>等待时间块</strong><small>孵育、静置与设备运行</small></span><b>⠿</b></button>
+    <p class="eyebrow second">容器与其他</p><button class="component" draggable="true" data-component="group"><span class="swatch group">⊞</span><span><strong>大步骤容器</strong><small>组织一组实验步骤</small></span><b>⠿</b></button>
+    <button class="component" draggable="true" data-component="note"><span class="swatch note">☷</span><span><strong>备注</strong><small>说明与注意事项</small></span><b>⠿</b></button>
+    <div class="selection-tools"><p class="eyebrow">选中时间块</p><button id="copy">复制 <kbd>Ctrl C</kbd></button><button id="paste">粘贴 <kbd>Ctrl V</kbd></button><button id="delete">删除 <kbd>Del</kbd></button><div class="format-tools"><button id="bold" title="选中文字后加粗"><b>B</b></button><button id="italic" title="选中文字后强调"><em>I</em></button></div></div>
+    <div class="help-card"><span>✧</span><strong>让实验流程一目了然</strong><p>拖动块移动 · 拖动底边改时长<br>点击文字直接编辑<br>Ctrl + 滚轮缩放<br>空格 + 拖动画布</p><button id="help">使用说明 ↗</button></div><a class="back-link" href="../plate-layout/">↗ 孔板铺板设计器</a>
+  </aside>
+  <section class="center"><div class="canvas-bar"><div class="zoom-tools"><button id="zoomOut" aria-label="缩小">⊖</button><button id="zoomIn" aria-label="放大">⊕</button><button id="zoomReset">100%⌄</button><button id="fit">▧ 适合宽度</button></div><span class="paper-label">A4 · <span id="orientationLabel">纵向</span></span></div><div id="viewport" class="viewport" tabindex="-1"><div id="paperWrap"><article id="paper" class="paper" aria-label="SOP 编辑画布"></article></div></div><footer class="statusbar"><span id="draftStatus">本机草稿 · 自动保存</span><span id="summary"></span></footer></section>
+  <aside id="settings" class="settings"><div class="panel-title"><h2>布局设置</h2><button id="settingsClose" aria-label="关闭设置">×</button></div><div id="settingFields"></div><button id="resetLayout" class="reset">恢复默认布局</button><button id="saveDefaults" class="reset">设为新 SOP 默认布局</button><p class="settings-note">仅调整视觉排版，实验时间保持不变。<br>文件与草稿保存在本机浏览器。</p></aside>
+</main>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div><input id="fileInput" type="file" accept=".soptime,application/json" hidden>
+<dialog id="helpDialog"><h2>在画布中编排实验</h2><p>先拖入大步骤，再把操作块或等待块拖到对应泳道。蓝色参考线表示合法端点；红色表示当前位置冲突。也可以点击左侧组件，在当前大步骤中添加。</p><p>点击时间输入 <b>5 min / 30 min / 2 h</b>。拖动时间块的底部手柄，只改变该块时长；相接的后继块自动移动。并行块的时长保持不变。</p><p>直接编辑实验文字、环境及实验对象。相同对象的连续同环境自动合并箭头；并行配液可将对象改为“试剂”，与“样本”分开显示。</p><p>拖动容器标题的 ⠿ 调整大步骤顺序。选择文字后使用左侧 B / I 加粗与强调。空格拖动画布；Ctrl + 滚轮缩放；Ctrl C / V、Delete、Ctrl Z / Y 管理选中块。</p><p>保存为 <b>.soptime</b> 可以随时恢复编辑。导出 PDF 会打开 A4 打印窗口，在目标打印机中选择“另存为 PDF”，关闭浏览器页眉页脚。长流程按时间节点分页，并重复标题、列头与环境延续标记。</p><p class="muted">示例仅用于展示编辑功能；实验参数请按经过确认的 SOP 填写。</p><form method="dialog"><button>开始编辑</button></form></dialog>
+<script type="module" src="app.mjs"></script>
+</body></html>
