@@ -1,4 +1,4 @@
-import {end,total,formatDuration,environmentRuns,primaryObject} from './core.mjs?v=2';
+import {end,total,formatDuration,environmentRuns,primaryObject} from './core.mjs?v=3';
 const W=744,esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 const text=(x,y,value,size=13,color='#3f506f',extra='')=>`<text x="${x}" y="${y}" font-size="${size}" fill="${color}" ${extra}>${esc(value)}</text>`;
 function richTokens(html){const template=document.createElement('template');template.innerHTML=html;const tokens=[];function walk(node,bold=false,italic=false){if(node.nodeType===3){for(const char of node.textContent)tokens.push({char,bold,italic});return;}if(node.nodeType!==1&&node.nodeType!==11)return;const tag=node.tagName?.toLowerCase();if(['script','style','iframe','object'].includes(tag))return;if(tag==='br')tokens.push({char:'\n'});for(const child of node.childNodes)walk(child,bold||['b','strong'].includes(tag),italic||['i','em'].includes(tag));if(['div','p'].includes(tag))tokens.push({char:'\n'});}walk(template.content);return tokens;}

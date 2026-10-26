@@ -1,5 +1,5 @@
-import {defaults,clone,uid,end,total,formatDuration,parseDuration,validate,emptyDocument,sampleDocument,endpoints,resizeBlock,deleteBlock,deleteGroup,addBlock,insertBlock,moveBlock,reorderGroup,importDocument,environmentRuns,primaryObject,groupLayout} from './core.mjs?v=2';
-import {exportPNG,printPDF} from './export.mjs?v=2';
+import {defaults,clone,uid,end,total,formatDuration,parseDuration,validate,emptyDocument,sampleDocument,endpoints,resizeBlock,deleteBlock,deleteGroup,addBlock,insertBlock,moveBlock,reorderGroup,importDocument,environmentRuns,primaryObject,groupLayout} from './core.mjs?v=3';
+import {exportPNG,printPDF} from './export.mjs?v=3';
 const $=s=>document.querySelector(s), paper=$('#paper'),viewport=$('#viewport'),storageKey='blackblues.sop-timeline.v1';
 let doc=sampleDocument(), selected=null, activeGroup=doc.groups[0].id, past=[],future=[],clipboard=null,zoom=1,drag=null,toastTimer,editSnapshot=null,fileHandle=null,space=false,pointerHeld=false,needsRefresh=false,environmentTargetIds=[];
 let recoveryMessage='';
@@ -53,7 +53,7 @@ function render(){
         texts.innerHTML=simultaneous.map(b=>`<div class="text-item ${b.lane==='wait'?'wait-text':''}" data-text-id="${b.id}"><div class="block-description" contenteditable="true" data-text="${b.id}" data-placeholder="点击输入实验操作…" aria-label="实验操作文字">${safeHTML(b.text)}</div></div>`).join('');body.append(texts);
       }
       const start=layout.nodes[0], finish=layout.nodes.at(-1);
-      for(const run of allRuns.filter(r=>r.start<finish&&r.end>start)){
+      for(const run of allRuns.filter(r=>finish>start&&r.start<finish&&r.end>start)){
         const top=Math.max(run.start,start),bottom=Math.min(run.end,finish),env=document.createElement('div');env.className=`env-run ${/4|冰|避光/.test(run.environment)?'cold':/37/.test(run.environment)?'warm':''}`;env.style.top=`${layout.toY(top)+7}px`;env.style.height=`${Math.max(36,layout.toY(bottom)-layout.toY(top)-14)}px`;env.innerHTML=`<button class="environment-label" data-edit-environment="${run.ids.join(',')}" title="选择环境">${esc(run.environment)}</button><small class="env-object">${run.start<start?'↑ 接上步骤':run.end>finish?'↓ 续下步骤':''}</small>`;body.append(env);
       }
       section.append(body);
@@ -83,7 +83,7 @@ function measureText(){
       for(const el of body.querySelectorAll('.block-texts,.time-line'))el.style.top=`${y(Number(el.dataset.time))}px`;
       body.style.height=`${layout.height+extra}px`;
     }
-    const runs=environmentRuns(doc.blocks.filter(b=>b.object===primaryObject(doc))).filter(r=>r.start<layout.nodes.at(-1)&&r.end>layout.nodes[0]);
+    const runs=environmentRuns(doc.blocks.filter(b=>b.object===primaryObject(doc))).filter(r=>layout.nodes.at(-1)>layout.nodes[0]&&r.start<layout.nodes.at(-1)&&r.end>layout.nodes[0]);
     [...body.querySelectorAll('.env-run')].forEach((el,i)=>{const r=runs[i];el.style.top=`${y(Math.max(r.start,layout.nodes[0]))+7}px`;el.style.height=`${y(Math.min(r.end,layout.nodes.at(-1)))-y(Math.max(r.start,layout.nodes[0]))-14}px`;});
     body._mapping={nodes:layout.nodes,ys:layout.nodes.map(y)};
   }
@@ -103,7 +103,7 @@ function addComponent(type,group=activeGroup,time){
   if(!group){toast('请先添加一个大步骤容器');return;}
   if(type==='environment'){const b=doc.blocks.find(b=>b.id===selected)||doc.blocks.find(b=>b.group===group&&b.object===primaryObject(doc));chooseEnvironment(b?[b.id]:[]);return;}
   if(type==='note'){mutate(d=>d.notes.push({id:uid(),group,text:'点击输入备注'}));return;}
-  const blocks=doc.blocks.filter(b=>b.group===group), groupEnd=blocks.length?Math.max(...blocks.map(end)):total(doc),wait=blocks.find(b=>b.lane==='wait'&&!doc.blocks.some(o=>o.lane==='operation'&&o.start<=b.start&&end(o)>b.start));
+  const blocks=doc.blocks.filter(b=>b.group===group), groupEnd=blocks.length?Math.max(...blocks.map(end)):groupLayout(doc,group).nodes[0],wait=blocks.find(b=>b.lane==='wait'&&!doc.blocks.some(o=>o.lane==='operation'&&o.start<=b.start&&end(o)>b.start));
   const target=time??(type==='operation'&&wait?wait.start:groupEnd), b=newBlock(type,group);
   let next=time===undefined?addBlock(doc,b,target):insertBlock(doc,b,target);if(next.error&&time===undefined)next=insertBlock(doc,b,groupEnd);if(commit(next)){select(b.id);requestAnimationFrame(()=>paper.querySelector(`[data-text="${b.id}"]`)?.focus());}
 }

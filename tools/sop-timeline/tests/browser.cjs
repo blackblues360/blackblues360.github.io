@@ -25,6 +25,24 @@ const os=require('node:os');
     assert.equal((await stored()).blocks[0].text,'中文测试：轻轻混匀，避免气泡。');
     await page.reload();assert.equal(await page.locator('[data-text]').first().textContent(),'中文测试：轻轻混匀，避免气泡。');
     const initial=await stored();
+    // Empty later groups must start after their predecessors, including when
+    // a populated group follows them. Match the reported 10 min / 6 min case.
+    const emptySecond={...structuredClone(initial),groups:[{id:'first',title:'细胞收集',collapsed:false},{id:'second',title:'抗体染色',collapsed:false}],notes:[],layout:{...initial.layout,waitWidth:85,operationWidth:87,laneGap:12},blocks:[
+      {...initial.blocks[0],id:'first-wait',group:'first',lane:'wait',start:0,duration:600},
+      {...initial.blocks[0],id:'first-operation',group:'first',lane:'operation',start:0,duration:360}]};
+    await load(emptySecond);await page.locator('#zoomOut').click();
+    await page.locator('[data-component="wait"]').dragTo(page.locator('.timeline-body[data-group="second"] .lane-wait'),{targetPosition:{x:10,y:10}});
+    let inserted=(await stored()).blocks.find(b=>b.group==='second');assert.ok(inserted,'wait block must enter the empty second group');assert.equal(inserted.start,600);
+    await page.locator('#undo').click();assert.deepEqual((await stored()).blocks,emptySecond.blocks);
+    await page.locator('[data-component="operation"]').dragTo(page.locator('.timeline-body[data-group="second"] .lane-operation'),{targetPosition:{x:10,y:10}});
+    inserted=(await stored()).blocks.find(b=>b.group==='second');assert.ok(inserted,'operation block must enter the empty second group');assert.equal(inserted.start,600);
+    const middle={...structuredClone(emptySecond),groups:[...emptySecond.groups,{id:'third',title:'后续步骤',collapsed:false}],blocks:[...emptySecond.blocks,{...initial.blocks[0],id:'third-operation',group:'third',lane:'operation',start:600,duration:120}]};
+    await load(middle);await page.locator('[data-component="wait"]').dragTo(page.locator('.timeline-body[data-group="second"] .lane-wait'),{targetPosition:{x:10,y:10}});
+    assert.equal((await stored()).blocks.find(b=>b.group==='second')?.start,600);assert.equal((await stored()).blocks.find(b=>b.id==='third-operation').start,2400);
+    await page.screenshot({path:path.join(output,'empty-middle-fixed.png'),fullPage:true});
+    await load(middle);await page.locator('[data-group-title="second"]').click();await page.locator('[data-component="operation"]').click();
+    assert.equal((await stored()).blocks.find(b=>b.group==='second')?.start,600);assert.equal((await stored()).blocks.find(b=>b.id==='third-operation').start,900);
+    await load(initial);
     // Whole-container delete is immediate and restores all content in one undo.
     const deleteGroup=initial.groups[0].id;await page.locator(`[data-remove-group="${deleteGroup}"]`).click();assert.equal((await stored()).groups.length,2);assert.equal((await stored()).notes.some(n=>n.group===deleteGroup),false);await page.keyboard.press('Control+z');assert.deepEqual(await stored(),initial);
     // Custom environment term, palette drag, selection, removal and undo.
@@ -78,6 +96,6 @@ const os=require('node:os');
     const printText=await print.locator('body').textContent();assert.match(printText,/中文步骤 18/);assert.match(printText,/续/);assert.match(printText,/总耗时/);assert.ok(!printText.includes('样本'));
     const heading=print.locator('.print-page svg').first();assert.equal(await heading.locator('text').first().textContent(),long.name);assert.equal(await heading.locator('text').nth(1).textContent(),'SOP 实验流程');await print.close();
     await load(initial);await page.screenshot({path:path.join(output,'editor-final.png'),fullPage:true});
-    assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,printPages:count,output,checks:['title hierarchy','wait left / operation right','text only','group delete / Ctrl Z','environment terms / drag / remove','edit','restore','live text layout','group drag','resize','undo/redo','drag lanes','simultaneous text','width','copy/paste/delete','file roundtrip','PNG','Chinese multipage PDF']}));
+    assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,printPages:count,output,checks:['empty second/middle container drag / click','title hierarchy','wait left / operation right','text only','group delete / Ctrl Z','environment terms / drag / remove','edit','restore','live text layout','group drag','resize','undo/redo','drag lanes','simultaneous text','width','copy/paste/delete','file roundtrip','PNG','Chinese multipage PDF']}));
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

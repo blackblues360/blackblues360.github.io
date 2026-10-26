@@ -162,6 +162,8 @@ export function primaryObject(doc) { return doc.blocks.find(b=>b.lane==='wait')?
 export function plainText(html) { return String(html).replace(/<br\s*\/?\s*>/gi,'\n').replace(/<\/div>/gi,'\n').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&'); }
 export function groupLayout(doc,groupId) {
   const blocks=doc.blocks.filter(b=>b.group===groupId), nodes=[...new Set(blocks.flatMap(b=>[b.start,end(b)]))].sort((a,b)=>a-b);
+  // Empty containers still occupy a real insertion boundary in group order.
+  if(!nodes.length){const preceding=new Set(doc.groups.slice(0,doc.groups.findIndex(g=>g.id===groupId)).map(g=>g.id));nodes.push(Math.max(0,...doc.blocks.filter(b=>preceding.has(b.group)).map(end)));}
   const textWidth=Math.max(180,800-doc.layout.operationWidth-doc.layout.waitWidth-doc.layout.environmentWidth-doc.layout.laneGap*2);
   const positions=new Map();let y=0;
   for(let i=0;i<nodes.length;i++) {
