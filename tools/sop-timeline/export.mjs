@@ -1,4 +1,4 @@
-import {end,total,formatDuration,environmentRuns,primaryObject} from './core.mjs';
+import {end,total,formatDuration,environmentRuns,primaryObject} from './core.mjs?v=2';
 const W=744,esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 const text=(x,y,value,size=13,color='#3f506f',extra='')=>`<text x="${x}" y="${y}" font-size="${size}" fill="${color}" ${extra}>${esc(value)}</text>`;
 function richTokens(html){const template=document.createElement('template');template.innerHTML=html;const tokens=[];function walk(node,bold=false,italic=false){if(node.nodeType===3){for(const char of node.textContent)tokens.push({char,bold,italic});return;}if(node.nodeType!==1&&node.nodeType!==11)return;const tag=node.tagName?.toLowerCase();if(['script','style','iframe','object'].includes(tag))return;if(tag==='br')tokens.push({char:'\n'});for(const child of node.childNodes)walk(child,bold||['b','strong'].includes(tag),italic||['i','em'].includes(tag));if(['div','p'].includes(tag))tokens.push({char:'\n'});}walk(template.content);return tokens;}
@@ -10,7 +10,8 @@ function diagram(doc){
     const blocks=doc.blocks.filter(b=>b.group===g.id),nodes=[...new Set(blocks.flatMap(b=>[b.start,end(b)]))].sort((a,b)=>a-b),positions=new Map(),descriptions=[],baselines=[];let y=0;
     for(let i=0;i<nodes.length;i++){
       positions.set(nodes[i],y);if(i===nodes.length-1)break;
-      let textY=y+19;for(const b of blocks.filter(b=>b.start===nodes[i])){descriptions.push(text(tx+14,textY,`${b.lane==='wait'?'等待':'操作'} · ${formatDuration(b.start)}${blocks.filter(o=>o.start===b.start).length>1?' · 同时开始':''}`,9,'#8c9aaf'));baselines.push(textY);textY+=23;const lines=wrap(b.text||'（未填写实验操作）',tw-30,l.fontSize,ctx);for(const line of lines){descriptions.push(richLine(tx+14,textY,line,l.fontSize));baselines.push(textY);textY+=25;}descriptions.push(text(tx+14,textY,`${b.object||'样本'} · ${b.environment||'未标注环境'}`,10,'#8394a7'));baselines.push(textY);textY+=26;}
+      const simultaneous=blocks.filter(b=>b.start===nodes[i]).sort((a,b)=>(a.lane==='wait'?0:1)-(b.lane==='wait'?0:1)),textWidth=(tw-28)/Math.max(1,simultaneous.length);let textY=y+24;
+      simultaneous.forEach((b,index)=>{let lineY=y+24;const x=tx+14+index*textWidth,lines=wrap(b.text||'（未填写实验操作）',textWidth-12,l.fontSize,ctx);for(const line of lines){descriptions.push(richLine(x,lineY,line,l.fontSize));baselines.push(lineY);lineY+=25;}textY=Math.max(textY,lineY+10);});
       y=Math.max(y+72+l.spacing,y+Math.min(126,48+Math.log2((nodes[i+1]-nodes[i])/60+1)*12),textY+7);
     }
     if(!blocks.length){y=72;descriptions.push(text(W/2,42,'空步骤 · 尚未添加时间块',12,'#9aa7bb','text-anchor="middle"'));}
@@ -18,13 +19,13 @@ function diagram(doc){
     groups.push({id:g.id,title:g.title,index,blocks,nodes,positions,height:y,descriptions,baselines});
   }return {doc,l,op,wait,gap,env,tx,tw,groups};
 }
-function columnHeader(d,y){const {op,wait,gap,env,tx,tw}=d;return `<rect y="${y}" width="${W}" height="36" rx="5" fill="#e9edf4"/>${text(op/2,y+23,'操作',13,'#34435f','text-anchor="middle" font-weight="700"')}${text(op+gap+wait/2,y+23,'等待',13,'#34435f','text-anchor="middle" font-weight="700"')}${text(tx+tw/2,y+23,'实验操作',13,'#34435f','text-anchor="middle" font-weight="700"')}${text(W-env/2,y+23,'环境',13,'#34435f','text-anchor="middle" font-weight="700"')}`;}
-function heading(d,page,pages){return `${text(5,29,'SOP 实验流程',27,'#17233e','font-weight="700"')}${text(5,57,d.doc.name,14)}${text(W-5,25,`${d.doc.revision} · ${d.doc.date}`,10,'#8290a3','text-anchor="end"')}${text(W-5,44,`作者：${d.doc.author||'—'}`,10,'#8290a3','text-anchor="end"')}${columnHeader(d,75)}${page?text(W-5,62,`${page} / ${pages}`,10,'#8290a3','text-anchor="end"'):''}`;}
+function columnHeader(d,y){const {op,wait,gap,env,tx,tw}=d;return `<rect y="${y}" width="${W}" height="36" rx="5" fill="#e9edf4"/>${text(wait/2,y+23,'等待',13,'#34435f','text-anchor="middle" font-weight="700"')}${text(wait+gap+op/2,y+23,'操作',13,'#34435f','text-anchor="middle" font-weight="700"')}${text(tx+tw/2,y+23,'实验操作',13,'#34435f','text-anchor="middle" font-weight="700"')}${text(W-env/2,y+23,'环境',13,'#34435f','text-anchor="middle" font-weight="700"')}`;}
+function heading(d,page,pages){return `${text(5,29,d.doc.name,27,'#17233e','font-weight="700"')}${text(5,57,'SOP 实验流程',14)}${text(W-5,25,`${d.doc.revision} · ${d.doc.date}`,10,'#8290a3','text-anchor="end"')}${text(W-5,44,`作者：${d.doc.author||'—'}`,10,'#8290a3','text-anchor="end"')}${columnHeader(d,75)}${page?text(W-5,62,`${page} / ${pages}`,10,'#8290a3','text-anchor="end"'):''}`;}
 function groupSlice(d,g,start,stop,offset,continuation){
   const {op,wait,gap,env,tx,l}=d,h=stop-start,clip=`clip-${g.index}-${start}`,y=t=>g.positions.get(t),theme=l.theme,opFill=theme==='sage'?'#dcebe5':theme==='lavender'?'#e6e0f6':'#d8e8fc';
-  let shapes=`<rect x="0" y="${start}" width="${W}" height="${h}" fill="#fff"/><path d="M ${op} ${start} V ${stop} M ${op+gap+wait} ${start} V ${stop} M ${W-env} ${start} V ${stop}" stroke="#dce4ef" stroke-dasharray="4 4"/>`;
+  let shapes=`<rect x="0" y="${start}" width="${W}" height="${h}" fill="#fff"/><path d="M ${wait} ${start} V ${stop} M ${wait+gap+op} ${start} V ${stop} M ${W-env} ${start} V ${stop}" stroke="#dce4ef" stroke-dasharray="4 4"/>`;
   for(const t of g.nodes)shapes+=`<path d="M 0 ${y(t)} H ${W}" stroke="#edf1f6"/>`;
-  for(const b of g.blocks){const top=y(b.start),bottom=y(end(b));if(bottom<=start||top>=stop)continue;const x=b.lane==='operation'?13:op+gap+13,w=(b.lane==='operation'?op:wait)-26,sy=Math.max(start,top)+7,ey=Math.min(stop,bottom)-7;
+  for(const b of g.blocks){const top=y(b.start),bottom=y(end(b));if(bottom<=start||top>=stop)continue;const x=b.lane==='wait'?13:wait+gap+13,w=(b.lane==='operation'?op:wait)-26,sy=Math.max(start,top)+7,ey=Math.min(stop,bottom)-7;
     shapes+=`<rect x="${x}" y="${sy}" width="${w}" height="${Math.max(20,ey-sy)}" rx="6" fill="${b.lane==='operation'?opFill:'#ffe0bd'}" stroke="${b.lane==='operation'?'#a5c3e5':'#efbc88'}"/>${text(x+w/2,sy+21,`${top<start?'↳ ':''}${formatDuration(b.duration)}`,11,b.lane==='operation'?'#355b88':'#875635','text-anchor="middle" font-weight="700"')}`;
     if(bottom>stop)shapes+=text(x+w/2,ey-5,'续下页 ↓',9,'#8b9ab0','text-anchor="middle"');
   }

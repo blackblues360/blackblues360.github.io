@@ -1,5 +1,6 @@
 // Real time is integer seconds. Rendering coordinates never enter these operations.
 export const VERSION = 1;
+export const defaultEnvironmentTerms = ['室温','冰上','4°C','37°C','避光','4°C · 避光','生物安全柜'];
 export const defaults = { operationWidth: 116, waitWidth: 116, laneGap: 0, environmentWidth: 100, fontSize: 15, spacing: 14, theme: 'blue', orientation: 'portrait' };
 export const clone = value => structuredClone(value);
 export const uid = () => globalThis.crypto.randomUUID();
@@ -20,6 +21,7 @@ export function formatDuration(seconds) {
 export function validate(doc) {
   if (!doc || doc.version !== VERSION || !Array.isArray(doc.groups) || !Array.isArray(doc.blocks) || !Array.isArray(doc.notes)) return '不支持的文件结构或版本';
   if (doc.groups.length > 200 || doc.blocks.length > 1000 || doc.notes.length > 1000) return '文件内容过多';
+  if(doc.environmentTerms!==undefined&&(!Array.isArray(doc.environmentTerms)||doc.environmentTerms.length>100||doc.environmentTerms.some(term=>typeof term!=='string'||!term.trim()||term.length>80)))return '环境词条无效（最多 100 条，每条最多 80 字）';
   const ids = new Set();
   for (const g of doc.groups) {
     if (!g || typeof g.id !== 'string' || !/^[\w-]{1,100}$/.test(g.id) || ids.has(g.id) || typeof g.title !== 'string' || g.title.length > 500) return '大步骤数据无效';
@@ -50,7 +52,7 @@ export function validate(doc) {
   return null;
 }
 export function emptyDocument() {
-  return { version: VERSION, name: '未命名实验 SOP', author: '', date: new Date().toLocaleDateString('sv-SE'), revision: 'v1.0', groups: [{id:uid(),title:'实验准备',collapsed:false}], blocks: [], notes: [], layout: {...defaults} };
+  return { version: VERSION, name: '未命名实验 SOP', author: '', date: new Date().toLocaleDateString('sv-SE'), revision: 'v1.0', groups: [{id:uid(),title:'实验准备',collapsed:false}], blocks: [], notes: [], environmentTerms:[...defaultEnvironmentTerms], layout: {...defaults} };
 }
 export function sampleDocument() {
   const d = emptyDocument(); d.name='流式细胞术 · 细胞表面抗体染色';
@@ -106,6 +108,7 @@ function closeGaps(doc) {
   } return d;
 }
 export function deleteBlock(doc,id) { const d=clone(doc);d.blocks=d.blocks.filter(b=>b.id!==id);return result(closeGaps(d)); }
+export function deleteGroup(doc,id) { const d=clone(doc);d.groups=d.groups.filter(g=>g.id!==id);d.blocks=d.blocks.filter(b=>b.group!==id);d.notes=d.notes.filter(n=>n.group!==id);return result(closeGaps(d)); }
 export function addBlock(doc,block,target=total(doc)) {
   const candidates=endpoints(doc).flatMap(t=>[t,t-block.duration]).filter(t=>t>=0);
   const ordered=[...new Set(candidates)].sort((a,b)=>Math.abs(a-target)-Math.abs(b-target)||a-b);
@@ -145,6 +148,7 @@ export function importDocument(text) {
   }
   if(['blue','sage','lavender'].includes(doc.layout?.theme))layout.theme=doc.layout.theme;
   if(doc.layout?.orientation==='landscape')layout.orientation='landscape';
+  doc.environmentTerms=doc.environmentTerms?[...new Set(doc.environmentTerms.map(term=>term.trim()))]:[...defaultEnvironmentTerms];
   doc.layout=layout;return doc;
 }
 export function environmentRuns(blocks) {

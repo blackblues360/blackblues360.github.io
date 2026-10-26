@@ -1,7 +1,7 @@
-import {defaults,clone,uid,end,total,formatDuration,parseDuration,validate,emptyDocument,sampleDocument,endpoints,resizeBlock,deleteBlock,addBlock,insertBlock,moveBlock,reorderGroup,importDocument,environmentRuns,primaryObject,groupLayout} from './core.mjs';
-import {exportPNG,printPDF} from './export.mjs';
+import {defaults,clone,uid,end,total,formatDuration,parseDuration,validate,emptyDocument,sampleDocument,endpoints,resizeBlock,deleteBlock,deleteGroup,addBlock,insertBlock,moveBlock,reorderGroup,importDocument,environmentRuns,primaryObject,groupLayout} from './core.mjs?v=2';
+import {exportPNG,printPDF} from './export.mjs?v=2';
 const $=s=>document.querySelector(s), paper=$('#paper'),viewport=$('#viewport'),storageKey='blackblues.sop-timeline.v1';
-let doc=sampleDocument(), selected=null, activeGroup=doc.groups[0].id, past=[],future=[],clipboard=null,zoom=1,drag=null,toastTimer,editSnapshot=null,fileHandle=null,space=false,pointerHeld=false,needsRefresh=false;
+let doc=sampleDocument(), selected=null, activeGroup=doc.groups[0].id, past=[],future=[],clipboard=null,zoom=1,drag=null,toastTimer,editSnapshot=null,fileHandle=null,space=false,pointerHeld=false,needsRefresh=false,environmentTargetIds=[];
 let recoveryMessage='';
 try {const stored=localStorage.getItem(storageKey);if(stored){doc=importDocument(stored);recoveryMessage='已恢复本机自动保存的草稿';}activeGroup=doc.groups[0]?.id;}catch{recoveryMessage='草稿读取失败，已保留原存储。请先保存当前文件。';}
 const esc=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -27,18 +27,19 @@ function fit(){setZoom(Math.min(1,(viewport.clientWidth-42)/800));}
 function select(id){selected=id;const b=doc.blocks.find(b=>b.id===id);if(b)activeGroup=b.group;paper.querySelectorAll('.time-block').forEach(el=>el.classList.toggle('selected',el.dataset.id===id));$('#copy').disabled=!b;$('#delete').disabled=!b;}
 function renderSettings(){
   const range=(key,label,min,max,unit='px')=>`<label class="setting-row">${label}<span class="setting-control"><input type="range" data-setting="${key}" min="${min}" max="${max}" value="${doc.layout[key]}" aria-label="${label}"><output>${doc.layout[key]} ${unit}</output></span></label>`;
-  $('#settingFields').innerHTML=`<section class="setting-section"><h3>泳道宽度</h3>${range('operationWidth','操作泳道宽度',72,180)}${range('waitWidth','等待泳道宽度',72,180)}${range('environmentWidth','环境列宽度',80,150)}${range('laneGap','两泳道间距',0,24)}</section><section class="setting-section"><h3>排版与样式</h3>${range('fontSize','实验文字字号',12,22)}${range('spacing','时间节点间距',8,36)}<label class="setting-row">颜色主题<select data-setting="theme"><option value="blue">浅雾蓝 · 杏橙</option><option value="sage">鼠尾草 · 浅沙</option><option value="lavender">薰衣草 · 杏橙</option></select></label></section><section class="setting-section"><h3>页面设置</h3><label class="setting-row">A4 页面方向<select data-setting="orientation"><option value="portrait">纵向 · 210 × 297 mm</option><option value="landscape">横向 · 297 × 210 mm</option></select></label></section>`;
+  $('#settingFields').innerHTML=`<section class="setting-section"><h3>泳道宽度</h3>${range('waitWidth','等待泳道宽度',72,180)}${range('operationWidth','操作泳道宽度',72,180)}${range('environmentWidth','环境列宽度',80,150)}${range('laneGap','两泳道间距',0,24)}</section><section class="setting-section"><h3>排版与样式</h3>${range('fontSize','实验文字字号',12,22)}${range('spacing','时间节点间距',8,36)}<label class="setting-row">颜色主题<select data-setting="theme"><option value="blue">浅雾蓝 · 杏橙</option><option value="sage">鼠尾草 · 浅沙</option><option value="lavender">薰衣草 · 杏橙</option></select></label></section><section class="setting-section"><h3>页面设置</h3><label class="setting-row">A4 页面方向<select data-setting="orientation"><option value="portrait">纵向 · 210 × 297 mm</option><option value="landscape">横向 · 297 × 210 mm</option></select></label></section>`;
+  $('#settingFields').insertAdjacentHTML('beforeend',`<section class="setting-section"><h3>环境词条</h3><div class="environment-terms">${doc.environmentTerms.map((term,index)=>`<span>${esc(term)}<button data-remove-term="${index}" aria-label="删除环境词条 ${esc(term)}">×</button></span>`).join('')}</div><form id="environmentTermForm"><input id="environmentTermInput" maxlength="80" placeholder="输入新环境，如 25°C" aria-label="新增环境词条"><button type="submit">添加</button></form><p class="environment-hint">拖入环境块后选择。删除词条不影响已有标注。</p></section>`);
   for(const key of ['theme','orientation'])$(`[data-setting="${key}"]`).value=doc.layout[key];
 }
 function render(){
   needsRefresh=false;
   if(!doc.groups.some(g=>g.id===activeGroup))activeGroup=doc.groups[0]?.id;
   const l=doc.layout;paper.style.setProperty('--ow',`${l.operationWidth}px`);paper.style.setProperty('--ww',`${l.waitWidth}px`);paper.style.setProperty('--gap',`${l.laneGap}px`);paper.style.setProperty('--ew',`${l.environmentWidth}px`);paper.style.setProperty('--fs',`${l.fontSize}px`);document.body.dataset.theme=l.theme;
-  paper.innerHTML=`<header class="paper-heading"><div><h1>SOP 实验流程</h1><p>实验名称： <span contenteditable="plaintext-only" data-doc="name" aria-label="实验名称">${esc(doc.name)}</span></p></div><div class="metadata">${[['revision','版本'],['date','日期'],['author','作者']].map(([key,label])=>`<label><span>${label}</span><input data-doc="${key}" value="${esc(doc[key])}" aria-label="${label}" placeholder="点击填写"></label>`).join('')}</div></header><div class="columns"><span>操作</span><span>等待</span><span>实验操作</span><span>环境</span></div>`;
+  paper.innerHTML=`<header class="paper-heading"><div class="paper-title"><h1 contenteditable="plaintext-only" data-doc="name" aria-label="实验名称">${esc(doc.name)}</h1><p>SOP 实验流程</p></div><div class="metadata">${[['revision','版本'],['date','日期'],['author','作者']].map(([key,label])=>`<label><span>${label}</span><input data-doc="${key}" value="${esc(doc[key])}" aria-label="${label}" placeholder="点击填写"></label>`).join('')}</div></header><div class="columns"><span>等待</span><span>操作</span><span>实验操作</span><span>环境</span></div>`;
   const allRuns=environmentRuns(doc.blocks.filter(b=>b.object===primaryObject(doc)));
   doc.groups.forEach((g,index)=>{
     const layout=groupLayout(doc,g.id), section=document.createElement('section');section.className='step-group';section.dataset.group=g.id;
-    section.innerHTML=`<header class="group-heading"><span class="group-grip" draggable="true" data-group-drag="${g.id}" title="拖动大步骤排序">⠿</span><span class="number">${String(index+1).padStart(2,'0')}</span><span class="group-title" contenteditable="plaintext-only" data-group-title="${g.id}" aria-label="大步骤标题">${esc(g.title)}</span><span class="group-time">${layout.blocks.length?formatDuration(Math.max(...layout.blocks.map(end))-Math.min(...layout.blocks.map(b=>b.start))):'空步骤'}</span><button class="remove-group" data-remove-group="${g.id}" title="删除空容器">×</button><button data-collapse="${g.id}" aria-label="${g.collapsed?'展开':'折叠'}大步骤" aria-expanded="${!g.collapsed}">${g.collapsed?'⌄':'⌃'}</button></header>`;
+    section.innerHTML=`<header class="group-heading"><span class="group-grip" draggable="true" data-group-drag="${g.id}" title="拖动大步骤排序">⠿</span><span class="number">${String(index+1).padStart(2,'0')}</span><span class="group-title" contenteditable="plaintext-only" data-group-title="${g.id}" aria-label="大步骤标题">${esc(g.title)}</span><span class="group-time">${layout.blocks.length?formatDuration(Math.max(...layout.blocks.map(end))-Math.min(...layout.blocks.map(b=>b.start))):'空步骤'}</span><button class="remove-group" data-remove-group="${g.id}" title="删除整个大步骤（Ctrl+Z 撤销）">×</button><button data-collapse="${g.id}" aria-label="${g.collapsed?'展开':'折叠'}大步骤" aria-expanded="${!g.collapsed}">${g.collapsed?'⌄':'⌃'}</button></header>`;
     if(!g.collapsed){
       const body=document.createElement('div');body.className='timeline-body';body.dataset.group=g.id;body.style.height=`${layout.height}px`;
       body.innerHTML='<div class="lane lane-operation" data-lane="operation"></div><div class="lane lane-wait" data-lane="wait"></div>';
@@ -47,12 +48,13 @@ function render(){
       for(const b of layout.blocks){const block=document.createElement('div');block.className=`time-block ${b.lane}`;block.dataset.id=b.id;block.draggable=true;block.style.top=`${layout.toY(b.start)+10}px`;block.style.height=`${Math.max(32,layout.toY(end(b))-layout.toY(b.start)-20)}px`;block.innerHTML=`<input class="duration" value="${formatDuration(b.duration)}" data-duration="${b.id}" aria-label="时间块持续时间" draggable="false">${b.duration>=1200?'<span class="compression" title="较长时间已视觉压缩">⋮</span>':''}<span class="resize" data-resize="${b.id}" title="拖动尾端调整时长"></span>`;body.append(block);}
       for(const time of [...new Set(layout.blocks.map(b=>b.start))]){
         const texts=document.createElement('div');texts.className='block-texts';texts.dataset.time=time;texts.style.top=`${layout.toY(time)}px`;
-        const simultaneous=layout.blocks.filter(b=>b.start===time);
-        texts.innerHTML=simultaneous.map(b=>`<div class="text-item ${b.lane==='wait'?'wait-text':''}" data-text-id="${b.id}"><div class="text-meta"><span>${b.lane==='operation'?'操作':'等待'}${simultaneous.length>1?' · 同时开始':''} · ${formatDuration(b.start)}</span><button data-select="${b.id}" title="选择此时间块">⋯</button></div><div class="block-description" contenteditable="true" data-text="${b.id}" data-placeholder="点击输入实验操作…" aria-label="实验操作文字">${safeHTML(b.text)}</div><div class="env-tags"><span>对象</span><span contenteditable="plaintext-only" data-object="${b.id}" aria-label="实验对象">${esc(b.object)}</span><span>环境</span><span contenteditable="plaintext-only" data-environment="${b.id}" aria-label="操作环境">${esc(b.environment)}</span></div></div>`).join('');body.append(texts);
+        const simultaneous=layout.blocks.filter(b=>b.start===time).sort((a,b)=>(a.lane==='wait'?0:1)-(b.lane==='wait'?0:1));
+        texts.classList.toggle('parallel',simultaneous.length>1);
+        texts.innerHTML=simultaneous.map(b=>`<div class="text-item ${b.lane==='wait'?'wait-text':''}" data-text-id="${b.id}"><div class="block-description" contenteditable="true" data-text="${b.id}" data-placeholder="点击输入实验操作…" aria-label="实验操作文字">${safeHTML(b.text)}</div></div>`).join('');body.append(texts);
       }
       const start=layout.nodes[0], finish=layout.nodes.at(-1);
       for(const run of allRuns.filter(r=>r.start<finish&&r.end>start)){
-        const top=Math.max(run.start,start),bottom=Math.min(run.end,finish),env=document.createElement('div');env.className=`env-run ${/4|冰|避光/.test(run.environment)?'cold':/37/.test(run.environment)?'warm':''}`;env.style.top=`${layout.toY(top)+7}px`;env.style.height=`${Math.max(36,layout.toY(bottom)-layout.toY(top)-14)}px`;env.innerHTML=`<span>${esc(run.environment)}</span><small class="env-object">${run.start<start?'↑ 接上步骤':run.end>finish?'↓ 续下步骤':esc(run.object)}</small>`;body.append(env);
+        const top=Math.max(run.start,start),bottom=Math.min(run.end,finish),env=document.createElement('div');env.className=`env-run ${/4|冰|避光/.test(run.environment)?'cold':/37/.test(run.environment)?'warm':''}`;env.style.top=`${layout.toY(top)+7}px`;env.style.height=`${Math.max(36,layout.toY(bottom)-layout.toY(top)-14)}px`;env.innerHTML=`<button class="environment-label" data-edit-environment="${run.ids.join(',')}" title="选择环境">${esc(run.environment)}</button><small class="env-object">${run.start<start?'↑ 接上步骤':run.end>finish?'↓ 续下步骤':''}</small>`;body.append(env);
       }
       section.append(body);
       doc.notes.filter(n=>n.group===g.id).forEach(n=>{const note=document.createElement('div');note.className='group-note';note.innerHTML=`<span>!</span><span contenteditable="plaintext-only" data-note="${n.id}" aria-label="备注">${esc(n.text)}</span><button data-remove-note="${n.id}" aria-label="删除备注">×</button>`;section.append(note);});
@@ -88,11 +90,18 @@ function measureText(){
 }
 function bodyTime(body,clientY){const m=body._mapping, pos=(clientY-body.getBoundingClientRect().top)/zoom;if(!m?.nodes.length)return 0;for(let i=1;i<m.nodes.length;i++)if(pos<=m.ys[i])return m.nodes[i-1]+(pos-m.ys[i-1])/(m.ys[i]-m.ys[i-1])*(m.nodes[i]-m.nodes[i-1]);const i=m.nodes.length-1;return i>0?m.nodes[i]+(pos-m.ys[i])/(m.ys[i]-m.ys[i-1])*(m.nodes[i]-m.nodes[i-1]):m.nodes[0];}
 function nearestTime(body,clientY,duration=0){const time=bodyTime(body,clientY);const nodes=[...new Set(endpoints(doc).flatMap(t=>[t,t-duration]))].filter(t=>t>=0);return nodes.reduce((a,b)=>Math.abs(b-time)<Math.abs(a-time)?b:a,0);}
-function newBlock(lane,group){return {id:uid(),lane,group,start:0,duration:lane==='wait'?1800:300,text:'',environment:'室温',object:lane==='operation'&&doc.blocks.some(b=>b.group===group&&b.lane==='wait')?'试剂':'样本'};}
+function newBlock(lane,group){return {id:uid(),lane,group,start:0,duration:lane==='wait'?1800:300,text:'',environment:'',object:'样本'};}
+function chooseEnvironment(ids){
+  environmentTargetIds=ids.filter(id=>doc.blocks.some(b=>b.id===id));if(!environmentTargetIds.length){toast('请先添加时间块，再拖入环境块');return;}
+  $('#environmentChoices').innerHTML=doc.environmentTerms.map((term,index)=>`<button data-environment-choice="${index}">${esc(term)}</button>`).join('')||'<p>请先在设置中添加环境词条。</p>';
+  $('#environmentDialog').showModal();
+}
+function environmentBlockAt(body,clientY){const time=bodyTime(body,clientY),blocks=doc.blocks.filter(b=>b.group===body.dataset.group&&b.object===primaryObject(doc)).sort((a,b)=>(a.lane==='wait'?0:1)-(b.lane==='wait'?0:1)||a.start-b.start);return blocks.find(b=>b.start<=time&&end(b)>time)||blocks.at(-1);}
 function addComponent(type,group=activeGroup,time){
   finishEdit();
   if(type==='group'){const id=uid();mutate(d=>d.groups.push({id,title:'新大步骤',collapsed:false}));activeGroup=id;return;}
   if(!group){toast('请先添加一个大步骤容器');return;}
+  if(type==='environment'){const b=doc.blocks.find(b=>b.id===selected)||doc.blocks.find(b=>b.group===group&&b.object===primaryObject(doc));chooseEnvironment(b?[b.id]:[]);return;}
   if(type==='note'){mutate(d=>d.notes.push({id:uid(),group,text:'点击输入备注'}));return;}
   const blocks=doc.blocks.filter(b=>b.group===group), groupEnd=blocks.length?Math.max(...blocks.map(end)):total(doc),wait=blocks.find(b=>b.lane==='wait'&&!doc.blocks.some(o=>o.lane==='operation'&&o.start<=b.start&&end(o)>b.start));
   const target=time??(type==='operation'&&wait?wait.start:groupEnd), b=newBlock(type,group);
@@ -103,8 +112,7 @@ paper.addEventListener('input',e=>{
   const el=e.target;if(el.dataset.duration)return;
   if(el.dataset.doc)doc[el.dataset.doc]=el.value??el.textContent;
   if(el.dataset.groupTitle)doc.groups.find(g=>g.id===el.dataset.groupTitle).title=el.textContent;
-  const id=el.dataset.text||el.dataset.environment||el.dataset.object;
-  if(id){const b=doc.blocks.find(b=>b.id===id);if(el.dataset.text)b.text=safeHTML(el.innerHTML);else if(el.dataset.environment)b.environment=el.textContent;else b.object=el.textContent||'样本';}
+  if(el.dataset.text)doc.blocks.find(b=>b.id===el.dataset.text).text=safeHTML(el.innerHTML);
   if(el.dataset.note)doc.notes.find(n=>n.id===el.dataset.note).text=el.textContent;
   if(el.dataset.text)requestAnimationFrame(()=>{measureText();applyZoom();});
   persist();
@@ -119,8 +127,9 @@ paper.addEventListener('paste',e=>{if(!e.target.matches('[contenteditable]'))ret
 paper.addEventListener('click',e=>{
   const el=e.target, b=el.closest('.time-block');if(b)select(b.dataset.id);
   if(el.dataset.select)select(el.dataset.select);
+  if(el.dataset.editEnvironment)chooseEnvironment(el.dataset.editEnvironment.split(','));
   if(el.dataset.collapse)mutate(d=>{const g=d.groups.find(g=>g.id===el.dataset.collapse);g.collapsed=!g.collapsed;});
-  if(el.dataset.removeGroup){if(doc.blocks.some(b=>b.group===el.dataset.removeGroup)||doc.notes.some(n=>n.group===el.dataset.removeGroup)){toast('请先移走或删除容器中的时间块和备注');return;}mutate(d=>d.groups=d.groups.filter(g=>g.id!==el.dataset.removeGroup));}
+  if(el.dataset.removeGroup)commit(deleteGroup(doc,el.dataset.removeGroup),'已删除大步骤及其内容，Ctrl+Z 可撤销');
   if(el.dataset.removeNote)mutate(d=>d.notes=d.notes.filter(n=>n.id!==el.dataset.removeNote));
   const group=el.closest('.step-group');if(group)activeGroup=group.dataset.group;
 });
@@ -134,7 +143,8 @@ paper.addEventListener('dragstart',e=>{
 function clearGuide(){paper.querySelectorAll('.drop-guide').forEach(el=>el.remove());}
 paper.addEventListener('dragover',e=>{
   if(!drag)return;e.preventDefault();clearGuide();const body=e.target.closest('.timeline-body');if(!body||drag.group||drag.type==='group'||drag.type==='note')return;
-  const x=(e.clientX-body.getBoundingClientRect().left)/zoom,l=doc.layout,lane=x<l.operationWidth?'operation':x>=l.operationWidth+l.laneGap&&x<l.operationWidth+l.laneGap+l.waitWidth?'wait':null;
+  if(drag.type==='environment'){const b=environmentBlockAt(body,e.clientY),valid=e.clientX>=body.getBoundingClientRect().right-doc.layout.environmentWidth*zoom&&b,guide=document.createElement('div');guide.className=`drop-guide${valid?'':' invalid'}`;const m=body._mapping;guide.style.top=`${b?m.ys[m.nodes.indexOf(b.start)]:0}px`;guide.innerHTML=`<span>${valid?'放入环境块 · 选择词条':'请拖到最右侧环境区'}</span>`;body.append(guide);return;}
+  const x=(e.clientX-body.getBoundingClientRect().left)/zoom,l=doc.layout,lane=x<l.waitWidth?'wait':x>=l.waitWidth+l.laneGap&&x<l.waitWidth+l.laneGap+l.operationWidth?'operation':null;
   const b=drag.id?{...doc.blocks.find(b=>b.id===drag.id),group:body.dataset.group}:newBlock(drag.type,body.dataset.group),time=nearestTime(body,e.clientY,b.duration);
   const next=drag.id?moveBlock(doc,b.id,body.dataset.group,time):insertBlock(doc,b,time),valid=lane===drag.type&&!next.error;
   const m=body._mapping,index=m?.nodes.indexOf(time);let y=index>=0?m.ys[index]:0;if(index<0&&m)for(let i=1;i<m.nodes.length;i++)if(time>=m.nodes[i-1]&&time<=m.nodes[i])y=m.ys[i-1]+(time-m.nodes[i-1])/(m.nodes[i]-m.nodes[i-1])*(m.ys[i]-m.ys[i-1]);const guide=document.createElement('div');guide.className=`drop-guide${valid?'':' invalid'}`;guide.style.top=`${y}px`;guide.innerHTML=`<span>${valid?'吸附':'冲突'} · ${formatDuration(time)}${lane!==drag.type?' · 请放入对应泳道':''}</span>`;body.append(guide);
@@ -143,7 +153,8 @@ paper.addEventListener('drop',e=>{
   if(!drag)return;e.preventDefault();clearGuide();const target=e.target.closest('.step-group'),body=e.target.closest('.timeline-body'),group=target?.dataset.group||activeGroup;
   if(drag.group){commit(reorderGroup(doc,drag.group,target?.dataset.group));}
   else if(drag.type==='group'||drag.type==='note')addComponent(drag.type,group);
-  else if(body){const x=(e.clientX-body.getBoundingClientRect().left)/zoom,l=doc.layout,lane=x<l.operationWidth?'operation':x>=l.operationWidth+l.laneGap&&x<l.operationWidth+l.laneGap+l.waitWidth?'wait':null;if(lane!==drag.type)toast('时间块只能放入对应的操作或等待泳道');else {const duration=drag.id?doc.blocks.find(b=>b.id===drag.id).duration:drag.type==='wait'?1800:300,t=nearestTime(body,e.clientY,duration);if(drag.id)commit(moveBlock(doc,drag.id,group,t));else addComponent(drag.type,group,t);}}
+  else if(drag.type==='environment'&&body){if(e.clientX<body.getBoundingClientRect().right-doc.layout.environmentWidth*zoom)toast('环境块只能放入最右侧环境区');else {const b=environmentBlockAt(body,e.clientY);chooseEnvironment(b?[b.id]:[]);}}
+  else if(body){const x=(e.clientX-body.getBoundingClientRect().left)/zoom,l=doc.layout,lane=x<l.waitWidth?'wait':x>=l.waitWidth+l.laneGap&&x<l.waitWidth+l.laneGap+l.operationWidth?'operation':null;if(lane!==drag.type)toast('时间块只能放入对应的操作或等待泳道');else {const duration=drag.id?doc.blocks.find(b=>b.id===drag.id).duration:drag.type==='wait'?1800:300,t=nearestTime(body,e.clientY,duration);if(drag.id)commit(moveBlock(doc,drag.id,group,t));else addComponent(drag.type,group,t);}}
   drag=null;
 });
 document.addEventListener('dragend',()=>{drag=null;pointerHeld=false;clearGuide();setTimeout(refreshAfterEdit,0);});
@@ -178,10 +189,14 @@ viewport.addEventListener('pointerdown',e=>{if(!space)return;e.preventDefault();
 function toggleSettings(show){$('.workspace').classList.toggle('settings-hidden',!show);$('#settingsToggle').setAttribute('aria-expanded',String(show));}
 $('#settingsToggle').onclick=()=>toggleSettings($('.workspace').classList.contains('settings-hidden'));$('#settingsClose').onclick=()=>toggleSettings(false);
 $('#settingFields').addEventListener('input',e=>{const el=e.target;if(!el.dataset.setting)return;if(!editSnapshot)editSnapshot=clone(doc);doc.layout[el.dataset.setting]=el.type==='range'?Number(el.value):el.value;if(el.type==='range')el.nextElementSibling.value=`${el.value} px`;});
-$('#settingFields').addEventListener('change',()=>{finishEdit();render();});
+$('#settingFields').addEventListener('change',e=>{if(e.target.dataset.setting){finishEdit();render();}});
+$('#settingFields').addEventListener('submit',e=>{if(e.target.id!=='environmentTermForm')return;e.preventDefault();const term=$('#environmentTermInput').value.trim();if(!term){toast('请输入环境词条');return;}if(doc.environmentTerms.includes(term)){toast('这个环境词条已存在');return;}if(doc.environmentTerms.length>=100){toast('最多添加 100 个环境词条');return;}mutate(d=>d.environmentTerms.push(term));});
+$('#settingFields').addEventListener('click',e=>{if(e.target.dataset.removeTerm!==undefined)mutate(d=>d.environmentTerms.splice(Number(e.target.dataset.removeTerm),1));});
+$('#environmentChoices').addEventListener('click',e=>{const index=e.target.dataset.environmentChoice;if(index===undefined)return;const term=doc.environmentTerms[Number(index)];if(term===undefined)return;mutate(d=>{for(const b of d.blocks)if(environmentTargetIds.includes(b.id))b.environment=term;});$('#environmentDialog').close();});
+$('#clearEnvironment').onclick=()=>{mutate(d=>{for(const b of d.blocks)if(environmentTargetIds.includes(b.id))b.environment='';});$('#environmentDialog').close();};
 $('#resetLayout').onclick=()=>mutate(d=>d.layout={...defaults});$('#saveDefaults').onclick=()=>{try{localStorage.setItem(`${storageKey}.defaults`,JSON.stringify(doc.layout));toast('已设为新 SOP 的默认布局');}catch{toast('浏览器无法保存默认布局');}};
 $('#help').onclick=()=>$('#helpDialog').showModal();
-$('#new').onclick=()=>{finishEdit();if(!confirm('新建空白 SOP？当前内容可用撤销恢复；建议先保存原始文件。'))return;const next=emptyDocument();try{const saved=localStorage.getItem(`${storageKey}.defaults`);if(saved)next.layout=importDocument(JSON.stringify({...next,layout:JSON.parse(saved)})).layout;}catch{}fileHandle=null;commit({doc:next});activeGroup=doc.groups[0].id;};
+$('#new').onclick=()=>{finishEdit();if(!confirm('新建空白 SOP？当前内容可用撤销恢复；建议先保存原始文件。'))return;const next=emptyDocument();next.environmentTerms=[...doc.environmentTerms];try{const saved=localStorage.getItem(`${storageKey}.defaults`);if(saved)next.layout=importDocument(JSON.stringify({...next,layout:JSON.parse(saved)})).layout;}catch{}fileHandle=null;commit({doc:next});activeGroup=doc.groups[0].id;};
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
 async function saveFile(asNew){finishEdit();const blob=new Blob([JSON.stringify(doc,null,2)],{type:'application/json'}),name=`${doc.name.replace(/[\\/:*?"<>|]/g,'_')||'实验SOP'}.soptime`;
   try{if(window.showSaveFilePicker){if(!fileHandle||asNew)fileHandle=await window.showSaveFilePicker({suggestedName:name,types:[{description:'SOP 时间轴',accept:{'application/json':['.soptime']}}]});const stream=await fileHandle.createWritable();await stream.write(blob);await stream.close();}else download(blob,name);toast('已保存可编辑的 .soptime 原始文件');}catch(error){if(error.name!=='AbortError')toast(`保存失败：${error.message}`);}}

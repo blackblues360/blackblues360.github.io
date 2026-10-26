@@ -16,11 +16,24 @@ const os=require('node:os');
     const load=async doc=>{await page.locator('#fileInput').setInputFiles({name:'test.soptime',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(doc))});await page.waitForFunction(({key,count,first})=>{const d=JSON.parse(localStorage.getItem(key));return d?.blocks.length===count&&d.blocks[0]?.id===first;},{key,count:doc.blocks.length,first:doc.blocks[0]?.id});await page.locator('.time-block').first().waitFor();};
     await page.goto(url);await page.locator('.time-block').first().waitFor();
     assert.equal(await page.locator('.time-block').count(),8);assert.match(await page.locator('#summary').textContent(),/52 min/);
+    assert.deepEqual(await page.locator('.columns>span').allTextContents(),['等待','操作','实验操作','环境']);
+    assert.equal(await page.locator('[data-object],.env-tags,.text-meta').count(),0);
+    assert.equal(await page.locator('h1[data-doc="name"]').count(),1);
+    assert.ok(await page.locator('.paper-heading h1').evaluate(el=>parseFloat(getComputedStyle(el).fontSize))>await page.locator('.paper-heading p').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)));
     await page.screenshot({path:path.join(output,'editor.png'),fullPage:true});
     const text=page.locator('[data-text]').first();await text.fill('中文测试：轻轻混匀，避免气泡。');await text.press('Tab');await page.locator('#saveDefaults').click();
     assert.equal((await stored()).blocks[0].text,'中文测试：轻轻混匀，避免气泡。');
     await page.reload();assert.equal(await page.locator('[data-text]').first().textContent(),'中文测试：轻轻混匀，避免气泡。');
     const initial=await stored();
+    // Whole-container delete is immediate and restores all content in one undo.
+    const deleteGroup=initial.groups[0].id;await page.locator(`[data-remove-group="${deleteGroup}"]`).click();assert.equal((await stored()).groups.length,2);assert.equal((await stored()).notes.some(n=>n.group===deleteGroup),false);await page.keyboard.press('Control+z');assert.deepEqual(await stored(),initial);
+    // Custom environment term, palette drag, selection, removal and undo.
+    const term='25°C · 振荡';await page.locator('#environmentTermInput').fill(term);await page.locator('#environmentTermForm button').click();assert.ok((await stored()).environmentTerms.includes(term));
+    await page.locator('.env-run').first().scrollIntoViewIfNeeded();await page.locator('[data-component="environment"]').dragTo(page.locator('.env-run').first(),{targetPosition:{x:20,y:20}});await page.locator('#environmentDialog').waitFor({state:'visible'});await page.locator('#environmentChoices button').filter({hasText:term}).click();assert.equal((await stored()).blocks[0].environment,term);
+    await page.locator('.environment-label').first().click();await page.locator('#clearEnvironment').click();assert.equal((await stored()).blocks[0].environment,'');
+    const emptyEnvironment=page.locator('.timeline-body').first(),emptyBox=await emptyEnvironment.boundingBox();await page.locator('[data-component="environment"]').dragTo(emptyEnvironment,{targetPosition:{x:emptyBox.width-15,y:20}});await page.locator('#environmentChoices button').filter({hasText:term}).click();assert.equal((await stored()).blocks[0].environment,term);
+    const termIndex=(await stored()).environmentTerms.indexOf(term);await page.locator(`[data-remove-term="${termIndex}"]`).click();assert.equal((await stored()).environmentTerms.includes(term),false);assert.equal((await stored()).blocks[0].environment,term);await page.locator('#undo').click();assert.ok((await stored()).environmentTerms.includes(term));
+    await load(initial);
     // Rich text grows immediately while focused and shrinks without changing time.
     const first=page.locator('[data-text]').first(),body=page.locator('.timeline-body').first();const oldHeight=await body.evaluate(el=>el.offsetHeight);
     await first.fill('长文字即时自动排版。'.repeat(80));await page.waitForTimeout(50);assert.ok(await body.evaluate(el=>el.offsetHeight)>oldHeight);await first.fill(initial.blocks[0].text);await first.press('Tab');assert.deepEqual((await stored()).blocks.map(b=>[b.start,b.duration]),initial.blocks.map(b=>[b.start,b.duration]));
@@ -48,7 +61,7 @@ const os=require('node:os');
     const waitLane=page.locator('.lane-wait');await page.locator('[data-component="wait"]').dragTo(waitLane,{targetPosition:{x:5,y:6}});assert.equal((await stored()).blocks.length,4);
     // B: simultaneous text must have distinct vertical bounds while both time heads align.
     await load(model);const a=await page.locator('.time-block[data-id="a"]').boundingBox(),b=await page.locator('.time-block[data-id="b"]').boundingBox();assert.ok(Math.abs(a.y-b.y)<1);
-    const ta=await page.locator('[data-text-id="a"]').boundingBox(),tb=await page.locator('[data-text-id="b"]').boundingBox();assert.ok(ta.y+ta.height<=tb.y||tb.y+tb.height<=ta.y);
+    const ta=await page.locator('[data-text-id="a"]').boundingBox(),tb=await page.locator('[data-text-id="b"]').boundingBox();assert.ok(ta.x+ta.width<=tb.x||tb.x+tb.width<=ta.x);assert.ok(Math.abs(ta.y-tb.y)<1);assert.ok(b.x<a.x);
     // Independent width settings do not change true time.
     await page.locator('[data-setting="operationWidth"]').fill('150');await page.locator('[data-setting="operationWidth"]').dispatchEvent('change');assert.deepEqual((await stored()).blocks,model.blocks);
     // Copy/paste/delete and undo are one complete transaction each.
@@ -62,8 +75,9 @@ const os=require('node:os');
     const long=structuredClone(model);long.blocks=[];long.groups=[];
     for(let i=0;i<18;i++){const gid=`group-${i}`;long.groups.push({id:gid,title:`中文步骤 ${i+1}`,collapsed:false});long.blocks.push({...model.blocks[0],id:`block-${i}`,group:gid,start:i*300,duration:300,text:i===3?'超长中文实验步骤，不要截断这段文字。'.repeat(200):`中文实验操作 ${i+1}，记录处理条件。`,object:'样本'});}
     await load(long);const popupPromise=page.waitForEvent('popup');await page.locator('#pdf').click();const print=await popupPromise;await print.waitForLoadState();const count=await print.locator('.print-page').count();assert.ok(count>=3);await print.emulateMedia({media:'print'});await print.pdf({path:path.join(output,'timeline-a4.pdf'),preferCSSPageSize:true,printBackground:true});await print.screenshot({path:path.join(output,'print-pages.png'),fullPage:true});
-    const printText=await print.locator('body').textContent();assert.match(printText,/中文步骤 18/);assert.match(printText,/续/);assert.match(printText,/总耗时/);await print.close();
+    const printText=await print.locator('body').textContent();assert.match(printText,/中文步骤 18/);assert.match(printText,/续/);assert.match(printText,/总耗时/);assert.ok(!printText.includes('样本'));
+    const heading=print.locator('.print-page svg').first();assert.equal(await heading.locator('text').first().textContent(),long.name);assert.equal(await heading.locator('text').nth(1).textContent(),'SOP 实验流程');await print.close();
     await load(initial);await page.screenshot({path:path.join(output,'editor-final.png'),fullPage:true});
-    assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,printPages:count,output,checks:['edit','restore','live text layout','group drag','resize','undo/redo','drag lanes','simultaneous text','width','copy/paste/delete','file roundtrip','PNG','Chinese multipage PDF']}));
+    assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,printPages:count,output,checks:['title hierarchy','wait left / operation right','text only','group delete / Ctrl Z','environment terms / drag / remove','edit','restore','live text layout','group drag','resize','undo/redo','drag lanes','simultaneous text','width','copy/paste/delete','file roundtrip','PNG','Chinese multipage PDF']}));
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
