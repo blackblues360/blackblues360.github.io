@@ -22,6 +22,12 @@
           "url": "tools/anniversaries/",
           "icon": "clock",
           "description": "记录和查看重要的日子"
+        },
+        {
+          "name": "账户中心",
+          "url": "account/",
+          "icon": "notebook",
+          "description": "登录账户，管理个人资料"
         }
       ]
     },
