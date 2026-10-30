@@ -11,6 +11,7 @@
     <link rel="dns-prefetch" href="//api.open-meteo.com">
     <link rel="dns-prefetch" href="//wttr.in">
     <link rel="stylesheet" href="assets/css/theme.css">
+    <link rel="stylesheet" href="assets/css/home.css">
   </head>
   <body class="directory-page">
     <header class="site-header">
@@ -21,16 +22,6 @@
           <span id="clockWeekday" class="clock-weekday">星期--</span>
           <span id="weatherInfo" class="weather-info">天气 --</span>
         </div>
-        <label class="search">
-          <span class="search-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <circle cx="11" cy="11" r="7"></circle>
-              <path d="m16.5 16.5 4 4"></path>
-            </svg>
-          </span>
-          <input id="searchInput" type="search" autocomplete="off" placeholder="搜索" aria-label="搜索网站">
-          <span id="searchCount" class="search-count" aria-live="polite">0 / 0</span>
-        </label>
         <button id="theme-btn" class="theme-toggle" type="button" aria-label="切换主题">☀️</button>
       </div>
     </header>
@@ -38,18 +29,20 @@
     <main id="home" class="page-shell">
       <section class="web-search-area" aria-label="网页搜索">
         <form id="webSearchForm" class="web-search-form" role="search">
-          <span class="web-search-icon" aria-hidden="true">🔍</span>
-          <input id="webSearchInput" class="web-search-input" type="search" autocomplete="off" placeholder="搜索网页" aria-label="搜索网页">
+          <span class="web-search-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+          <input id="searchInput" class="web-search-input" type="search" autocomplete="off" placeholder="筛选下方站点，按回车搜索网页" aria-label="筛选站点或搜索网页" aria-describedby="searchHint">
           <span class="web-search-engines" aria-label="搜索引擎">
-            <button class="web-search-engine is-active" type="button" data-engine="google" aria-pressed="true" aria-label="使用谷歌搜索">G</button>
-            <button class="web-search-engine" type="button" data-engine="bing" aria-pressed="false" aria-label="使用必应搜索">B</button>
+            <button class="web-search-engine is-active" type="button" data-engine="google" aria-pressed="true" aria-label="使用谷歌搜索">Google</button>
+            <button class="web-search-engine" type="button" data-engine="bing" aria-pressed="false" aria-label="使用必应搜索">Bing</button>
           </span>
         </form>
       </section>
+      <p id="searchHint" class="search-hint"><kbd>/</kbd> 聚焦搜索 · <kbd>Esc</kbd> 清空 · <span id="searchCount" aria-live="polite">0 / 0</span> 个站点</p>
+      <nav id="categoryFilters" class="category-filters" aria-label="站点分类"></nav>
       <section id="bookmarks" aria-label="网站书签">
         <div id="categoryList" class="category-list" aria-live="polite"></div>
       </section>
-      <p id="emptyState" class="empty-state" hidden>没有找到相关网站</p>
+      <p id="emptyState" class="empty-state" hidden>没有匹配的站点，按回车用搜索引擎查找。</p>
     </main>
 
     <footer id="about" class="site-footer">
@@ -57,6 +50,8 @@
       <span class="site-footer-links">
         <a href="tools/plate-layout/">孔板铺板设计器</a> ·
         <a href="tools/sop-timeline/">SOP 时间轴编辑器</a> ·
+        <a href="tools/anniversaries/">纪念日</a> ·
+        <a href="account/">账户中心</a> ·
         <a href="blog/index.html">博客</a> ·
         <a href="music/index.html">音乐</a> ·
         <a href="https://github.com/blackblues360" target="_blank" rel="noopener noreferrer">GitHub</a>
@@ -65,7 +60,7 @@
     <script>
       (() => {
         const form = document.querySelector('#webSearchForm');
-        const input = document.querySelector('#webSearchInput');
+        const input = document.querySelector('#searchInput');
         const bookmarkSearchInput = document.querySelector('#searchInput');
         const engineButtons = Array.from(document.querySelectorAll('.web-search-engine'));
         const storageKey = 'webSearchEngine';
@@ -124,7 +119,7 @@
           const query = input.value.trim();
           if (!query) return;
 
-          window.open(searchUrls[currentEngine] + encodeURIComponent(query), '_blank');
+          window.open(searchUrls[currentEngine] + encodeURIComponent(query), '_blank', 'noopener,noreferrer');
         });
 
         document.addEventListener('keydown', event => {

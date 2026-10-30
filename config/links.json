@@ -1,6 +1,31 @@
 {
   "categories": [
     {
+      "id": "my-tools",
+      "name": "我的工具",
+      "icon": "wrench",
+      "links": [
+        {
+          "name": "孔板铺板设计器",
+          "url": "tools/plate-layout/",
+          "iconUrl": "tools/plate-layout/icon.png",
+          "description": "设计实验分组与孔板布局"
+        },
+        {
+          "name": "SOP 时间轴编辑器",
+          "url": "tools/sop-timeline/",
+          "iconUrl": "tools/sop-timeline/icon.svg",
+          "description": "编排实验步骤，导出时间轴"
+        },
+        {
+          "name": "纪念日",
+          "url": "tools/anniversaries/",
+          "icon": "clock",
+          "description": "记录和查看重要的日子"
+        }
+      ]
+    },
+    {
       "id": "ai",
       "name": "AI 工具",
       "icon": "robot",

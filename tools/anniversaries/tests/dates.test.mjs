@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {parseDate,calendarDay,anniversaryStats,leapYear} from '../dates.mjs';
+test('Gregorian leap years include century rules',()=>{assert.equal(leapYear(2000),true);assert.equal(leapYear(1900),false);assert.equal(leapYear(2024),true);});
+test('invalid or ambiguous dates are rejected',()=>{for(const date of ['2025-02-29','2024-04-31','0000-01-01','2024-2-01','2024-13-01','2024-00-01','x'])assert.throws(()=>parseDate(date));});
+test('calendar ordinals handle years 1 to 9999 without timestamp shortcuts',()=>{assert.equal(calendarDay(parseDate('0001-01-01')),0);assert.equal(calendarDay(parseDate('2000-03-01'))-calendarDay(parseDate('2000-02-28')),2);assert.equal(calendarDay(parseDate('1900-03-01'))-calendarDay(parseDate('1900-02-28')),1);});
+test('anniversary today has a zero countdown',()=>{assert.equal(anniversaryStats('2020-10-30',true,new Date(2026,9,30)).remaining,0);});
+test('leap day uses February 28 in a non-leap year',()=>{const stat=anniversaryStats('2024-02-29',true,new Date(2025,1,27));assert.equal(stat.next,'2025-02-28');assert.equal(stat.remaining,1);});
+test('the original leap day is retained for the next leap year',()=>{assert.equal(anniversaryStats('2024-02-29',true,new Date(2027,2,1)).next,'2028-02-29');});
+test('a future initial event never repeats before it first occurs',()=>{const stat=anniversaryStats('2028-03-04',true,new Date(2026,0,1));assert.equal(stat.next,'2028-03-04');assert.ok(stat.passed<0);});
+test('non-repeating past events retain elapsed days',()=>{const stat=anniversaryStats('2026-10-29',false,new Date(2026,9,30));assert.equal(stat.passed,1);assert.equal(stat.remaining,-1);});
+test('year-end and leap-year boundaries remain calendar days',()=>{assert.equal(anniversaryStats('2024-12-31',true,new Date(2025,0,1)).remaining,364);});
+test('calendar day counts ignore the local time of day',()=>{const a=anniversaryStats('2026-03-09',false,new Date(2026,2,8,0));const b=anniversaryStats('2026-03-09',false,new Date(2026,2,8,23,59));assert.equal(a.remaining,1);assert.equal(a.remaining,b.remaining);});
+test('repeats beyond the supported maximum year are explicit',()=>{assert.equal(anniversaryStats('9999-01-01',true,new Date(9999,11,31)).next,null);});

@@ -5,7 +5,9 @@ const searchCount = document.querySelector('#searchCount');
 const clockTime = document.querySelector('#clockTime');
 const clockWeekday = document.querySelector('#clockWeekday');
 const weatherInfo = document.querySelector('#weatherInfo');
+const categoryFilters = document.querySelector('#categoryFilters');
 let categories = [];
+let activeCategory = -1;
 let clockTimeZone = 'Asia/Shanghai';
 
 // 页面结构不完整时直接停止，避免后续事件绑定产生隐性错误。
@@ -353,6 +355,13 @@ const createLinkIcon = link => {
   icon.width = 32;
   icon.height = 32;
   icon.loading = 'lazy';
+  icon.addEventListener('error', () => {
+    const fallback = document.createElement('span');
+    fallback.className = 'link-favicon link-favicon-fallback';
+    fallback.setAttribute('aria-hidden', 'true');
+    fallback.textContent = Array.from(link.name || '?')[0].toUpperCase();
+    icon.replaceWith(fallback);
+  }, { once: true });
   return icon;
 };
 
@@ -398,7 +407,9 @@ const createCategorySection = (category, links) => {
   grid.className = 'link-grid';
   links.forEach(link => grid.append(createLinkCard(link)));
 
-  heading.append(categoryName);
+  const count = document.createElement('small');
+  count.textContent = links.length;
+  heading.append(categoryName, count);
   section.append(heading, grid);
   return section;
 };
@@ -417,9 +428,10 @@ const render = () => {
 
   categoryList.replaceChildren();
 
-  categories.forEach(category => {
+  categories.forEach((category, index) => {
+    if (activeCategory !== -1 && activeCategory !== index) return;
     const links = Array.isArray(category.links) ? category.links : [];
-    const filteredLinks = query ? links.filter(link => linkMatches(link, query)) : links;
+    const filteredLinks = query ? links.filter(link => normalize(category.name).includes(query) || linkMatches(link, query)) : links;
 
     if (filteredLinks.length === 0) return;
 
@@ -452,6 +464,22 @@ fetch('config/links.json')
   })
   .then(data => {
     categories = Array.isArray(data.categories) ? data.categories : [];
+    if (categoryFilters) {
+      [-1, ...categories.map((_, index) => index)].forEach(index => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = index === -1 ? '全部' : categories[index].name;
+        button.setAttribute('aria-pressed', String(index === activeCategory));
+        button.addEventListener('click', () => {
+          activeCategory = index;
+          categoryFilters.querySelectorAll('button').forEach(item => {
+            item.setAttribute('aria-pressed', String(item === button));
+          });
+          render();
+        });
+        categoryFilters.append(button);
+      });
+    }
     render();
   })
   .catch(() => {
