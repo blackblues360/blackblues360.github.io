@@ -457,7 +457,7 @@ updateWeather();
 setInterval(updateClock, 1000);
 setInterval(updateWeather, 30 * 60 * 1000);
 
-fetch('config/links.json?v=20261030-tools-2', { cache: 'no-cache' })
+fetch('config/links.json?v=20261030-no-blog', { cache: 'no-cache' })
   .then(response => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();

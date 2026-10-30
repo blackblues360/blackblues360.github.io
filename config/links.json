@@ -264,43 +264,6 @@
           "description": "华语音乐平台"
         }
       ]
-    },
-    {
-      "id": "blog",
-      "name": "博客",
-      "icon": "pencil",
-      "links": [
-        {
-          "name": "思考",
-          "url": "blog/index.html?category=思考",
-          "icon": "wrench",
-          "description": "工具、效率和工作方式"
-        },
-        {
-          "name": "生活",
-          "url": "blog/index.html?category=生活",
-          "icon": "clock",
-          "description": "生活缝隙里的片段"
-        },
-        {
-          "name": "技术",
-          "url": "blog/index.html?category=技术",
-          "icon": "code",
-          "description": "技术和建站记录"
-        },
-        {
-          "name": "阅读",
-          "url": "blog/index.html?category=阅读",
-          "icon": "book-open",
-          "description": "读书笔记和记录"
-        },
-        {
-          "name": "随笔",
-          "url": "blog/index.html?category=随笔",
-          "icon": "pencil",
-          "description": "杂记、心情和短记录"
-        }
-      ]
     }
   ]
 }
