@@ -8,25 +8,37 @@
 <main class="account-main">
 <p id="status" class="app-status" role="status" aria-live="polite"></p>
 <section id="signedOut" class="auth-stage">
-<aside class="auth-intro"><h2>专注创造，<br>从一个账户开始</h2><p>在 blackblues.xyz，连接你的工具与数据，<br class="desktop-break">让灵感与效率始终相伴。</p><span aria-hidden="true"></span></aside>
+<aside class="auth-intro"><h2>专注创造，<br>从一个账户开始</h2><p>一个账户，连接你在 blackblues.xyz 的工具与数据，让灵感与效率始终相伴。</p><span aria-hidden="true"></span></aside>
 <section class="auth-card" aria-label="账户登录与注册">
 <div class="auth-tabs" role="tablist" aria-label="账户操作"><button id="loginTab" type="button" role="tab" aria-selected="true" aria-controls="loginPane">登录</button><button id="registerTab" type="button" role="tab" aria-selected="false" aria-controls="registerPane" tabindex="-1">注册</button></div>
 <div id="loginPane" role="tabpanel" aria-labelledby="loginTab">
-<h1>欢迎回来</h1><p class="auth-subtitle">登录你的 blackblues.xyz 账户</p>
+<h1>欢迎回来</h1><p class="auth-subtitle">登录后继续使用你的工具与数据。</p>
 <form id="loginForm">
-<label class="auth-input"><span class="sr-only">邮箱</span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><input id="email" type="email" autocomplete="username" placeholder="请输入邮箱地址" required></label>
-<label class="auth-input password-input"><span class="sr-only">密码</span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg><input id="password" type="password" autocomplete="current-password" placeholder="请输入密码" required><button id="togglePassword" type="button" aria-label="显示密码" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="m3 21 18-18"/></svg></button></label>
-<div class="login-options"><label><input id="rememberEmail" type="checkbox">记住邮箱</label><button id="openReset" type="button" aria-expanded="false" aria-controls="resetDetails">忘记密码？</button></div>
-<button class="auth-submit" type="submit">登录 <span aria-hidden="true">→</span></button>
+<div class="auth-field"><label for="email">邮箱</label><input id="email" type="email" autocomplete="username" placeholder="you@example.com" required></div>
+<div class="auth-field"><div class="field-label"><label for="password">密码</label><button id="openReset" type="button" aria-expanded="false" aria-controls="resetDetails">忘记密码？</button></div><div class="password-input"><input id="password" type="password" autocomplete="current-password" placeholder="输入密码" required><button id="togglePassword" type="button" aria-label="显示密码" aria-pressed="false">显示</button></div></div>
+<div class="login-options"><label><input id="rememberEmail" type="checkbox">记住邮箱</label></div>
+<button class="auth-submit" type="submit">登录</button>
 </form>
 <section id="resetDetails" class="reset-panel" hidden><h2>重置密码</h2><form id="resetForm"><label>账户邮箱<input id="resetEmail" type="email" autocomplete="email" placeholder="请输入受邀账户的邮箱" required></label><button type="submit">发送重置邮件</button></form></section>
-<div class="auth-divider"><span>或</span></div><p class="register-prompt">还没有账户？ <button id="showRegister" type="button">立即注册</button></p>
+<p class="register-prompt">还没有账户？ <button id="showRegister" type="button">使用邀请注册</button></p>
 </div>
 <div id="registerPane" role="tabpanel" aria-labelledby="registerTab" hidden><h1>受邀加入</h1><p class="auth-subtitle">一个账户，连接你的工具与数据</p><p class="invitation-copy">目前采用邀请制。收到邀请邮件后，打开邮件中的链接验证邮箱并设置密码，即可创建账户。</p><a class="auth-submit invitation-link" href="mailto:feedback@blackblues.xyz?subject=blackblues%20%E5%86%85%E6%B5%8B%E9%82%80%E8%AF%B7%E7%94%B3%E8%AF%B7">申请内测邀请 <span aria-hidden="true">→</span></a><p class="register-prompt">已有账户？ <button id="showLogin" type="button">返回登录</button></p></div>
 </section>
-<svg class="auth-botanical" viewBox="0 0 300 480" aria-hidden="true"><path d="M270 480C230 280 190 140 75 10" fill="none" stroke="currentColor" stroke-width="7"/><g fill="currentColor"><ellipse cx="155" cy="135" rx="20" ry="67" transform="rotate(-45 155 135)"/><ellipse cx="228" cy="187" rx="20" ry="71" transform="rotate(33 228 187)"/><ellipse cx="160" cy="252" rx="23" ry="78" transform="rotate(-64 160 252)"/><ellipse cx="267" cy="298" rx="22" ry="72" transform="rotate(35 267 298)"/><ellipse cx="184" cy="355" rx="24" ry="76" transform="rotate(-61 184 355)"/></g></svg>
+
 </section>
-<section id="signedIn" hidden><div class="app-grid"><form id="profileForm" class="app-card"><h2>个人资料</h2><p id="identity" class="muted"></p><label>昵称<input id="nickname" maxlength="80" autocomplete="nickname"></label><button class="primary" type="submit">保存昵称</button><button id="signOut" type="button">退出登录</button></form><section class="app-card"><h2>你的应用</h2><p>私人纪念日只对当前账户可见。</p><a class="app-link" href="../tools/anniversaries/">打开纪念日工具 →</a><a class="app-link" href="../tools/plate-layout/">打开孔板设计器 →</a><a class="app-link" href="../tools/sop-timeline/">打开 SOP 时间轴 →</a><p class="muted">本机方案不会自动上传。云端文档请手动保存，并保留独立文件备份。</p><button id="exportData" type="button">导出我的云端数据</button><details><summary>账户注销流程</summary><p>先导出需要保留的数据，再向站点联系邮箱提交注销申请。管理员核验账户归属后删除账户及关联业务数据，并告知备份保留期限和处理方式。</p><a id="deleteRequest" href="mailto:feedback@blackblues.xyz">查看注销申请邮件</a></details></section></div></section>
+<section id="signedIn" hidden>
+<div class="account-who"><div class="account-avatar" id="accountAvatar" aria-hidden="true">b</div><div><h1 id="accountName">我的账户</h1><p><span id="identity"></span><span id="verification" class="verified-badge"></span></p></div></div>
+<div class="account-grid">
+<section class="account-panel" aria-labelledby="appsHeading"><h2 id="appsHeading">你的应用</h2><p class="hint">在这里直接打开你的工具。</p><ul class="account-apps">
+<li><a href="../tools/anniversaries/"><span>纪念日工具<small>私人纪念日只对当前账户可见</small></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></li>
+<li><a href="../tools/plate-layout/"><span>孔板设计器<small>规划孔位与分组，继续你的实验方案</small></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></li>
+<li><a href="../tools/sop-timeline/"><span>SOP 时间轴<small>编排实验步骤与操作时间</small></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></li>
+</ul></section>
+<form id="profileForm" class="account-panel"><h2>个人资料</h2><p class="hint">设置一个你喜欢的称呼。</p><label for="nickname">昵称</label><input id="nickname" maxlength="80" autocomplete="nickname" placeholder="你的昵称"><div class="profile-actions"><button class="primary" type="submit">保存昵称</button></div></form>
+</div>
+<section class="account-panel account-backup" aria-labelledby="backupHeading"><div><h2 id="backupHeading">数据与备份</h2><p class="hint">本机方案不会自动上传。云端文档请手动保存，并保留独立文件备份。</p></div><button id="exportData" type="button">导出我的云端数据</button></section>
+<div class="account-foot"><details><summary>账户注销流程</summary><p>先导出需要保留的数据，再向站点联系邮箱提交注销申请。管理员核验账户归属后删除账户及关联业务数据，并告知备份保留期限和处理方式。</p><a id="deleteRequest" href="mailto:feedback@blackblues.xyz">查看注销申请邮件</a></details><button id="signOut" type="button">退出登录</button></div>
+</section>
 <form id="setPasswordForm" class="app-card password-setup" hidden><h2>设置新密码</h2><p id="passwordIdentity" class="muted"></p><label>新密码（至少12位）<input id="newPassword" type="password" minlength="12" autocomplete="new-password" required></label><label>再次输入<input id="confirmPassword" type="password" minlength="12" autocomplete="new-password" required></label><button class="primary" type="submit">确认新密码</button></form>
 </main>
 <footer class="account-footer"><span>© 2026 blackblues.xyz</span><nav aria-label="页脚导航"><button type="button" id="showPrivacy">隐私说明</button><button type="button" data-account-help>使用帮助</button><a href="mailto:feedback@blackblues.xyz">联系我们</a></nav></footer>

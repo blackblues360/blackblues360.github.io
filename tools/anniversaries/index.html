@@ -1,3 +1,23 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>纪念日 · blackblues</title><link rel="stylesheet" href="../../assets/css/account.css"><script src="../../script.js" defer></script><script type="module" src="app.mjs"></script></head><body><main class="app-shell"><nav class="app-nav"><a class="wordmark" href="../../">BLACKBLUES.</a><a href="../../account/">账户中心 ↗</a></nav><p class="eyebrow">DAYS THAT MATTER</p><h1>记住那些重要的日子。</h1><p class="lead">用公历记录纪念日，在不同设备上读取自己的记录。</p><p id="status" class="app-status" role="status" aria-live="polite"></p>
-<section id="intro" class="app-card"><h2>把重要的日子留给自己</h2><p>登录后可以创建、保存和同步私人纪念日。内测采用邀请制，未登录时不会读取私人数据。</p><a class="app-link" href="../../account/">前往登录 →</a></section>
-<section id="workspace" hidden><p id="accountLabel" class="muted"></p><section class="app-card"><p id="featuredTitle" class="muted">尚无纪念日</p><div id="featuredDays" class="countdown">—</div><p id="featuredDetail" class="muted"></p></section><div class="app-grid"><section class="app-card"><div class="app-actions"><h2>你的纪念日</h2><button id="refresh" type="button">刷新</button><button id="new" type="button" class="primary">添加</button></div><ul id="list" class="app-list"></ul></section><form id="editor" class="app-card"><fieldset id="fields"><h2 id="editorTitle">新建纪念日</h2><label>名称<input id="title" maxlength="200" required></label><label>原始日期<input id="eventDate" type="date" min="0001-01-01" max="9999-12-31" required></label><label><input id="repeat" type="checkbox"> 每年重复</label><label>备注<textarea id="notes" maxlength="20000"></textarea></label><p class="muted">按本机当地日期计算；2月29日在非闰年按2月28日纪念。</p><div class="app-actions"><button id="save" class="primary" type="submit">保存到云端</button><button id="delete" type="button" hidden>删除记录</button><button id="draftExport" type="button">导出本页草稿</button></div><div id="conflictActions" class="app-actions" hidden><button id="copyAsNew" type="button">另存为新记录</button><button id="reloadCloud" type="button">确认后载入云端版本</button></div></fieldset></form></div></section><footer>BLACKBLUES / 私人纪念日 · 每台设备需要独立登录</footer></main></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>纪念日 · blackblues</title><link rel="icon" href="../../favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../assets/css/account.css"><link rel="stylesheet" href="anniversaries.css"><script src="../../script.js" defer></script><script type="module" src="app.mjs"></script></head>
+<body class="anniversaries-page"><main class="app-shell">
+<nav class="app-nav" aria-label="主导航"><a class="wordmark" href="../../">BLACKBLUES.</a><a href="../../account/">账户中心 ↗</a></nav>
+<header class="anniversary-hero"><h1>记住那些重要的日子。</h1><p class="lead">用公历记录纪念日，在不同设备上读取自己的记录。</p><div class="anniversary-chips"><span id="accountChip" class="account-chip" hidden><span id="accountLabel"></span></span><p id="status" class="app-status" role="status" aria-live="polite"></p></div></header>
+<section id="intro" class="app-card guest-gate"><h2>把重要的日子留给自己</h2><p>登录后可以创建、保存和同步私人纪念日。内测采用邀请制，未登录时不会读取私人数据。</p><a class="app-link primary" href="../../account/">前往登录 →</a></section>
+<section id="workspace" hidden><div class="app-grid">
+<section class="app-card anniversary-list" aria-labelledby="listHeading"><div class="list-heading"><h2 id="listHeading">你的纪念日</h2><div class="list-actions"><button id="refresh" type="button">刷新</button><button id="new" type="button" class="primary">添加</button></div></div>
+<div id="emptyState" class="empty-state"><span class="empty-mark" aria-hidden="true"></span><h3>尚无纪念日</h3><p>添加第一个重要的日子，让值得记住的时刻，在这里慢慢积累。</p><button id="emptyAdd" type="button">添加纪念日</button></div>
+<div id="featured" class="featured-summary" hidden><div><p id="featuredTitle"></p><p id="featuredDetail"></p></div><div id="featuredDays"></div></div>
+<ul id="list" class="app-list" aria-label="纪念日列表"></ul></section>
+<form id="editor" class="app-card anniversary-editor"><fieldset id="fields"><h2 id="editorTitle">新建纪念日</h2>
+<label for="title">名称</label><input id="title" maxlength="200" placeholder="例如：第一次见面" autocomplete="off" required>
+<label for="eventDate">原始日期</label><input id="eventDate" type="date" min="0001-01-01" max="9999-12-31" required>
+<label class="repeat-option"><input id="repeat" type="checkbox"><span>每年重复</span></label>
+<label for="notes">备注（可选）</label><textarea id="notes" maxlength="20000" placeholder="写下这个日子值得记住的事"></textarea>
+<p class="date-hint">按本机当地日期计算；2 月 29 日在非闰年按 2 月 28 日纪念。</p>
+<div class="editor-actions"><button id="save" class="primary" type="submit">保存到云端</button><button id="draftExport" type="button">导出本页草稿</button></div><button id="delete" class="delete-record" type="button" hidden>删除记录</button>
+<div id="conflictActions" class="conflict-actions" hidden><p>本页内容仍保留。可先导出草稿，再选择下一步。</p><div><button id="copyAsNew" type="button">另存为新记录</button><button id="reloadCloud" type="button">确认后载入云端版本</button></div></div>
+</fieldset></form></div></section>
+<footer>BLACKBLUES / 私人纪念日 · 每台设备需要独立登录</footer>
+</main></body></html>

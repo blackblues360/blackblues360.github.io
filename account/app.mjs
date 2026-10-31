@@ -4,6 +4,10 @@ import {loadProfile,updateNickname,exportPrivateData} from '../assets/js/account
 const $=id=>document.getElementById(id),status=$('status');
 let shownUser;
 const message=text=>{status.textContent=text;};
+function paintProfile(name=''){
+  const display=name.trim()||currentAccount().user?.email?.split('@')[0]||'我的账户';
+  $('accountName').textContent=display;$('accountAvatar').textContent=[...display][0];
+}
 function showAuthPane(register){
   $('loginPane').hidden=register;$('registerPane').hidden=!register;
   for(const [id,selected] of [['loginTab',!register],['registerTab',register]]){$(id).setAttribute('aria-selected',String(selected));$(id).tabIndex=selected?0:-1;}
@@ -11,7 +15,7 @@ function showAuthPane(register){
 $('loginTab').onclick=$('showLogin').onclick=()=>showAuthPane(false);
 $('registerTab').onclick=$('showRegister').onclick=()=>showAuthPane(true);
 document.querySelector('.auth-tabs').onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const register=event.key==='End'||(event.key!=='Home'&&$('loginTab').getAttribute('aria-selected')==='true');showAuthPane(register);$(register?'registerTab':'loginTab').focus();};
-$('togglePassword').onclick=()=>{const visible=$('password').type==='password';$('password').type=visible?'text':'password';$('togglePassword').setAttribute('aria-pressed',String(visible));$('togglePassword').setAttribute('aria-label',visible?'隐藏密码':'显示密码');};
+$('togglePassword').onclick=()=>{const visible=$('password').type==='password';$('password').type=visible?'text':'password';$('togglePassword').textContent=visible?'隐藏':'显示';$('togglePassword').setAttribute('aria-pressed',String(visible));$('togglePassword').setAttribute('aria-label',visible?'隐藏密码':'显示密码');};
 $('openReset').onclick=()=>{$('resetDetails').hidden=!$('resetDetails').hidden;$('openReset').setAttribute('aria-expanded',String(!$('resetDetails').hidden));if(!$('resetDetails').hidden){$('resetEmail').value=$('email').value;$('resetEmail').focus();}};
 for(const button of document.querySelectorAll('[data-account-help]'))button.onclick=()=>$('accountHelp').showModal();
 $('showPrivacy').onclick=()=>$('accountPrivacy').showModal();
@@ -22,17 +26,19 @@ observeAccount(({user,epoch})=>{
   if(user?.id===shownUser)return;
   shownUser=user?.id;
   $('password').value='';$('nickname').value='';$('newPassword').value='';$('confirmPassword').value='';
-  $('password').type='password';$('togglePassword').setAttribute('aria-pressed','false');$('togglePassword').setAttribute('aria-label','显示密码');
+  $('password').type='password';$('togglePassword').textContent='显示';$('togglePassword').setAttribute('aria-pressed','false');$('togglePassword').setAttribute('aria-label','显示密码');
+  document.body.classList.toggle('is-signed-in',Boolean(user));
+  $('identity').textContent='';$('verification').textContent='';$('accountName').textContent='我的账户';$('accountAvatar').textContent='b';
   $('signedOut').hidden=Boolean(user);$('signedIn').hidden=!user;
   const flow=sessionStorage.getItem('blackblues.password-flow');
   $('setPasswordForm').hidden=!user||!['invite','recovery'].includes(flow);
   if(!user)return;
-  $('identity').textContent=`${user.email} · ${user.email_confirmed_at?'邮箱已验证':'邮箱待验证'}`;
+  $('identity').textContent=user.email;$('verification').textContent=user.email_confirmed_at?'邮箱已验证':'邮箱待验证';$('verification').classList.toggle('unverified',!user.email_confirmed_at);paintProfile();
   $('nickname').disabled=true;$('profileForm').querySelector('button[type=submit]').disabled=true;
   $('passwordIdentity').textContent=`为 ${user.email} 设置密码`;
   const subject=encodeURIComponent('blackblues.xyz 账户注销申请');
   $('deleteRequest').href=`mailto:${accountConfig.deletionEmail}?subject=${subject}&body=${encodeURIComponent(`申请注销账户：${user.email}\n账户ID：${user.id}\n我已导出需要保留的数据，请告知核验及删除流程。`)}`;
-  setTimeout(async()=>{if(currentAccount().epoch!==epoch)return;try{const profile=await loadProfile();if(currentAccount().epoch===epoch)$('nickname').value=profile.display_name;}catch(error){if(currentAccount().epoch===epoch)message(`已登录；资料暂未载入，不影响应用使用。${readableError(error)}`);}finally{if(currentAccount().epoch===epoch){$('nickname').disabled=false;$('profileForm').querySelector('button[type=submit]').disabled=false;}}},0);
+  setTimeout(async()=>{if(currentAccount().epoch!==epoch)return;try{const profile=await loadProfile();if(currentAccount().epoch===epoch){$('nickname').value=profile.display_name;paintProfile(profile.display_name);}}catch(error){if(currentAccount().epoch===epoch)message(`已登录；资料暂未载入，不影响应用使用。${readableError(error)}`);}finally{if(currentAccount().epoch===epoch){$('nickname').disabled=false;$('profileForm').querySelector('button[type=submit]').disabled=false;}}},0);
 });
 async function submit(form,operation) {
   const button=form.querySelector('button[type=submit]');button.disabled=true;
@@ -47,7 +53,7 @@ $('loginForm').onsubmit=event=>{event.preventDefault();submit(event.currentTarge
 $('resetForm').onsubmit=event=>{event.preventDefault();submit(event.currentTarget,async()=>{
   const {error}=await client.auth.resetPasswordForEmail($('resetEmail').value.trim(),{redirectTo:callbackUrl()});if(error)throw error;message('若此邮箱属于受邀账户，将收到重置邮件。');
 });};
-$('profileForm').onsubmit=event=>{event.preventDefault();const generation=currentAccount().epoch;submit(event.currentTarget,async()=>{await updateNickname($('nickname').value.trim());if(currentAccount().epoch===generation)message('昵称已保存。');});};
+$('profileForm').onsubmit=event=>{event.preventDefault();const generation=currentAccount().epoch,name=$('nickname').value.trim();submit(event.currentTarget,async()=>{await updateNickname(name);if(currentAccount().epoch===generation){paintProfile(name);message('昵称已保存。');}});};
 $('signOut').onclick=async()=>{const {error}=await client.auth.signOut();if(error)message(readableError(error));else{sessionStorage.removeItem('blackblues.password-flow');message('已退出登录，旧账户界面已清空。');}};
 $('setPasswordForm').onsubmit=event=>{event.preventDefault();submit(event.currentTarget,async()=>{
   if($('newPassword').value!==$('confirmPassword').value)throw new Error('两次密码不一致');
