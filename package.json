@@ -1,0 +1,31 @@
+{
+  "name": "blackblues-website",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "serve": "python scripts/serve.py",
+    "build:client": "node scripts/build-client.mjs",
+    "test": "node --test",
+    "test:plate-browser": "node tools/plate-layout/tests/browser.cjs",
+    "test:sop-browser": "node tools/sop-timeline/tests/browser.cjs",
+    "test:data-safety-browser": "node tools/plate-layout/tests/data-safety-browser.cjs",
+    "test:locks": "node tests/multi-tab-browser.cjs",
+    "test:sop-security": "node tests/sop-security-browser.cjs",
+    "test:account": "node tests/account-browser.cjs",
+    "test:cloud-documents": "node tests/cloud-documents-browser.cjs",
+    "test:cloud-races": "node tests/cloud-races-browser.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "playwright": "1.64.1"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

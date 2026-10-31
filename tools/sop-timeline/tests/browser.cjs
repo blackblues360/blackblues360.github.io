@@ -11,7 +11,7 @@ const os=require('node:os');
   try{
     const context=await browser.newContext({viewport:{width:1536,height:1080},acceptDownloads:true});
     const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-    const base=process.env.SOP_TEST_URL||'http://127.0.0.1:8000',url=`${base}/tools/sop-timeline/`,key='blackblues.sop-timeline.v1';
+    const base=process.env.SOP_TEST_URL||'http://127.0.0.1:8765',url=`${base}/tools/sop-timeline/`,key='blackblues.sop-timeline.v1';
     const stored=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
     const load=async doc=>{await page.locator('#fileInput').setInputFiles({name:'test.soptime',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(doc))});await page.waitForFunction(({key,doc})=>{const d=JSON.parse(localStorage.getItem(key));return d&&JSON.stringify(d.blocks)===JSON.stringify(doc.blocks)&&JSON.stringify(d.groups)===JSON.stringify(doc.groups)&&JSON.stringify(d.environmentRanges)===JSON.stringify(doc.environmentRanges);},{key,doc});await page.locator('.time-block').first().waitFor();};
     await page.goto(url);await page.locator('.time-block').first().waitFor();

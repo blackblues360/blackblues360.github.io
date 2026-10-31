@@ -1,0 +1,93 @@
+Stage B working tree snapshot
+Branch: main
+HEAD: 2cb9ab530bdf4cd7a918daab0cc2dd2e64c7f5eb
+Staged files:
+Working tree files:
+ M .gitignore
+ M index.html
+ M tools/plate-layout/app.mjs
+ M tools/plate-layout/index.html
+ M tools/plate-layout/plate-layout.css
+ M tools/plate-layout/tests/browser.cjs
+ M tools/sop-timeline/README.md
+ M tools/sop-timeline/app.mjs
+ M tools/sop-timeline/export.mjs
+ M tools/sop-timeline/index.html
+ M tools/sop-timeline/style.css
+ M tools/sop-timeline/tests/browser.cjs
+ M tools/sop-timeline/tests/environment-browser.cjs
+ M tools/sop-timeline/tests/text-browser.cjs
+?? account/app.mjs
+?? account/callback/app.mjs
+?? account/callback/index.html
+?? account/index.html
+?? assets/css/account.css
+?? assets/js/account/client.mjs
+?? assets/js/account/config.mjs
+?? assets/js/account/data.mjs
+?? assets/js/draft-lock.mjs
+?? assets/vendor/LICENSES.txt
+?? assets/vendor/supabase.mjs
+?? docs/development/toolchain.md
+?? docs/plans/supabase-v1/database-design.md
+?? docs/plans/supabase-v1/migration-plan.md
+?? docs/plans/supabase-v1/repository-audit.md
+?? docs/plans/supabase-v1/review-report.md
+?? docs/plans/supabase-v1/sql/001_initial_schema.sql
+?? docs/plans/supabase-v1/sql/002_rls_policies.sql
+?? docs/plans/supabase-v1/sql/003_indexes_and_constraints.sql
+?? docs/plans/supabase-v1/stage-a-report.md
+?? docs/plans/supabase-v1/stage-b-files.txt
+?? docs/plans/supabase-v1/stage-b-operations.md
+?? docs/plans/supabase-v1/stage-b-report.md
+?? docs/plans/supabase-v1/tests/README.md
+?? docs/plans/supabase-v1/tests/concurrency.py
+?? docs/plans/supabase-v1/tests/formats-and-acl.py
+?? docs/plans/supabase-v1/tests/http-auth.py
+?? docs/plans/supabase-v1/tests/permissions.test.sql
+?? docs/plans/supabase-v1/tests/run-local.py
+?? docs/plans/supabase-v1/tests/validate-portable.py
+?? package-lock.json
+?? package.json
+?? scripts/apply-cloud-migrations.py
+?? scripts/backup-drill.py
+?? scripts/build-client.mjs
+?? scripts/check-concurrency.py
+?? scripts/cloud-audit.py
+?? scripts/cloud-http-auth.py
+?? scripts/compare-databases.py
+?? scripts/configure-cloud-mail.py
+?? scripts/local-fixtures.py
+?? scripts/serve.py
+?? scripts/verify-cloud.py
+?? supabase/.gitignore
+?? supabase/checks/cloud-smoke.sql
+?? supabase/config.toml
+?? supabase/migrations/20261030071325_001_initial_schema.sql
+?? supabase/migrations/20261030071327_002_rls_policies.sql
+?? supabase/migrations/20261030071329_003_indexes_and_constraints.sql
+?? supabase/migrations/20261030071332_anniversary_revisions.sql
+?? supabase/migrations/20261030071333_private_write_limits.sql
+?? supabase/migrations/20261030071335_quota_retry_identity.sql
+?? supabase/production/supabase/config.toml
+?? supabase/production/supabase/templates/confirmation.html
+?? supabase/production/supabase/templates/invite.html
+?? supabase/production/supabase/templates/recovery.html
+?? supabase/templates/confirmation.html
+?? supabase/templates/invite.html
+?? supabase/templates/recovery.html
+?? supabase/tests/phase_b.test.sql
+?? supabase/tests/quota.test.sql
+?? tests/account-browser.cjs
+?? tests/multi-tab-browser.cjs
+?? tests/sop-security-browser.cjs
+?? tools/anniversaries/app.mjs
+?? tools/anniversaries/dates.mjs
+?? tools/anniversaries/index.html
+?? tools/anniversaries/tests/dates.test.mjs
+?? tools/plate-layout/README.md
+?? tools/plate-layout/files.mjs
+?? tools/plate-layout/tests/data-safety-browser.cjs
+?? tools/plate-layout/tests/files.test.mjs
+?? tools/sop-timeline/draft.mjs
+?? tools/sop-timeline/tests/draft.test.mjs

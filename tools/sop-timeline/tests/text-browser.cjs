@@ -9,7 +9,7 @@ const os=require('node:os');
   const browser=await chromium.launch({headless:true,channel:'msedge'});
   try{
     const page=await browser.newPage({viewport:{width:1536,height:1080},acceptDownloads:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));
-    const base=process.env.SOP_TEST_URL||'http://127.0.0.1:8000',key='blackblues.sop-timeline.v1',first='1、示例示例',second='2、实力';
+    const base=process.env.SOP_TEST_URL||'http://127.0.0.1:8765',key='blackblues.sop-timeline.v1',first='1、示例示例',second='2、实力';
     const model=emptyDocument();model.groups=[{id:'g',title:'换行测试'}];model.notes=[];model.blocks=[{id:'text',group:'g',lane:'operation',start:0,duration:300,text:'',environment:'',object:'样本'},{id:'next',group:'g',lane:'operation',start:300,duration:300,text:'后续步骤',environment:'',object:'样本'}];
     await page.goto(`${base}/tools/sop-timeline/`);await page.locator('#fileInput').setInputFiles({name:'text.soptime',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(model))});const editor=page.locator('[data-text="text"]');await editor.waitFor();
     const stored=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);

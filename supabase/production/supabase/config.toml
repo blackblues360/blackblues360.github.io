@@ -1,0 +1,37 @@
+# Auth-only cloud configuration. Never push the root local-development config.
+project_id = "blackblues-account"
+
+[auth]
+site_url = "https://blackblues.xyz/account/"
+additional_redirect_urls = ["https://blackblues.xyz/account/callback/"]
+enable_signup = false
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+minimum_password_length = 12
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+[auth.email]
+# Keep the email login provider enabled; global enable_signup disables registration.
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+max_frequency = "60s"
+otp_expiry = 3600
+
+[auth.rate_limit]
+email_sent = 10
+sign_in_sign_ups = 30
+token_refresh = 150
+token_verifications = 30
+
+# Resend custom SMTP must already be configured in this Free project.
+[auth.email.template.invite]
+subject = "blackblues 邀请你创建账户"
+content_path = "./supabase/templates/invite.html"
+[auth.email.template.recovery]
+subject = "重置你的 blackblues 密码"
+content_path = "./supabase/templates/recovery.html"
+[auth.email.template.confirmation]
+subject = "验证你的 blackblues 邮箱"
+content_path = "./supabase/templates/confirmation.html"

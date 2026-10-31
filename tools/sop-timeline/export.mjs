@@ -1,5 +1,5 @@
 import {end,total,formatDuration,getEnvironmentRanges} from './core.mjs?v=5';
-const W=744,esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+const W=744,esc=value=>[...String(value)].filter(char=>{const n=char.codePointAt(0);return n===9||n===10||n===13||(n>=32&&n<=0xd7ff)||(n>=0xe000&&n<=0xfffd)||n>=0x10000;}).join('').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 const text=(x,y,value,size=13,color='#3f506f',extra='')=>`<text x="${x}" y="${y}" font-size="${size}" fill="${color}" ${extra}>${esc(value)}</text>`;
 function richTokens(html){
   const template=document.createElement('template');template.innerHTML=html;const lines=[[]];let afterBlock=false;

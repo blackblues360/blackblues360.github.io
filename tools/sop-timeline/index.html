@@ -1,7 +1,9 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="拖拽时间块、直接编辑实验步骤，制作可打印的双泳道实验 SOP 时间轴。支持本地保存、PNG 和 A4 PDF。"><title>SOP Timeline Editor · blackblues</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=5"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="拖拽时间块、直接编辑实验步骤，制作可打印的双泳道实验 SOP 时间轴。支持本地保存、PNG 和 A4 PDF。"><title>SOP Timeline Editor · blackblues</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=5"><link rel="stylesheet" href="../../assets/css/cloud-documents.css"></head>
 <body>
+<p id="draftAccessNotice" class="draft-recovery" role="status" hidden></p>
+<section id="draftRecovery" class="draft-recovery" role="alert" hidden><h2>草稿无法恢复，原始数据尚未覆盖</h2><p id="recoveryDetail"></p><button id="exportBrokenDraft">下载原始草稿文本</button><button id="recoverDraftFile">打开有效 .soptime 恢复</button><button id="restartDraft">确认后重新开始</button></section>
 <header class="toolbar">
   <a class="brand" href="../../" title="返回 blackblues"><img src="icon.svg" alt=""><span><strong>SOP Timeline Editor</strong><small>可视化设计 · 实验标准操作流程</small></span></a>
   <nav aria-label="文件工具"><button id="new">⊞ <span>新建</span></button><button id="open">▱ <span>打开</span></button><button id="save">▣ <span>保存</span></button><button id="saveAs" title="另存为新的 .soptime 文件">另存为</button><i></i><button id="png">⇩ <span>导出 PNG</span></button><button id="pdf">♧ <span>导出 PDF</span></button><i></i><button id="undo" title="Ctrl + Z">↶ <span>撤销</span></button><button id="redo" title="Ctrl + Y">↷ <span>重做</span></button><button id="settingsToggle" aria-expanded="true">⚙ <span>设置</span></button></nav>

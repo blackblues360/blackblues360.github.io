@@ -3,6 +3,9 @@ import {
   setLabelColor, clearSelectedLabels, deleteLabel, usedLabels, plateMarkup,
   buildExportSvg, exportFilename
 } from './core.mjs';
+import {prepareImport,backupBeforeImport,readImportBackup} from './files.mjs';
+import {acquireDraftGuard} from '../../assets/js/draft-lock.mjs';
+import {mountDocumentManager} from '../../assets/js/account/document-manager.mjs';
 
 const STORAGE_KEY = 'blackblues.plate-layout.v1';
 const elements = Object.fromEntries([
@@ -18,8 +21,14 @@ let state = createState();
 let storageAvailable = true;
 let restored = false;
 let restoreFailed = false;
+let lastStoredText = null;
+const draftStorage = await acquireDraftGuard(STORAGE_KEY, message => {
+  document.getElementById('draftAccessNotice').textContent = message;
+  document.getElementById('draftAccessNotice').hidden = false;
+});
 try {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = draftStorage.getItem(STORAGE_KEY);
+  lastStoredText = raw;
   if (raw) {
     state = restoreState(JSON.parse(raw));
     restored = true;
@@ -37,6 +46,8 @@ let drag = null;
 let manualColor = false;
 let exporting = false;
 let noticeTimer;
+let pendingImport = null;
+let cloudDocuments = null;
 
 function notify(message) {
   clearTimeout(noticeTimer);
@@ -46,8 +57,15 @@ function notify(message) {
 }
 
 function persist() {
+  if (cloudDocuments?.cloudMode) { cloudDocuments.changed(); elements.saveStatus.textContent='云端文档 · 请手动保存'; return; }
+  if (!draftStorage.canWrite || restoreFailed) {
+    elements.saveStatus.textContent = '本地保存不可用 · 请手动备份 JSON';
+    return;
+  }
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const text = JSON.stringify(state);
+    draftStorage.setItem(STORAGE_KEY, text);
+    lastStoredText = text;
     storageAvailable = true;
   } catch {
     storageAvailable = false;
@@ -457,10 +475,121 @@ async function exportImage(format) {
 elements.exportPng.addEventListener('click', () => exportImage('png'));
 elements.exportJpg.addEventListener('click', () => exportImage('jpg'));
 
+function downloadJson(text, name) {
+  const url = URL.createObjectURL(new Blob([text], {type: 'application/json;charset=utf-8'}));
+  const link = document.createElement('a');
+  link.href = url; link.download = name; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+document.getElementById('exportJson').onclick = () => {
+  finishDrag();
+  downloadJson(JSON.stringify(state, null, 2), 'plate-layout-v1.json');
+};
+const importDialog = document.getElementById('importDialog');
+const jsonInput = document.getElementById('jsonInput');
+document.getElementById('importJson').onclick = () => jsonInput.click();
+jsonInput.onchange = async () => {
+  const file = jsonInput.files[0];
+  if (!file) return;
+  const cloudContext = cloudDocuments?.contextToken;
+  try {
+    if (file.size > 5000000) throw new Error('JSON 文件不能超过 5 MB');
+    const prepared = prepareImport(await file.text());
+    if (cloudContext !== cloudDocuments?.contextToken) throw new Error('账户或文档已切换，请重新选择文件');
+    finishDrag();
+    const memoryOnly = cloudDocuments?.cloudMode || !draftStorage.canWrite;
+    const backup = !memoryOnly ? backupBeforeImport(draftStorage, STORAGE_KEY, state) : {storageText: null};
+    pendingImport = {...prepared, beforeStorage: backup.storageText, beforeState: structuredClone(state), memoryOnly, cloudContext};
+    document.getElementById('importProtection').textContent = cloudDocuments?.cloudMode
+      ? '已保留导入前内存副本，可下载当前方案备份。确认后作为新的云端草稿打开，需手动保存；原云端记录和游客原件不变。'
+      : pendingImport.memoryOnly
+      ? '文件模式：已保留导入前内存副本，可下载当前方案备份。确认只替换本页内容，不会写入浏览器草稿；请手动保存JSON。'
+      : '已备份当前编辑状态及原存储文本。导入将使用规范化结果，原始文件不作改动；可取消、撤销或恢复导入前备份。';
+    document.getElementById('importSummary').textContent = `${prepared.summary.type} 孔板 · ${prepared.summary.labels} 个标签 · ${prepared.summary.assigned} 个孔位已分配`;
+    document.getElementById('importChanges').textContent = prepared.changes.length
+      ? `规范化将改变 ${prepared.changes.length} 处字段（最多显示20处）：\n${prepared.differences.slice(0, 20).map(({path,before,after})=>`${path}: ${JSON.stringify(before)?.slice(0,80) ?? '缺失'} → ${JSON.stringify(after)?.slice(0,80) ?? '删除'}`).join('\n')}\n可下载规范化预览，核对完整结果。`
+      : '未检测到数据字段差异（JSON 缩进和键顺序不参与比较）。';
+    importDialog.showModal();
+  } catch (error) { pendingImport = null; notify(`导入未进行：${error.message}`); }
+  finally { jsonInput.value = ''; }
+};
+document.getElementById('downloadImportOriginal').onclick = () => {
+  if (pendingImport) downloadJson(pendingImport.rawText, 'plate-import-original.json');
+};
+document.getElementById('downloadImportNormalized').onclick = () => {
+  if (pendingImport) downloadJson(JSON.stringify(pendingImport.normalized, null, 2), 'plate-import-normalized.json');
+};
+document.getElementById('downloadBeforeImport').onclick = () => {
+  if (pendingImport) downloadJson(JSON.stringify(pendingImport.beforeState, null, 2), 'plate-before-import.json');
+};
+document.getElementById('exportBrowserOriginal').onclick = () => {
+  try { const raw = draftStorage.getItem(STORAGE_KEY); if (raw !== null) downloadJson(raw, 'plate-browser-original.json'); }
+  catch (error) { notify(`无法读取原文：${error.message}`); }
+};
+document.getElementById('exportImportBackup').onclick = () => {
+  try {
+    const text = localStorage.getItem(`${STORAGE_KEY}.import-backup`);
+    if (text === null) throw new Error('没有导入前备份');
+    downloadJson(text, 'plate-import-backup.json');
+  } catch (error) { notify(`无法导出备份：${error.message}`); }
+};
+document.getElementById('confirmImport').onclick = async () => {
+  if (!pendingImport) return;
+  if (pendingImport.cloudContext !== cloudDocuments?.contextToken) { notify('账户或文档已切换，未导入。请重新选择文件。');return; }
+  const next = pendingImport.normalized;
+  if (cloudDocuments?.cloudMode) {
+    try { if (await cloudDocuments.importContent(next)) { pendingImport=null;importDialog.close();notify('已作为独立云端草稿打开，请手动保存。'); } }
+    catch(error) { notify(`未导入：${error.message}`); }
+    return;
+  }
+  // A failed primary write must not change the editor or its undo history.
+  try {
+    if (!pendingImport.memoryOnly) {
+      if (draftStorage.getItem(STORAGE_KEY) !== pendingImport.beforeStorage) throw new Error('原方案已在其他页面变化，请取消后重新预览');
+      const text = JSON.stringify(next);
+      draftStorage.setItem(STORAGE_KEY, text);
+      lastStoredText = text;
+      restoreFailed = false;
+    }
+  }
+  catch (error) { notify(`未导入：无法保存方案。${error.message}`); return; }
+  change(() => { state = next; }, '已导入，可撤销或恢复导入前备份。');
+  pendingImport = null; importDialog.close();
+};
+document.getElementById('cancelImport').onclick = () => importDialog.close();
+importDialog.addEventListener('close', () => { pendingImport = null; });
+document.getElementById('restoreImportBackup').onclick = () => {
+  try {
+    if (cloudDocuments?.cloudMode) throw new Error('请先返回本机方案，再恢复本机导入备份');
+    const next = readImportBackup(draftStorage, STORAGE_KEY);
+    if (!draftStorage.canWrite) throw new Error('本页没有共享草稿写入权限，请使用JSON文件恢复');
+    if (draftStorage.getItem(STORAGE_KEY) !== lastStoredText) throw new Error('原方案已在其他页面变化，请先备份并刷新');
+    if (!confirm('恢复最近一次导入前的编辑状态？当前修改可通过撤销恢复。')) return;
+    const text = JSON.stringify(next);
+    draftStorage.setItem(STORAGE_KEY, text);
+    lastStoredText = text;
+    change(() => { state = next; }, '已恢复导入前备份，可撤销。');
+  } catch (error) { notify(`无法恢复备份：${error.message}`); }
+};
+
 render();
 if (restored) elements.saveStatus.textContent = '已恢复此浏览器中的方案';
 if (!storageAvailable) {
   elements.saveStatus.textContent = '本地保存不可用 · 请及时导出';
   elements.saveStatus.classList.add('warning');
 }
-if (restoreFailed) notify('上次保存的方案格式无法读取，已打开空白孔板。');
+if (restoreFailed || !draftStorage.canWrite) {
+  const notice = document.getElementById('draftAccessNotice'); notice.hidden = false;
+  notice.textContent = restoreFailed ? '原草稿无法恢复，自动保存已暂停。请下载浏览器原文；本页修改可备份为JSON，确认导入有效JSON后才替换原草稿。' : draftStorage.reason;
+}
+cloudDocuments = mountDocumentManager({
+  appId:'plate-layout',
+  read:()=>structuredClone(state),
+  flush:()=>{document.activeElement?.blur?.();finishDrag();},
+  validate:value=>{const result=prepareImport(JSON.stringify(value));if(result.changes.length)throw new Error('孔板内容需要规范化，请先导出原文并通过 JSON 导入预览核对，不能静默改写');return result.normalized;},
+  apply:value=>{state=structuredClone(value);drag=null;undoStack=[];redoStack=[];lastAction='';pendingImport=null;if(importDialog.open)importDialog.close();render();const mode=cloudDocuments?.cloudMode?'云端文档 · 请手动保存':'本机方案 · 保留独立文件备份';elements.saveStatus.textContent=mode;const footer=document.querySelector('.workspace-footer span');if(footer)footer.textContent=mode;document.getElementById('draftAccessNotice').hidden=Boolean(cloudDocuments?.cloudMode)||!(restoreFailed||!draftStorage.canWrite);},
+  create:()=>createState(),title:value=>value.plate.title,
+  summary:value=>`${value.plate.type} 孔板 · ${value.labels.length} 个标签 · ${Object.values(value.wells).filter(Boolean).length} 个孔位分配`,
+  localRaw:()=>draftStorage.getItem(STORAGE_KEY),canImportLocal:()=>!restoreFailed,
+  export:()=>{finishDrag();downloadJson(JSON.stringify(state,null,2),'plate-layout-v1.json');}
+});

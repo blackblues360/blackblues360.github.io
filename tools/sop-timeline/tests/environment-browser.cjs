@@ -9,7 +9,7 @@ const os=require('node:os');
   const browser=await chromium.launch({headless:true,channel:'msedge'});
   try{
     const page=await browser.newPage({viewport:{width:1536,height:1080},acceptDownloads:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));
-    const url=`${process.env.SOP_TEST_URL||'http://127.0.0.1:8000'}/tools/sop-timeline/`,key='blackblues.sop-timeline.v1';
+    const url=`${process.env.SOP_TEST_URL||'http://127.0.0.1:8765'}/tools/sop-timeline/`,key='blackblues.sop-timeline.v1';
     const stored=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
     const legacy=emptyDocument();legacy.groups=[{id:'g',title:'90 分钟等待与 5 分钟并行操作'}];delete legacy.environmentRanges;
     legacy.blocks=[

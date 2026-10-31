@@ -9,6 +9,7 @@
     <link rel="icon" href="icon.png" type="image/png">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="stylesheet" href="plate-layout.css">
+    <link rel="stylesheet" href="../../assets/css/cloud-documents.css">
     <script type="module" src="app.mjs"></script>
   </head>
   <body>
@@ -31,6 +32,7 @@
       </header>
 
       <main class="designer">
+<p id="draftAccessNotice" class="panel draft-access-notice" role="status" hidden></p>
         <aside class="left-sidebar" aria-label="孔板设置">
           <section class="panel settings-panel">
             <h2>孔板类型 <span>Plate type</span></h2>
@@ -61,7 +63,8 @@
               <p class="display-note">编号与显示设置同步；关闭图例后仍保留孔内标签文字。</p>
             </div>
             <label class="resolution-label" for="exportScale">导出清晰度</label><select id="exportScale"><option value="1">标准 · 1×</option><option value="2" selected>高清 · 2×</option><option value="3">超清 · 3×</option></select>
-            <p class="privacy-note">本地生成 · 无需登录 · 不上传方案</p>
+            <div class="file-actions"><button id="exportJson" class="button secondary">备份 JSON</button><button id="importJson" class="button secondary">导入 JSON</button><button id="restoreImportBackup" class="button secondary">恢复导入前备份</button><button id="exportImportBackup" class="button secondary">导出导入前备份</button><button id="exportBrowserOriginal" class="button secondary">下载浏览器原始草稿</button></div>
+<p class="privacy-note">游客本地使用 · 云端需登录并手动保存</p>
           </section>
         </aside>
 
@@ -103,6 +106,8 @@
       <footer class="workspace-footer"><span>BLACKBLUES / LAB TOOLS</span><span>让实验设计清晰可见。</span><a href="../../">返回导航站 ↗</a></footer>
     </div>
     <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <input id="jsonInput" type="file" accept=".json,application/json" hidden>
+    <dialog id="importDialog"><h2>确认导入原始方案</h2><p id="importSummary"></p><p id="importProtection"></p><p id="importChanges"></p><button id="downloadBeforeImport" class="button secondary">下载当前方案备份</button><button id="downloadImportOriginal" class="button secondary">下载待导入原文</button><button id="downloadImportNormalized" class="button secondary">下载规范化预览</button><button id="confirmImport" class="button primary">确认导入规范化方案</button><button id="cancelImport" class="button secondary">取消</button></dialog>
     <noscript><p class="noscript">请启用 JavaScript 以使用孔板设计和图片导出功能。</p></noscript>
   </body>
 </html>

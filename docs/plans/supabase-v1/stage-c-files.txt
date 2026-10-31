@@ -1,0 +1,126 @@
+阶段 C 文件及 Git 状态快照（2026-10-30）
+工作区：C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发
+分支：main
+HEAD：9ebe169ca6f776eb6748e13f0b41b37caf2deb20
+已跟踪变更：21
+未跟踪文件：74
+暂存文件：0
+
+本清单包含阶段 A/B 遗留、用户既有草稿与孔板布局调整，不代表所有文件均由阶段 C 新增。
+本代理没有暂存、提交、推送、发布、reset、clean 或回退用户改动。
+.local、node_modules、Supabase 临时目录和凭据没有纳入 Git 清单。
+
+阶段 C 直接新增/接入重点：
+assets/js/account/documents.mjs
+assets/js/account/document-manager.mjs
+assets/css/cloud-documents.css
+tools/plate-layout/app.mjs 与 index.html 云端入口
+tools/sop-timeline/app.mjs 与 index.html 云端入口
+account/index.html 应用入口
+supabase/migrations/20261030100000_document_recycle_bin.sql
+supabase/tests/phase_c.test.sql
+tests/cloud-documents-browser.cjs
+tests/cloud-races-browser.cjs
+scripts/check-document-concurrency.py
+scripts/production-concurrency.py
+scripts/check-cloud-connection.py
+scripts/backup-production.py
+scripts/serve.py 私有路径拒绝访问
+package.json 固定回归入口及本阶段报告
+
+全部工作区状态（状态码 + 绝对路径）：
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\.gitignore
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\account\index.html
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\assets\js\account\data.mjs
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\drafts\20260529-long-talk-gemini.md
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\drafts\ai-tools-half-year.md
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\drafts\before-building-site.md
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\drafts\cloudflare-github-pages.md
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\drafts\rain-tea-night.md
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\drafts\sapiens-notes.md
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\plate-layout\app.mjs
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\plate-layout\index.html
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\plate-layout\plate-layout.css
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\plate-layout\tests\browser.cjs
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\sop-timeline\README.md
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\sop-timeline\app.mjs
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\sop-timeline\export.mjs
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\sop-timeline\index.html
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\sop-timeline\style.css
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\sop-timeline\tests\browser.cjs
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\sop-timeline\tests\environment-browser.cjs
+ M C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\sop-timeline\tests\text-browser.cjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\assets\css\cloud-documents.css
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\assets\js\account\document-manager.mjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\assets\js\account\documents.mjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\development\toolchain.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\database-design.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\migration-plan.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\repository-audit.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\review-report.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\sql\001_initial_schema.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\sql\002_rls_policies.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\sql\003_indexes_and_constraints.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\stage-a-report.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\stage-b-files.txt
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\stage-b-operations.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\stage-b-report.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\stage-c-backup.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\stage-c-files.txt
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\stage-c-release-checklist.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\stage-c-report.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\tests\README.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\tests\concurrency.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\tests\formats-and-acl.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\tests\http-auth.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\tests\permissions.test.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\tests\run-local.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\docs\plans\supabase-v1\tests\validate-portable.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\package-lock.json
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\package.json
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\apply-cloud-migrations.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\backup-drill.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\backup-production.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\build-client.mjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\check-cloud-connection.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\check-concurrency.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\check-document-concurrency.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\cloud-audit.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\cloud-http-auth.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\compare-databases.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\configure-cloud-mail.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\local-fixtures.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\production-concurrency.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\serve.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\scripts\verify-cloud.py
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\.gitignore
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\checks\cloud-smoke.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\config.toml
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\migrations\20261030071325_001_initial_schema.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\migrations\20261030071327_002_rls_policies.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\migrations\20261030071329_003_indexes_and_constraints.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\migrations\20261030071332_anniversary_revisions.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\migrations\20261030071333_private_write_limits.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\migrations\20261030071335_quota_retry_identity.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\migrations\20261030100000_document_recycle_bin.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\production\supabase\config.toml
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\production\supabase\templates\confirmation.html
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\production\supabase\templates\invite.html
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\production\supabase\templates\recovery.html
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\templates\confirmation.html
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\templates\invite.html
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\templates\recovery.html
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\tests\phase_b.test.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\tests\phase_c.test.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\supabase\tests\quota.test.sql
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tests\account-browser.cjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tests\cloud-documents-browser.cjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tests\cloud-races-browser.cjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tests\multi-tab-browser.cjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tests\sop-security-browser.cjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\plate-layout\README.md
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\plate-layout\files.mjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\plate-layout\tests\data-safety-browser.cjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\plate-layout\tests\files.test.mjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\sop-timeline\draft.mjs
+?? C:\Users\Blackblues\Documents\Codex\Projects Master\网页开发\tools\sop-timeline\tests\draft.test.mjs

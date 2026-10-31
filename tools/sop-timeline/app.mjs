@@ -1,9 +1,16 @@
 import {defaults,clone,uid,end,total,formatDuration,parseDuration,validate,emptyDocument,sampleDocument,endpoints,resizeBlock,deleteBlock,deleteGroup,addBlock,insertBlock,moveBlock,reorderGroup,importDocument,getEnvironmentRanges,setEnvironmentRange,resizeEnvironmentRange,removeEnvironmentRange,groupLayout} from './core.mjs?v=5';
 import {exportPNG,printPDF} from './export.mjs?v=5';
+import {loadDraft,saveDraft,replaceFailedDraft} from './draft.mjs';
+import {acquireDraftGuard} from '../../assets/js/draft-lock.mjs';
+import {mountDocumentManager} from '../../assets/js/account/document-manager.mjs';
+import {sameJSON} from '../../assets/js/account/documents.mjs';
 const $=s=>document.querySelector(s), paper=$('#paper'),viewport=$('#viewport'),storageKey='blackblues.sop-timeline.v1';
-let doc=sampleDocument(), selected=null, activeGroup=doc.groups[0].id, past=[],future=[],clipboard=null,zoom=1,drag=null,toastTimer,editSnapshot=null,fileHandle=null,space=false,pointerHeld=false,needsRefresh=false,environmentSelection=null;
-let recoveryMessage='';
-try {const stored=localStorage.getItem(storageKey);if(stored){doc=importDocument(stored);recoveryMessage='已恢复本机自动保存的草稿';}activeGroup=doc.groups[0]?.id;}catch{recoveryMessage='草稿读取失败，已保留原存储。请先保存当前文件。';}
+// Access to localStorage itself can throw in restricted browser contexts.
+const draftStorage=await acquireDraftGuard(storageKey,message=>{const el=$('#draftAccessNotice');el.textContent=message;el.hidden=false;});
+const recovery=loadDraft(draftStorage,storageKey);
+let doc=recovery.document||(recovery.status==='failed'?emptyDocument():sampleDocument()), selected=null, activeGroup=doc.groups[0]?.id, past=[],future=[],clipboard=null,zoom=1,drag=null,toastTimer,editSnapshot=null,fileHandle=null,space=false,pointerHeld=false,needsRefresh=false,environmentSelection=null;
+const recoveryMessage=recovery.status==='restored'?'已恢复本机自动保存的草稿':'';
+let cloudDocuments=null;
 const esc=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function safeHTML(html) {
   const template=document.createElement('template');template.innerHTML=html;
@@ -11,9 +18,9 @@ function safeHTML(html) {
   return [...template.content.childNodes].map(visit).join('');
 }
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').hidden=true,4500);}
-function persist(){try{localStorage.setItem(storageKey,JSON.stringify(doc));$('#draftStatus').textContent=`本机草稿 · 已保存 ${new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}`;}catch{$('#draftStatus').textContent='自动保存失败，请保存 .soptime 文件';}}
+function persist(){if(cloudDocuments?.cloudMode){cloudDocuments.changed();$('#draftStatus').textContent='云端文档 · 请手动保存';return;}if(recovery.status==='failed')return;if(!draftStorage.canWrite){$('#draftStatus').textContent='文件模式 · 请手动保存 .soptime';return;}try{saveDraft(recovery,draftStorage,storageKey,doc);$('#draftStatus').textContent=`本机草稿 · 已保存 ${new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}`;}catch{$('#draftStatus').textContent='自动保存失败，请保存 .soptime 文件';}}
 function remember(before){if(JSON.stringify(before)===JSON.stringify(doc))return;past.push(before);if(past.length>100)past.shift();future=[];persist();}
-function commit(next,message){if(next.error){toast(next.error);return false;}if(validate(next.doc)){toast(validate(next.doc));return false;}const before=clone(doc);doc=next.doc;remember(before);render();if(next.message||message)toast(next.message||message);return true;}
+function commit(next,message){if(recovery.status==='failed'&&!cloudDocuments?.cloudMode){toast('请先处理无法恢复的原草稿');return false;}if(next.error){toast(next.error);return false;}if(validate(next.doc)){toast(validate(next.doc));return false;}const before=clone(doc);doc=next.doc;remember(before);render();if(next.message||message)toast(next.message||message);return true;}
 function mutate(fn){const next=clone(doc);fn(next);return commit({doc:next});}
 function undo(){finishEdit();if(!past.length)return;future.push(clone(doc));doc=past.pop();persist();render();}
 function redo(){finishEdit();if(!future.length)return;past.push(clone(doc));doc=future.pop();persist();render();}
@@ -123,7 +130,7 @@ paper.addEventListener('focusout',e=>{
   if(el.matches('[contenteditable],.metadata input')){finishEdit();needsRefresh=true;setTimeout(refreshAfterEdit,0);}
 });
 paper.addEventListener('keydown',e=>{if(e.target.dataset.duration&&e.key==='Enter'){e.preventDefault();e.target.blur();}});
-paper.addEventListener('paste',e=>{if(!e.target.matches('[contenteditable]'))return;e.preventDefault();document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));});
+paper.addEventListener('paste',e=>{if(!e.target.closest('[contenteditable]'))return;e.preventDefault();document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));});
 paper.addEventListener('click',e=>{
   const el=e.target, b=el.closest('.time-block');if(b)select(b.dataset.id);
   if(el.dataset.select)select(el.dataset.select);
@@ -142,7 +149,7 @@ paper.addEventListener('dragstart',e=>{
 });
 function clearGuide(){paper.querySelectorAll('.drop-guide').forEach(el=>el.remove());}
 paper.addEventListener('dragover',e=>{
-  if(!drag)return;e.preventDefault();clearGuide();const body=e.target.closest('.timeline-body');if(!body||drag.group||drag.type==='group'||drag.type==='note')return;
+  if(!drag){if(e.target.closest('[contenteditable]'))e.preventDefault();return;}e.preventDefault();clearGuide();const body=e.target.closest('.timeline-body');if(!body||drag.group||drag.type==='group'||drag.type==='note')return;
   if(drag.type==='environment'){const range=environmentIntervalAt(body,e.clientY),valid=e.clientX>=body.getBoundingClientRect().right-doc.layout.environmentWidth*zoom&&range,guide=document.createElement('div');guide.className=`drop-guide${valid?'':' invalid'}`;const m=body._mapping;guide.style.top=`${range?m.ys[m.nodes.indexOf(range.start)]:0}px`;guide.innerHTML=`<span>${valid?`环境范围 ${formatDuration(range.start)}–${formatDuration(range.end)}`:'请拖到最右侧环境区'}</span>`;body.append(guide);return;}
   const x=(e.clientX-body.getBoundingClientRect().left)/zoom,l=doc.layout,lane=x<l.waitWidth?'wait':x>=l.waitWidth+l.laneGap&&x<l.waitWidth+l.laneGap+l.operationWidth?'operation':null;
   const b=drag.id?{...doc.blocks.find(b=>b.id===drag.id),group:body.dataset.group}:newBlock(drag.type,body.dataset.group),time=nearestTime(body,e.clientY,b.duration);
@@ -150,7 +157,7 @@ paper.addEventListener('dragover',e=>{
   const m=body._mapping,index=m?.nodes.indexOf(time);let y=index>=0?m.ys[index]:0;if(index<0&&m)for(let i=1;i<m.nodes.length;i++)if(time>=m.nodes[i-1]&&time<=m.nodes[i])y=m.ys[i-1]+(time-m.nodes[i-1])/(m.nodes[i]-m.nodes[i-1])*(m.ys[i]-m.ys[i-1]);const guide=document.createElement('div');guide.className=`drop-guide${valid?'':' invalid'}`;guide.style.top=`${y}px`;guide.innerHTML=`<span>${valid?'吸附':'冲突'} · ${formatDuration(time)}${lane!==drag.type?' · 请放入对应泳道':''}</span>`;body.append(guide);
 });
 paper.addEventListener('drop',e=>{
-  if(!drag)return;e.preventDefault();clearGuide();const target=e.target.closest('.step-group'),body=e.target.closest('.timeline-body'),group=target?.dataset.group||activeGroup;
+  if(!drag){e.preventDefault();const editable=e.target.closest('[contenteditable]');if(editable){editable.focus();document.execCommand('insertText',false,e.dataTransfer.getData('text/plain'));}return;}e.preventDefault();clearGuide();const target=e.target.closest('.step-group'),body=e.target.closest('.timeline-body'),group=target?.dataset.group||activeGroup;
   if(drag.group){commit(reorderGroup(doc,drag.group,target?.dataset.group));}
   else if(drag.type==='group'||drag.type==='note')addComponent(drag.type,group);
   else if(drag.type==='environment'&&body){if(e.clientX<body.getBoundingClientRect().right-doc.layout.environmentWidth*zoom)toast('环境块只能放入最右侧环境区');else chooseEnvironment(environmentIntervalAt(body,e.clientY));}
@@ -187,6 +194,7 @@ for(const [id,command] of [['bold','bold'],['italic','italic']]){$(`#${id}`).add
 $('#zoomIn').onclick=()=>setZoom(zoom+.1);$('#zoomOut').onclick=()=>setZoom(zoom-.1);$('#zoomReset').onclick=()=>setZoom(1);$('#fit').onclick=fit;
 viewport.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();setZoom(zoom+(e.deltaY<0?.05:-.05));}},{passive:false});
 document.addEventListener('keydown',e=>{
+  if(recovery.status==='failed'&&!cloudDocuments?.cloudMode)return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();document.activeElement?.blur();saveFile(e.shiftKey);return;}
   const editing=e.target.matches('input,textarea,select,[contenteditable]');if(editing)return;
   if(e.code==='Space'){space=true;e.preventDefault();viewport.style.cursor='grab';}
@@ -203,15 +211,29 @@ $('#settingFields').addEventListener('submit',e=>{if(e.target.id!=='environmentT
 $('#settingFields').addEventListener('click',e=>{if(e.target.dataset.removeTerm!==undefined)mutate(d=>d.environmentTerms.splice(Number(e.target.dataset.removeTerm),1));});
 $('#environmentChoices').addEventListener('click',e=>{const index=e.target.dataset.environmentChoice;if(index===undefined)return;const term=doc.environmentTerms[Number(index)];if(term===undefined||!environmentSelection)return;commit(setEnvironmentRange(doc,{...environmentSelection,environment:term}));$('#environmentDialog').close();});
 $('#clearEnvironment').onclick=()=>{if(environmentSelection?.id)commit(removeEnvironmentRange(doc,environmentSelection.id));$('#environmentDialog').close();};
-$('#resetLayout').onclick=()=>mutate(d=>d.layout={...defaults});$('#saveDefaults').onclick=()=>{try{localStorage.setItem(`${storageKey}.defaults`,JSON.stringify(doc.layout));toast('已设为新 SOP 的默认布局');}catch{toast('浏览器无法保存默认布局');}};
+$('#resetLayout').onclick=()=>mutate(d=>d.layout={...defaults});$('#saveDefaults').onclick=()=>{try{draftStorage.setItem(`${storageKey}.defaults`,JSON.stringify(doc.layout));toast('已设为新 SOP 的默认布局');}catch{toast('本页无法写入共享布局，请在持有编辑权限的页面保存');}};
 $('#help').onclick=()=>$('#helpDialog').showModal();
-$('#new').onclick=()=>{finishEdit();if(!confirm('新建空白 SOP？当前内容可用撤销恢复；建议先保存原始文件。'))return;const next=emptyDocument();next.environmentTerms=[...doc.environmentTerms];try{const saved=localStorage.getItem(`${storageKey}.defaults`);if(saved)next.layout=importDocument(JSON.stringify({...next,layout:JSON.parse(saved)})).layout;}catch{}fileHandle=null;commit({doc:next});activeGroup=doc.groups[0].id;};
+$('#new').onclick=async()=>{finishEdit();if(cloudDocuments?.cloudMode){if(!confirm('请先保存或导出当前修改。确认新建独立的云端 SOP 草稿？'))return;try{await cloudDocuments.importContent(emptyDocument());}catch(error){toast(error.message);}return;}if(!confirm('新建空白 SOP？当前内容可用撤销恢复；建议先保存原始文件。'))return;const next=emptyDocument();next.environmentTerms=[...doc.environmentTerms];try{const saved=localStorage.getItem(`${storageKey}.defaults`);if(saved)next.layout=importDocument(JSON.stringify({...next,layout:JSON.parse(saved)})).layout;}catch{}fileHandle=null;commit({doc:next});activeGroup=doc.groups[0].id;};
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
-async function saveFile(asNew){finishEdit();const blob=new Blob([JSON.stringify(doc,null,2)],{type:'application/json'}),name=`${doc.name.replace(/[\\/:*?"<>|]/g,'_')||'实验SOP'}.soptime`;
+async function saveFile(asNew){if(recovery.status==='failed'&&!cloudDocuments?.cloudMode){toast('请先导出并处理无法恢复的原草稿');return;}finishEdit();const blob=new Blob([JSON.stringify(doc,null,2)],{type:'application/json'}),name=`${doc.name.replace(/[\\/:*?"<>|]/g,'_')||'实验SOP'}.soptime`;
   try{if(window.showSaveFilePicker){if(!fileHandle||asNew)fileHandle=await window.showSaveFilePicker({suggestedName:name,types:[{description:'SOP 时间轴',accept:{'application/json':['.soptime']}}]});const stream=await fileHandle.createWritable();await stream.write(blob);await stream.close();}else download(blob,name);toast('已保存可编辑的 .soptime 原始文件');}catch(error){if(error.name!=='AbortError')toast(`保存失败：${error.message}`);}}
 $('#save').onclick=()=>saveFile(false);$('#saveAs').onclick=()=>saveFile(true);$('#open').onclick=()=>$('#fileInput').click();
-$('#fileInput').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>5000000)throw new Error('文件不能超过 5 MB');const next=importDocument(await file.text());if(commit({doc:next},'已打开原始文件，可继续编辑')){fileHandle=null;activeGroup=doc.groups[0]?.id;}}catch(error){toast(`无法打开：${error.message}`);}e.target.value='';};
+$('#fileInput').onchange=async e=>{const file=e.target.files[0],context=cloudDocuments?.contextToken;if(!file)return;try{if(file.size>5000000)throw new Error('文件不能超过 5 MB');const next=importDocument(await file.text());if(context!==cloudDocuments?.contextToken)throw new Error('账户或文档已切换，请重新选择文件');if(cloudDocuments?.cloudMode){if(confirm('将此文件作为新的云端草稿打开？请先保存当前修改，原云端记录不会被覆盖。'))await cloudDocuments.importContent(next);}else if(recovery.status==='failed'){if(confirm('使用此文件替换无法恢复的草稿？原始文本将另存为本机恢复备份；建议先下载原文。'))resolveRecovery(next);}else if(commit({doc:next},'已打开原始文件，可继续编辑')){fileHandle=null;activeGroup=doc.groups[0]?.id;}}catch(error){toast(`无法打开：${error.message}`);}e.target.value='';};
 $('#png').onclick=async()=>{finishEdit();$('#png').disabled=true;try{const scale=await exportPNG(doc);toast(`已导出完整时间轴 PNG（${Number(scale.toFixed(2))}× 分辨率）`);}catch(error){toast(`PNG 导出失败：${error.message}`);}finally{$('#png').disabled=false;}};
 $('#pdf').onclick=()=>{finishEdit();try{printPDF(doc);}catch(error){toast(error.message);}};
 window.addEventListener('beforeunload',()=>{finishEdit();persist();});
-render();requestAnimationFrame(fit);if(recoveryMessage)toast(recoveryMessage);
+function showRecovery(){const failed=recovery.status==='failed'&&!cloudDocuments?.cloudMode;$('#draftRecovery').hidden=!failed;$('.toolbar').inert=failed;$('.workspace').inert=failed;if(failed){$('#draftStatus').textContent='草稿恢复失败 · 已暂停编辑和自动保存';$('#exportBrokenDraft').disabled=recovery.raw===null;$('#recoveryDetail').textContent=recovery.raw===null?'无法读取浏览器存储，暂时无法导出原文。请先检查浏览器存储权限。':`原始文本保持不变。${recovery.error}。请先下载备份，再选择恢复文件或重新开始。`;}}
+function resolveRecovery(next){doc=replaceFailedDraft(recovery,draftStorage,storageKey,next);past=[];future=[];editSnapshot=null;fileHandle=null;selected=null;clipboard=null;activeGroup=doc.groups[0]?.id;showRecovery();render();persist();toast('已建立新草稿，原始文本保留在本机恢复备份中');}
+$('#exportBrokenDraft').onclick=()=>{if(recovery.raw!==null)download(new Blob([recovery.raw],{type:'text/plain;charset=utf-8'}),'sop-unreadable-draft.txt');};
+$('#recoverDraftFile').onclick=()=>$('#fileInput').click();
+$('#restartDraft').onclick=()=>{if(!confirm('确认替换无法恢复的草稿并新建空白 SOP？原文将另存为本机恢复备份，建议先下载。'))return;try{resolveRecovery(emptyDocument());}catch(error){toast(`未能新建：${error.message}`);}};
+render();showRecovery();if(!draftStorage.canWrite){$('#draftAccessNotice').hidden=false;$('#draftAccessNotice').textContent=draftStorage.reason;}requestAnimationFrame(fit);if(recoveryMessage)toast(recoveryMessage);
+cloudDocuments=mountDocumentManager({
+  appId:'sop-timeline',read:()=>clone(doc),flush:()=>{document.activeElement?.blur?.();finishEdit();},
+  validate:(value,inputDraft)=>{const next=importDocument(JSON.stringify(value));if(!sameJSON(value,next))throw new Error('SOP 内容需要规范化，请先导出原文并使用文件导入核对，不能静默改写');if(inputDraft!==undefined&&inputDraft!==null){const block=next.blocks.find(block=>block.id===inputDraft.id);if(typeof inputDraft.id!=='string'||typeof inputDraft.value!=='string'||!block||!next.groups.some(group=>group.id===block.group&&!group.collapsed))throw new Error('恢复的时间输入与文档不匹配，请保留原始副本后核对');}return next;},
+  apply:value=>{doc=clone(value);past=[];future=[];selected=null;activeGroup=doc.groups[0]?.id;editSnapshot=null;fileHandle=null;clipboard=null;drag=null;environmentSelection=null;needsRefresh=false;render();$('#draftStatus').textContent=cloudDocuments?.cloudMode?'云端文档 · 请手动保存':draftStorage.canWrite?'本机方案 · 自动保存到此浏览器':'文件模式 · 请手动保存 .soptime';showRecovery();requestAnimationFrame(fit);},
+  create:()=>emptyDocument(),title:value=>value.name,summary:value=>`${value.name} · ${value.groups.length} 个步骤 · ${value.blocks.length} 个时间块 · 总时长 ${formatDuration(total(value))}`,
+  localRaw:()=>draftStorage.getItem(storageKey),canImportLocal:()=>recovery.status!=='failed',export:()=>{document.activeElement?.blur?.();return saveFile(true);},
+  pendingInput:()=>{const el=document.activeElement;return el?.dataset?.duration?{id:el.dataset.duration,value:el.value}:null;},
+  restoreInput:value=>{const el=paper.querySelector(`[data-duration="${CSS.escape(value.id)}"]`);if(el){el.value=value.value;el.focus();}}
+});

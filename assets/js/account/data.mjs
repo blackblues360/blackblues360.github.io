@@ -36,7 +36,7 @@ export async function deleteAnniversary(record) {
   const rows = await accountRequest((db,_id,signal) => db.rpc('delete_anniversary',{p_id:record.id,p_expected_revision:record.revision}).abortSignal(signal));
   if (!rows?.length) throw new Error('版本冲突或记录已删除，请刷新列表后重试。');
 }
-// Foundation for phase C; no plate/SOP page imports this module yet.
+// Shared revision-checked save used by both tool document managers.
 export async function saveToolDocument(record) {
   if(new TextEncoder().encode(JSON.stringify(record)).length>7340032)throw new Error('文档请求超过7 MiB，本地内容仍需保留。');
   const rows = await accountRequest((db,_id,signal) => db.rpc('save_tool_document', {
