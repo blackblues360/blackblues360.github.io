@@ -27,6 +27,7 @@
 
 </section>
 <section id="signedIn" hidden>
+<a id="continueTool" class="auth-submit" hidden>继续使用刚才的工具 →</a>
 <div class="account-who"><div class="account-avatar" id="accountAvatar" aria-hidden="true">b</div><div><h1 id="accountName">我的账户</h1><p><span id="identity"></span><span id="verification" class="verified-badge"></span></p></div></div>
 <div class="account-grid">
 <section class="account-panel" aria-labelledby="appsHeading"><h2 id="appsHeading">你的应用</h2><p class="hint">在这里直接打开你的工具。</p><ul class="account-apps">
@@ -42,6 +43,6 @@
 <form id="setPasswordForm" class="app-card password-setup" hidden><h2>设置新密码</h2><p id="passwordIdentity" class="muted"></p><label>新密码（至少12位）<input id="newPassword" type="password" minlength="12" autocomplete="new-password" required></label><label>再次输入<input id="confirmPassword" type="password" minlength="12" autocomplete="new-password" required></label><button class="primary" type="submit">确认新密码</button></form>
 </main>
 <footer class="account-footer"><span>© 2026 blackblues.xyz</span><nav aria-label="页脚导航"><button type="button" id="showPrivacy">隐私说明</button><button type="button" data-account-help>使用帮助</button><a href="mailto:feedback@blackblues.xyz">联系我们</a></nav></footer>
-<dialog id="accountHelp"><h2>账户帮助</h2><p>内测采用邀请制，请通过邀请邮件验证邮箱并设置密码。每台设备需要独立登录。</p><p>忘记密码时，可在登录面板申请重置邮件。孔板和 SOP 的本地文件能力仍可直接使用。</p><form method="dialog"><button>知道了</button></form></dialog>
+<dialog id="accountHelp"><h2>账户帮助</h2><p>内测采用邀请制，请通过邀请邮件验证邮箱并设置密码。每台设备需要独立登录。</p><p>忘记密码时，可在登录面板申请重置邮件。孔板和 SOP 需先登录，登录后仍可使用本地文件与云端文档。</p><form method="dialog"><button>知道了</button></form></dialog>
 <dialog id="accountPrivacy"><h2>隐私说明</h2><p>登录账户由 Supabase Auth 管理，私人云端记录按账户隔离。可在账户中心导出业务数据，或联系管理员核验后申请注销。</p><p>“记住邮箱”只在本机保存邮箱地址，不保存密码。请勿在公用设备启用，并在使用后退出账户。</p><form method="dialog"><button>知道了</button></form></dialog>
 </body></html>

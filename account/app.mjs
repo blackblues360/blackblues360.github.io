@@ -1,8 +1,11 @@
 import {client,configured,observeAccount,currentAccount,callbackUrl,readableError} from '../assets/js/account/client.mjs';
 import {accountConfig} from '../assets/js/account/config.mjs';
 import {loadProfile,updateNickname,exportPrivateData} from '../assets/js/account/data.mjs';
+import {toolReturnPath} from '../assets/js/account/return-path.mjs';
 const $=id=>document.getElementById(id),status=$('status');
 let shownUser;
+const returnPath=toolReturnPath(new URLSearchParams(location.search).get('next'),location.origin);
+if(returnPath)$('continueTool').href=returnPath;
 const message=text=>{status.textContent=text;};
 function paintProfile(name=''){
   const display=name.trim()||currentAccount().user?.email?.split('@')[0]||'我的账户';
@@ -32,6 +35,7 @@ observeAccount(({user,epoch})=>{
   $('signedOut').hidden=Boolean(user);$('signedIn').hidden=!user;
   const flow=sessionStorage.getItem('blackblues.password-flow');
   $('setPasswordForm').hidden=!user||!['invite','recovery'].includes(flow);
+  $('continueTool').hidden=!user||!returnPath||['invite','recovery'].includes(flow);
   if(!user)return;
   $('identity').textContent=user.email;$('verification').textContent=user.email_confirmed_at?'邮箱已验证':'邮箱待验证';$('verification').classList.toggle('unverified',!user.email_confirmed_at);paintProfile();
   $('nickname').disabled=true;$('profileForm').querySelector('button[type=submit]').disabled=true;
@@ -49,6 +53,7 @@ $('loginForm').onsubmit=event=>{event.preventDefault();submit(event.currentTarge
   const {error}=await client.auth.signInWithPassword({email,password:$('password').value});if(error)throw error;
   try{if(remember)localStorage.setItem('blackblues.account.remembered-email',email);else localStorage.removeItem('blackblues.account.remembered-email');}catch{}
   message('已登录。');
+  if(returnPath&&!sessionStorage.getItem('blackblues.password-flow'))location.assign(returnPath);
 });};
 $('resetForm').onsubmit=event=>{event.preventDefault();submit(event.currentTarget,async()=>{
   const {error}=await client.auth.resetPasswordForEmail($('resetEmail').value.trim(),{redirectTo:callbackUrl()});if(error)throw error;message('若此邮箱属于受邀账户，将收到重置邮件。');

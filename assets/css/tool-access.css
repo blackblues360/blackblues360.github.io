@@ -1,0 +1,8 @@
+html[data-tool-page]:not([data-tool-access=allowed]) body>:not(#toolAccessGate):not(noscript){display:none!important}
+html[data-tool-access=allowed] #toolAccessGate{display:none!important}
+html[data-tool-page]:not([data-tool-access=allowed]) body{display:flow-root}
+html[data-tool-page]:not([data-tool-access=allowed]) body{margin:0;min-height:100svh;background:#f7f5f2;color:#242a28;font-family:system-ui,"Microsoft YaHei",sans-serif}
+#toolAccessGate{box-sizing:border-box;max-width:480px;margin:12svh auto;padding:32px;border:1px solid #dedfd7;border-radius:18px;background:#fff;line-height:1.8;box-shadow:0 16px 48px #263b2910}
+#toolAccessGate h1{font-size:26px;margin:0 0 14px;font-weight:600}#toolAccessGate p{font-size:15px;color:#697169;overflow-wrap:anywhere}#toolAccessGate nav{display:flex;flex-wrap:wrap;gap:12px;align-items:center}#toolAccessGate a,#toolAccessGate button{font:inherit;display:inline-block;padding:9px 15px;border-radius:10px;border:1px solid #dfe3da;background:#fff;color:#335c43;text-decoration:none;cursor:pointer}#toolAccessGate [data-tool-login]{background:#3f7c5a;color:white;border-color:transparent}#toolAccessGate :focus-visible{outline:2px solid #3f7c5a;outline-offset:3px}#toolAccessGate button:disabled{opacity:.5}
+@media(max-width:540px){#toolAccessGate{margin:10svh 20px;padding:24px}}
+@media(prefers-color-scheme:dark){html[data-tool-page]:not([data-tool-access=allowed]) body{background:#151915;color:#eef0ea}#toolAccessGate{background:#202620;border-color:#343e35}#toolAccessGate p{color:#a8b3a8}#toolAccessGate a,#toolAccessGate button{background:#202620;border-color:#455345;color:#b8dac3}#toolAccessGate [data-tool-login]{background:#7fc29a;color:#102316}}

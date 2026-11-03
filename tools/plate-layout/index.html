@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-tool-page>
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,9 +10,9 @@
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="stylesheet" href="plate-layout.css">
     <link rel="stylesheet" href="../../assets/css/cloud-documents.css">
-    <script type="module" src="app.mjs"></script>
-  </head>
-  <body>
+    <script type="module" src="../../assets/js/account/tool-access.mjs" data-tool-entry="app.mjs"></script>
+  <link rel="stylesheet" href="../../assets/css/tool-access.css"></head>
+  <body><section id="toolAccessGate" aria-labelledby="toolAccessTitle"><h1 id="toolAccessTitle">登录后使用工具</h1><p role="status" aria-live="polite">正在检查登录状态…</p><nav><a data-tool-login href="../../account/">前往登录</a><a href="../../">返回首页</a><button type="button">重试</button></nav></section>
     <div class="workspace">
       <nav class="breadcrumb" aria-label="位置" hidden>
         <a href="../../">blackblues<span class="brand-dot">.</span></a>
