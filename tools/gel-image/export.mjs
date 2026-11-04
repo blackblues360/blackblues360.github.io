@@ -8,12 +8,13 @@ export function labelLayout(width,edit,measure) {
   const short=edit.labels.map((s,i)=>({s,i})).filter(x=>x.s.length<=3);
   if(short.length){const space=Math.min(...short.map(x=>slot(x.i))),text=Math.max(...short.map(x=>measure(x.s,font)));font=Math.max(18,Math.min(font,font*space/Math.max(1,text)));}
   const items=edit.labels.map((text,i)=>({text,x:lanes[i].center*width,width:measure(text,font),font,vertical:measure(text,font)>slot(i)}));
-  return {height:Math.ceil(Math.max(...items.map(t=>t.vertical?t.width:t.font*1.25))+font),items};
+  const height=Math.ceil(Math.max(...items.map(t=>t.vertical?t.width:t.font*1.25))+font);
+  return {height,baseline:height-font*.7,items};
 }
 export function drawLabels(context,width,layout) {
   if(!layout.height)return;
   context.save();context.fillStyle='#fff';context.fillRect(0,0,width,layout.height);context.fillStyle='#111';context.textBaseline='alphabetic';
-  for(const t of layout.items){context.font=`bold ${t.font}px "Segoe UI","Microsoft YaHei",sans-serif`;context.save();if(t.vertical){context.translate(t.x-t.font*.2,t.font/2+t.width);context.rotate(-Math.PI/2);context.fillText(t.text,0,0);}else context.fillText(t.text,t.x-t.width/2,layout.height-t.font/2-t.font*.2);context.restore();}context.restore();
+  for(const t of layout.items){context.font=`bold ${t.font}px "Segoe UI","Microsoft YaHei",sans-serif`;context.save();if(t.vertical){context.translate(t.x-t.font*.2,layout.baseline);context.rotate(-Math.PI/2);context.fillText(t.text,0,0);}else context.fillText(t.text,t.x-t.width/2,layout.baseline);context.restore();}context.restore();
 }
 export function annotationLayout(width,height,edit,measure) {
   const top=labelLayout(width,edit,measure),names=edit.rows?.length?parseRowLabels(edit.rowLeft,edit.rowRight):[],rows=edit.rows||[];
@@ -46,6 +47,6 @@ export function printFrame(target,frame,edit) {
   const doc=target.document,ns='http://www.w3.org/2000/svg';doc.title='胶图 · BLACK BLUES';doc.body.replaceChildren();const style=doc.createElement('style');style.textContent='@page{margin:12mm}body{margin:24px;font-family:Arial,sans-serif;color:#344f3d}nav{display:flex;align-items:center;gap:20px;margin-bottom:24px;font-size:12px}button{padding:9px 18px;cursor:pointer}svg{width:100%;height:auto;max-height:88vh}@media print{body{margin:0}nav{display:none}svg{max-height:260mm}}';doc.head.append(style);
   const nav=doc.createElement('nav'),button=doc.createElement('button'),note=doc.createElement('span');button.textContent='打印 / 另存为 PDF';button.onclick=()=>target.print();note.textContent='请在打印目标中选择“另存为 PDF”，并关闭页眉页脚。';nav.append(button,note);doc.body.append(nav);
   const svg=doc.createElementNS(ns,'svg');svg.setAttribute('viewBox',`0 0 ${layout.width} ${layout.height}`);svg.setAttribute('xmlns',ns);svg.style.background='white';const image=doc.createElementNS(ns,'image');image.setAttribute('href',canvas.toDataURL('image/png'));image.setAttribute('x',String(layout.left));image.setAttribute('y',String(layout.top));image.setAttribute('width',String(frame.width));image.setAttribute('height',String(frame.height));svg.append(image);
-  for(const t of labels.items){const text=doc.createElementNS(ns,'text');text.textContent=t.text;text.setAttribute('font-family','Segoe UI, Microsoft YaHei, sans-serif');text.setAttribute('font-size',String(t.font));text.setAttribute('font-weight','bold');if(t.vertical){text.setAttribute('transform',`translate(${layout.left+t.x-t.font*.2} ${t.font/2+t.width}) rotate(-90)`);}else{text.setAttribute('x',String(layout.left+t.x-t.width/2));text.setAttribute('y',String(labels.height-t.font*.7));}svg.append(text);}
+  for(const t of labels.items){const text=doc.createElementNS(ns,'text');text.textContent=t.text;text.setAttribute('font-family','Segoe UI, Microsoft YaHei, sans-serif');text.setAttribute('font-size',String(t.font));text.setAttribute('font-weight','bold');if(t.vertical){text.setAttribute('transform',`translate(${layout.left+t.x-t.font*.2} ${labels.baseline}) rotate(-90)`);}else{text.setAttribute('x',String(layout.left+t.x-t.width/2));text.setAttribute('y',String(labels.baseline));}svg.append(text);}
   for(const t of layout.sideItems){const text=doc.createElementNS(ns,'text');text.textContent=t.text;text.setAttribute('x',String(t.x));text.setAttribute('y',String(t.y));text.setAttribute('dominant-baseline','central');text.setAttribute('text-anchor',t.side==='left'?'end':'start');text.setAttribute('font-family','Segoe UI, Microsoft YaHei, sans-serif');text.setAttribute('font-size',String(t.font));text.setAttribute('font-weight','bold');svg.append(text);}doc.body.append(svg);return layout;
 }

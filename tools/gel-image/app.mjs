@@ -1,5 +1,5 @@
 import {defaults,clone,parseLabels,parseRowLabels,validate,even,geometry,composeCrop} from './core.mjs?v=3';
-import {annotationLayout,drawAnnotations,makeCanvas,canvasBlob,download,printFrame} from './export.mjs?v=3';
+import {annotationLayout,drawAnnotations,makeCanvas,canvasBlob,download,printFrame} from './export.mjs?v=4';
 
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d'),documents=[];
 let currentId=null,processor=createProcessor(),mode='normal',cropDraft=[0,0,1,1],cropFresh=false,selectedLane=-1,drag=null,frame=null,previewVersion=0,previewTimer,previewFlight=false,previewPending=false,busy=false,comparing=false,unsaved=false;
