@@ -14,96 +14,87 @@
   <link rel="stylesheet" href="../../assets/css/tool-access.css"></head>
   <body><section id="toolAccessGate" aria-labelledby="toolAccessTitle"><h1 id="toolAccessTitle">登录后使用工具</h1><p role="status" aria-live="polite">正在检查登录状态…</p><nav><a data-tool-login href="../../account/">前往登录</a><a href="../../">返回首页</a><button type="button">重试</button></nav></section>
     <div class="workspace">
-      <nav class="breadcrumb" aria-label="位置" hidden>
-        <a href="../../">blackblues<span class="brand-dot">.</span></a>
+      <header class="masthead">
+        <a class="tool-identity" href="../../" title="返回导航站">
+          <img class="tool-mark" src="icon.png" width="32" height="32" alt="">
+          <h1>孔板铺板设计器</h1>
+        </a>
+        <div class="plan-title"><label class="sr-only" for="planTitle">方案标题</label><input id="planTitle" maxlength="160" placeholder="未命名方案" autocomplete="off"><span id="titleCount" class="field-hint">0 / 160</span></div>
+        <div class="history-actions" role="group" aria-label="编辑历史">
+          <button id="undo" class="icon-action" aria-label="撤销" title="撤销（Ctrl / ⌘ + Z）" disabled>↶</button>
+          <button id="redo" class="icon-action" aria-label="重做" title="重做（Ctrl + Y / ⌘ + Shift + Z）" disabled>↷</button>
+          <button id="reset" class="icon-action" aria-label="重置" title="重置方案">⟲</button>
+        </div>
         <span id="saveStatus" class="save-status" role="status">仅保存在此浏览器</span>
-      </nav>
-
-      <header class="masthead panel">
-        <div class="tool-identity">
-          <img class="tool-mark" src="icon.png" width="47" height="47" alt="" aria-hidden="true" decoding="async">
-          <div><h1>Plate Layout Designer</h1><p class="chinese-title">孔板铺板设计器</p><p class="subtitle">从实验分组，到一张清晰的铺板方案。</p></div>
-        </div>
-        <div class="plan-title"><label for="planTitle">实验名称 / 方案标题</label><input id="planTitle" maxlength="160" placeholder="为这次实验命名…" autocomplete="off"><span id="titleCount" class="field-hint">0 / 160</span></div>
-        <div class="header-actions">
-          <div class="history-actions"><button id="undo" class="icon-action" title="撤销（Ctrl / ⌘ + Z）" disabled><span aria-hidden="true">↶</span>撤销</button><button id="redo" class="icon-action" title="重做（Ctrl / ⌘ + Shift + Z）" disabled><span aria-hidden="true">↷</span>重做</button><button id="reset" class="icon-action" title="重置当前方案"><span aria-hidden="true">⟲</span>重置</button></div>
-          <div class="export-actions"><button id="exportPng" class="button secondary"><span aria-hidden="true">↓</span> 导出 PNG</button><button id="exportJpg" class="button primary"><span aria-hidden="true">↓</span> 导出 JPG</button></div>
-        </div>
+        <button type="button" class="button menu-trigger" popovertarget="viewMenu">视图 <span aria-hidden="true">⌄</span></button>
+        <button type="button" class="button primary menu-trigger" popovertarget="exportMenu">导出 <span aria-hidden="true">⌄</span></button>
       </header>
-
+      <div id="viewMenu" class="toolbar-menu" popover="auto" aria-label="视图设置">
+        <h2>视图设置</h2>
+        <label class="switch-row" for="showIds">孔位编号<input id="showIds" type="checkbox" checked role="switch"></label>
+        <label class="switch-row" for="showAxes">行列标识<input id="showAxes" type="checkbox" checked role="switch"></label>
+        <label class="switch-row" for="showFrame">孔板边框<input id="showFrame" type="checkbox" checked role="switch"></label>
+        <label class="size-label" for="wellScale">孔位大小 <output id="wellScaleValue">100%</output></label>
+        <input id="wellScale" class="size-slider" type="range" min="75" max="110" value="100" step="5">
+        <p class="display-note">孔位编号与导出同步。</p>
+      </div>
+      <div id="exportMenu" class="toolbar-menu" popover="auto" aria-label="导出设置">
+        <h2>导出图片</h2>
+        <label class="switch-row" for="exportLegend">包含标签图例<input id="exportLegend" type="checkbox" checked role="switch"></label>
+        <div hidden><input id="exportIds" type="checkbox" checked></div>
+        <label class="resolution-label" for="exportScale">清晰度</label>
+        <select id="exportScale"><option value="1">标准 · 1×</option><option value="2" selected>高清 · 2×</option><option value="3">超清 · 3×</option></select>
+        <div class="export-actions"><button id="exportPng" class="button primary">下载 PNG</button><button id="exportJpg" class="button secondary">下载 JPG</button></div>
+        <details class="file-options"><summary>方案备份与导入</summary>
+          <div class="file-actions"><button id="exportJson" class="button secondary">备份 JSON</button><button id="importJson" class="button secondary">导入 JSON</button><button id="restoreImportBackup" class="button secondary">恢复导入前备份</button><button id="exportImportBackup" class="button secondary">导出导入前备份</button><button id="exportBrowserOriginal" class="button secondary">下载浏览器原始草稿</button></div>
+        </details>
+      </div>
       <main class="designer">
-<p id="draftAccessNotice" class="panel draft-access-notice" role="status" hidden></p>
-        <aside class="left-sidebar" aria-label="孔板设置">
-          <section class="panel settings-panel">
-            <h2>孔板类型 <span>Plate type</span></h2>
-            <div id="plateTypes" class="plate-types" role="group" aria-label="选择孔板类型">
-              <button data-type="6" aria-pressed="false"><span class="mini-plate" aria-hidden="true">⠿</span><span><strong>6 孔板</strong><small>2 × 3</small></span></button>
-              <button data-type="12" aria-pressed="false"><span class="mini-plate" aria-hidden="true">⠿</span><span><strong>12 孔板</strong><small>3 × 4</small></span></button>
-              <button data-type="24" aria-pressed="false"><span class="mini-plate" aria-hidden="true">⠿</span><span><strong>24 孔板</strong><small>4 × 6</small></span></button>
-              <button data-type="96" aria-pressed="true"><span class="mini-plate" aria-hidden="true">⠿</span><span><strong>96 孔板</strong><small>8 × 12</small></span></button>
-            </div>
-          </section>
-          <section class="panel settings-panel">
-            <h2>显示设置 <span>Display</span></h2>
-            <label class="switch-row" for="showIds">显示孔位编号<input id="showIds" type="checkbox" checked role="switch"></label>
-            <label class="switch-row" for="showAxes">显示行列标识<input id="showAxes" type="checkbox" checked role="switch"></label>
-            <label class="switch-row" for="showFrame">显示孔板边框<input id="showFrame" type="checkbox" checked role="switch"></label>
-            <label class="size-label" for="wellScale">孔位大小 <output id="wellScaleValue">100%</output></label><input id="wellScale" class="size-slider" type="range" min="75" max="110" value="100" step="5">
-            <p class="display-note">孔位编号与导出设置同步。行列标识和边框开关仅影响编辑视图。</p>
-          </section>
-          <section class="panel settings-panel action-panel">
-            <h2>选择操作 <span>Selection</span></h2>
-            <div class="two-buttons"><button id="selectAll" class="button subtle">全选孔位</button><button id="deselectAll" class="button subtle">取消选择</button></div>
-            <p class="selection-tip">点击行号或列号，选择整行或整列。</p>
-            <div class="help-box"><span class="help-icon" aria-hidden="true">ⓘ</span><strong>使用提示</strong><ol><li>点击或拖动选择孔位。</li><li>输入标签并应用，或点击已有标签。</li><li>检查图例后导出高清图片。</li></ol><p>选中描边只辅助编辑，不会出现在导出图片中。</p></div>
-            <div class="export-settings">
-              <h3>导出内容</h3>
-              <label class="switch-row" for="exportIds">导出孔位编号<input id="exportIds" type="checkbox" checked role="switch"></label>
-              <label class="switch-row" for="exportLegend">导出标签图例<input id="exportLegend" type="checkbox" checked role="switch"></label>
-              <p class="display-note">编号与显示设置同步；关闭图例后仍保留孔内标签文字。</p>
-            </div>
-            <label class="resolution-label" for="exportScale">导出清晰度</label><select id="exportScale"><option value="1">标准 · 1×</option><option value="2" selected>高清 · 2×</option><option value="3">超清 · 3×</option></select>
-            <div class="file-actions"><button id="exportJson" class="button secondary">备份 JSON</button><button id="importJson" class="button secondary">导入 JSON</button><button id="restoreImportBackup" class="button secondary">恢复导入前备份</button><button id="exportImportBackup" class="button secondary">导出导入前备份</button><button id="exportBrowserOriginal" class="button secondary">下载浏览器原始草稿</button></div>
-<p class="privacy-note">游客本地使用 · 云端需登录并手动保存</p>
-          </section>
-        </aside>
-
+        <p id="draftAccessNotice" class="panel draft-access-notice" role="status" hidden></p>
         <div class="canvas-column">
           <section class="panel plate-panel" aria-labelledby="plateHeading">
-            <div class="section-heading"><h2 id="plateHeading">96 孔板 <span>96-well plate</span></h2><span id="assignedCount" class="small-stat">0 / 96 已标记</span></div>
+            <div class="plate-toolbar">
+              <h2 id="plateHeading">96 孔板</h2>
+              <div id="plateTypes" class="plate-types" role="group" aria-label="选择孔板类型">
+              <button type="button" data-type="6" aria-pressed="false" title="2 行 × 3 列"><span class="mini-plate" style="--rows:2;--cols:3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span><span>6 孔</span></button>
+              <button type="button" data-type="12" aria-pressed="false" title="3 行 × 4 列"><span class="mini-plate" style="--rows:3;--cols:4" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span>12 孔</span></button>
+              <button type="button" data-type="24" aria-pressed="false" title="4 行 × 6 列"><span class="mini-plate" style="--rows:4;--cols:6" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span>24 孔</span></button>
+              <button type="button" data-type="96" aria-pressed="true" title="8 行 × 12 列"><span class="mini-plate" style="--rows:8;--cols:12" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span>96 孔</span></button>
+              </div>
+            </div>
             <div class="plate-scroll"><svg id="plate" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="孔板，点击孔位进行多选" aria-describedby="plateInstructions"></svg></div>
-            <div class="plate-caption"><p id="plateInstructions"><span class="selection-key" aria-hidden="true"></span>点击 / 拖动多选 <span class="caption-divider">·</span> 方向键移动，空格选中</p><span id="plateDimensions">8 行 × 12 列</span></div>
+            <div class="plate-actions">
+              <div class="two-buttons"><button id="selectAll" class="button subtle">全选</button><button id="deselectAll" class="button subtle">取消选择</button></div>
+              <span id="plateDimensions" class="secondary-text">8 行 × 12 列</span>
+              <span id="assignedCount" class="small-stat">0 / 96 已标记</span>
+              <details class="help-box"><summary>使用提示</summary><div id="plateInstructions">点击或拖动多选；点击行列标识可整行、整列选择。方向键移动，空格选中。选中描边不会出现在导出图片中。</div></details>
+            </div>
           </section>
           <section class="panel legend-panel" aria-labelledby="legendHeading">
-            <div class="section-heading"><h2 id="legendHeading">标签图例 <span>Legend &amp; statistics</span></h2><span id="legendSummary" class="small-stat">尚未标记孔位</span></div>
+            <div class="section-heading"><h2 id="legendHeading">标签图例</h2><span id="legendSummary" class="small-stat">尚未标记孔位</span></div>
             <div id="legend" class="legend-grid"></div>
           </section>
         </div>
-
-        <aside class="right-sidebar" aria-label="标签与当前选择">
-          <section class="panel selection-panel">
-            <div class="section-heading"><h2>当前选择 <span>Selection</span></h2><strong id="selectionCount" class="selection-count">0 个孔位</strong></div>
-            <div id="selectionList" class="selection-list" aria-label="选中的孔位"></div>
-            <button id="clearSelection" class="button subtle full-width">取消当前选择</button>
-          </section>
+        <aside class="right-sidebar" aria-label="标签编辑">
           <section class="panel label-editor">
-            <h2>标签设置 <span>Label settings</span></h2>
+            <div class="section-heading"><h2>给选中孔位打标签</h2><strong id="selectionCount" class="selection-count">0 个孔位</strong></div>
+            <div id="selectionList" class="selection-list" aria-label="选中的孔位"></div>
+            <button id="clearSelection" class="selection-clear" type="button">取消当前选择</button>
             <form id="labelForm">
               <label for="labelName">标签名称</label><input id="labelName" maxlength="160" placeholder="例如 OVA + LPS" autocomplete="off" required>
               <label for="labelColor">标签颜色 <span id="colorMode">自动推荐</span></label><div class="color-field"><input id="labelColor" type="color" value="#a9c9ed" aria-label="新标签颜色"><span id="colorHex">#A9C9ED</span><button id="autoColor" type="button" title="自动选择未使用的浅色">自动配色</button></div>
-              <button id="applyLabel" class="button primary full-width" type="submit">＋ 创建并应用到选中孔位</button>
+              <button id="applyLabel" class="button primary full-width" type="submit">创建并应用</button>
             </form>
             <button id="clearLabels" class="button subtle full-width">清除选中孔位的标签</button>
             <p id="editorHint" class="editor-hint">先在孔板上选择需要分组的孔位。</p>
           </section>
           <section class="panel labels-panel">
-            <div class="section-heading"><h2>已有标签 <span>Label library</span></h2><span id="labelCount" class="small-stat">0</span></div>
-            <p class="library-tip">点击名称应用；色块可修改颜色。未使用标签保留在库中。</p>
+            <div class="section-heading"><h2>已有标签</h2><span id="labelCount" class="small-stat">0</span></div>
             <div id="labelLibrary" class="label-library"></div>
           </section>
         </aside>
       </main>
-      <footer class="workspace-footer"><span>BLACKBLUES / LAB TOOLS</span><span>让实验设计清晰可见。</span><a href="../../">返回导航站 ↗</a></footer>
+      <footer class="workspace-footer"><a href="../../">返回导航站 ↗</a><span>方案保存在当前浏览器</span></footer>
     </div>
     <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
     <input id="jsonInput" type="file" accept=".json,application/json" hidden>
