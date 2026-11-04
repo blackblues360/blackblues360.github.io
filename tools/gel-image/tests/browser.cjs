@@ -21,6 +21,26 @@ const {pathToFileURL}=require('node:url');
     await context.route('**/assets/js/account/tool-access.mjs',route=>route.fulfill({contentType:'text/javascript',body:"document.documentElement.dataset.toolAccess='allowed'; await import(new URL(document.querySelector('script[data-tool-entry]').dataset.toolEntry,location.href));"}));
     const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
     const downloads=[];async function download(id,name){const event=page.waitForEvent('download');await page.locator('#'+id).click();const d=await event,file=path.join(output,name||d.suggestedFilename());await d.saveAs(file);downloads.push(file);return file;}
+    if(process.env.GEL_CROP_ONLY){
+      await page.goto(base+'/tools/gel-image/');await page.locator('#demo').click();
+      await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('预览已更新'));
+      const fields=async()=>Promise.all(['cropX','cropY','cropW','cropH'].map(id=>page.locator('#'+id).inputValue().then(Number)));
+      const near=(actual,expected)=>actual.forEach((n,i)=>assert.ok(Math.abs(n-expected[i])<.2,`${actual} != ${expected}`));
+      const begin=async()=>{await page.locator('#crop').click();await page.waitForFunction(()=>!document.getElementById('cropX').disabled);assert.equal(await page.locator('#cropFinish').isDisabled(),true);assert.equal(await page.locator('#canvas').evaluate(el=>getComputedStyle(el).cursor),'crosshair');};
+      const drag=async(from,to)=>{const box=await page.locator('#canvas').boundingBox();await page.mouse.move(box.x+from[0]*box.width,box.y+from[1]*box.height);await page.mouse.down();await page.mouse.move(box.x+to[0]*box.width,box.y+to[1]*box.height,{steps:10});await page.mouse.up();};
+      await begin();await page.locator('#canvas').click({position:{x:100,y:70}});assert.equal(await page.locator('#cropFinish').isDisabled(),true);
+      await drag([.2,.25],[.7,.65]);near(await fields(),[20,25,50,40]);
+      await drag([.45,.45],[.5,.5]);near(await fields(),[25,30,50,40]);
+      await drag([.75,.7],[.8,.8]);near(await fields(),[25,30,55,50]);
+      await page.screenshot({path:path.join(output,'crop-editor.png'),fullPage:true});
+      await page.locator('#cropFinish').click();assert.equal(await page.locator('#exportPng').isDisabled(),true);await page.locator('#apply').click();
+      const png=await fs.readFile(await download('exportPng','mouse-crop.png'));assert.equal(png.readUInt32BE(16),550);assert.equal(png.readUInt32BE(20),220);
+      await begin();await drag([.5,.5],[.9,.9]);near(await fields(),[50,50,40,40]);
+      await page.locator('#cropCancel').click();await begin();await drag([.85,.8],[.15,.2]);near(await fields(),[15,20,70,60]);
+      await page.locator('#cropCancel').click();await begin();await page.locator('#ratio').selectOption('1');assert.equal(await page.locator('#cropFinish').isDisabled(),true);await drag([.1,.1],[.3,.6]);const square=await fields();assert.ok(Math.abs(square[2]*1000-square[3]*440)<5);
+      await page.locator('#cropCancel').click();await begin();await page.locator('#cropW').fill('50');await page.locator('#cropW').dispatchEvent('change');assert.equal(await page.locator('#cropFinish').isEnabled(),true);
+      assert.deepEqual(errors,[]);await fs.writeFile(path.join(output,'crop-results.json'),JSON.stringify({passed:true,initialMouseSelection:true,clickWithoutDragDoesNotCrop:true,moveSelection:true,resizeCorner:true,recropStartsNewSelection:true,reverseDrag:true,fixedRatio:true,numericCrop:true,exportDimensions:[550,220],pageErrors:errors},null,2));console.log(JSON.stringify({passed:true,scope:'mouse crop',output,pageErrors:errors}));await context.close();return;
+    }
     await page.goto(base+'/tools/gel-image/');await page.locator('#demo').click();await page.locator('.image-card').waitFor();await page.waitForFunction(()=>!document.getElementById('canvas').hidden&&document.getElementById('canvas').width>1);await page.locator('#detect').click();await page.waitForFunction(()=>!document.getElementById('controls').disabled);assert.equal(await page.locator('#laneCount').textContent(),'8 条辅助线');await page.locator('#laneFinish').click();await page.locator('#apply').click();await page.locator('#labels').fill('');await page.locator('#apply').click();assert.equal(await page.locator('#exportPng').isDisabled(),true);await page.locator('#saveProject').click();assert.match(await page.locator('#status').textContent(),/先修正/);await page.locator('#discard').click();await page.locator('#even').click();await page.locator('#laneFinish').click();assert.equal(await page.locator('#exportPng').isDisabled(),true);await page.locator('#apply').click();await page.waitForTimeout(250);
     await page.locator('#brightness').evaluate(el=>{el.value='.1';el.dispatchEvent(new Event('input',{bubbles:true}));});assert.equal(await page.locator('#exportPng').isDisabled(),true);await page.locator('#apply').click();await page.waitForTimeout(250);
     const png=await fs.readFile(await download('exportPng','annotated.png'));assert.equal(png.subarray(1,4).toString(),'PNG');assert.equal(png.readUInt32BE(16),1000);assert.ok(png.readUInt32BE(20)>440);
