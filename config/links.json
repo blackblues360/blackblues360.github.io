@@ -24,6 +24,12 @@
           "description": "记录和查看重要的日子"
         },
         {
+          "name": "胶图处理",
+          "url": "tools/gel-image/",
+          "iconUrl": "tools/gel-image/icon.svg",
+          "description": "旋转裁剪 WB 胶图，定位泳道与样品编号"
+        },
+        {
           "name": "账户中心",
           "url": "account/",
           "icon": "notebook",
