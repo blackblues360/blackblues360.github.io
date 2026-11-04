@@ -1,17 +1,17 @@
-import {defaults,clone,parseLabels,validate,even,geometry} from './core.mjs?v=1';
-import {labelLayout,drawLabels,makeCanvas,canvasBlob,download,printFrame} from './export.mjs?v=1';
+import {defaults,clone,parseLabels,parseRowLabels,validate,even,geometry} from './core.mjs?v=2';
+import {annotationLayout,drawAnnotations,makeCanvas,canvasBlob,download,printFrame} from './export.mjs?v=2';
 
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d'),documents=[];
 let currentId=null,processor=createProcessor(),mode='normal',cropDraft=[0,0,1,1],cropFresh=false,selectedLane=-1,drag=null,frame=null,previewVersion=0,previewTimer,previewFlight=false,previewPending=false,busy=false,comparing=false,unsaved=false;
 let allowUnload=false;
-let activeTool='adjust',panelCollapsed=false,preferredSettingsWidth=340,settingsDrag=null;
+let activeTool='adjust',panelCollapsed=false,preferredSettingsWidth=340,settingsDrag=null,selectedRow=-1;
 const current=()=>documents.find(d=>d.id===currentId);
 const filename=(doc,suffix)=>doc.name.replace(/\.[^.]*$/,'')+suffix;
-const cleanEdit=edit=>({...clone(edit),lanes:null,labels:null});
+const cleanEdit=edit=>({...clone(edit),lanes:null,labels:null,rows:null,rowLeft:'',rowRight:''});
 const dirty=doc=>!!doc&&(JSON.stringify(doc.draft)!==JSON.stringify(doc.edit)||doc.prompt!==doc.appliedPrompt);
 function status(message,error=false){$('status').textContent=message;$('status').classList.toggle('error',error);}
 function createProcessor(){
-  const worker=new Worker(new URL('./worker.mjs?v=1',import.meta.url),{type:'module'}),pending=new Map();let serial=0;
+  const worker=new Worker(new URL('./worker.mjs?v=2',import.meta.url),{type:'module'}),pending=new Map();let serial=0;
   worker.onmessage=({data})=>{const p=pending.get(data.request);if(!p)return;pending.delete(data.request);data.error?p.reject(Error(data.error)):p.resolve(data.result);};
   worker.onerror=()=>{for(const p of pending.values())p.reject(Error('图片处理线程意外停止，请保存项目后刷新页面。'));pending.clear();};
   return {call(action,id,data={},transfers=[]){return new Promise((resolve,reject)=>{const request=++serial;pending.set(request,{resolve,reject});worker.postMessage({request,action,id,...data},transfers);});},close(){worker.terminate();for(const p of pending.values())p.reject(Error('处理任务已结束。'));pending.clear();}};
@@ -22,23 +22,26 @@ function updateActions(){
   for(const id of ['add','demo','openProject'])$(id).disabled=busy;
   for(const id of ['copyImage','exportPng','exportTiff','exportPdf','exportRecord'])$(id).disabled=!has||changed||busy||mode!=='normal';
   $('saveProject').disabled=!has||busy;$('reset').disabled=!has||busy;$('compare').disabled=!has||busy||mode!=='normal';$('apply').disabled=!has||!changed||busy||mode!=='normal';$('discard').disabled=!has||!changed||busy;
-  for(const id of ['toolAdjust','toolCrop','toolLanes','closeSettings'])$(id).disabled=busy;
+  for(const id of ['toolAdjust','toolCrop','toolLanes','toolRows','closeSettings'])$(id).disabled=busy;
   $('reviewDot').classList.toggle('dirty',changed);$('reviewText').textContent=changed?'预览含未应用修改，应用后可导出。':has?'修改已应用，可以导出。':'先调整图片，再应用修改。';$('dirtyState').textContent=unsaved?'项目未保存':'项目已保存';
   $('compare').setAttribute('aria-pressed',String(comparing));$('cropActions').hidden=mode!=='crop';$('laneActions').hidden=mode!=='lanes';$('crop').classList.toggle('active',mode==='crop');$('laneEdit').classList.toggle('active',mode==='lanes');$('modeHint').hidden=mode==='normal';$('modeHint').textContent=mode==='crop'?(cropFresh?'按住鼠标拖动，框选需要保留的区域':'框内移动 · 四角缩放 · 框外重新框选'):'拖动辅助线 · 开启补加可添加泳道';
   for(const id of ['cropX','cropY','cropW','cropH','ratio','cropFinish'])$(id).disabled=mode==='crop'&&!frame;
   if(mode==='crop'&&cropFresh)$('cropFinish').disabled=true;
-  canvas.style.cursor=mode==='crop'?'crosshair':mode==='lanes'?'ew-resize':'default';
+  $('rowActions').hidden=mode!=='rows';$('rowEdit').classList.toggle('active',mode==='rows');$('rowFinish').disabled=mode==='rows'&&!frame;
+  if(mode==='rows')$('modeHint').textContent='上下拖动横线 · 左右文字按行对应';
+  canvas.style.cursor=mode==='crop'?'crosshair':mode==='lanes'?'ew-resize':mode==='rows'?'ns-resize':'default';
   $('laneFinish').disabled=mode==='lanes'&&!frame;canvas.style.opacity=mode!=='normal'&&!frame?'.4':'1';
 }
 function setBusy(value,message){busy=value;if(message)status(message);updateActions();}
-function changed(geometry=false){const d=current();if(!d)return;if(geometry){d.draft.lanes=null;d.draft.labels=null;selectedLane=-1;}unsaved=true;updateCounts();updateActions();schedulePreview();}
-function updateCounts(){const d=current();try{$('labelCount').textContent=`${parseLabels($('labels').value).length} 个标签`;}catch(e){$('labelCount').textContent=e.message;}$('laneCount').textContent=d?.draft.lanes?`${d.draft.lanes.length} 条辅助线`:'尚未定位';}
+function changed(geometry=false){const d=current();if(!d)return;if(geometry){d.draft.lanes=null;d.draft.labels=null;d.draft.rows=null;selectedLane=selectedRow=-1;}unsaved=true;updateCounts();updateActions();schedulePreview();}
+function updateCounts(){const d=current();try{$('labelCount').textContent=`${parseLabels($('labels').value).length} 个标签`;}catch(e){$('labelCount').textContent=e.message;}$('laneCount').textContent=d?.draft.lanes?`${d.draft.lanes.length} 条辅助线`:'尚未定位';try{$('rowLabelCount').textContent=`${parseRowLabels($('rowLeft').value,$('rowRight').value).length} 行信息`;}catch(e){$('rowLabelCount').textContent=e.message;}$('rowCount').textContent=d?.draft.rows?`${d.draft.rows.length} 条横线`:'尚未定位';}
 function cropFields(){for(const [i,id] of ['cropX','cropY','cropW','cropH'].entries())$(id).value=(cropDraft[i]*100).toFixed(2);}
 function controls(){
-  const d=current();mode='normal';comparing=false;selectedLane=-1;frame=null;++previewVersion;$('addLane').checked=false;
+  const d=current();mode='normal';comparing=false;selectedLane=selectedRow=-1;frame=null;++previewVersion;$('addLane').checked=false;$('addRow').checked=false;
   for(const id of ['grayscale','invert'])$(id).checked=d?.draft[id]??true;
   for(const id of ['angle','brightness','contrast'])$(id).value=d?.draft[id]??(id==='contrast'?1:0);
   $('brightnessValue').textContent=Number($('brightness').value).toFixed(2);$('contrastValue').textContent=Number($('contrast').value).toFixed(2);$('labels').value=d?.prompt??'M,1-6,M';cropDraft=d?.draft.crop?[...d.draft.crop]:[0,0,1,1];cropFields();
+  for(const id of ['rowLeft','rowRight'])$(id).value=d?.draft[id]??'';
   $('imageTitle').textContent=d?.name??'让每一道，都有清晰的名字。';$('imageMeta').textContent=d?`${d.width} × ${d.height} · ${d.bits}-bit 原图`:'WB / GEL IMAGE EDITOR';$('empty').hidden=!!d;canvas.hidden=!d;updateCounts();updateActions();schedulePreview();
 }
 function list(){
@@ -50,15 +53,16 @@ async function refresh(){
   clearTimeout(previewTimer);if(previewFlight){previewPending=true;++previewVersion;return;}previewPending=false;
   const d=current(),version=++previewVersion;if(!d){ctx.clearRect(0,0,canvas.width,canvas.height);return;}previewFlight=true;
   const edit=comparing?{...defaults(),grayscale:false,invert:false}:cleanEdit(d.draft);if(mode==='crop')edit.crop=null;
-  try{const result=await processor.call('preview',d.id,{edit});if(version!==previewVersion||d.id!==currentId)return;frame=result;draw();updateActions();if(!d.thumbnail){const small=document.createElement('canvas');small.width=180;small.height=76;const raw=document.createElement('canvas');raw.width=frame.width;raw.height=frame.height;raw.getContext('2d').putImageData(new ImageData(frame.pixels,frame.width,frame.height),0,0);const c=small.getContext('2d');c.fillStyle='#edf1eb';c.fillRect(0,0,180,76);const scale=Math.min(180/frame.width,76/frame.height);c.drawImage(raw,(180-frame.width*scale)/2,(76-frame.height*scale)/2,frame.width*scale,frame.height*scale);d.thumbnail=small.toDataURL();const thumb=document.querySelector(`[data-thumbnail="${d.id}"]`);if(thumb)thumb.getContext('2d').drawImage(small,0,0);}if(!busy)status(mode==='normal'?'预览已更新。请核对泳道与上样记录。':mode==='crop'?(cropFresh?'按住鼠标拖动，框选需要保留的区域。':'完成选区后点击“确认选区”，再应用修改。'):'校正后点击“完成校正”，再应用修改。');}catch(e){if(version===previewVersion)status(e.message,true);}finally{previewFlight=false;if(previewPending)refresh();}
+  try{const result=await processor.call('preview',d.id,{edit});if(version!==previewVersion||d.id!==currentId)return;frame=result;if(draw()===false)return;updateActions();if(!d.thumbnail){const small=document.createElement('canvas');small.width=180;small.height=76;const raw=document.createElement('canvas');raw.width=frame.width;raw.height=frame.height;raw.getContext('2d').putImageData(new ImageData(frame.pixels,frame.width,frame.height),0,0);const c=small.getContext('2d');c.fillStyle='#edf1eb';c.fillRect(0,0,180,76);const scale=Math.min(180/frame.width,76/frame.height);c.drawImage(raw,(180-frame.width*scale)/2,(76-frame.height*scale)/2,frame.width*scale,frame.height*scale);d.thumbnail=small.toDataURL();const thumb=document.querySelector(`[data-thumbnail="${d.id}"]`);if(thumb)thumb.getContext('2d').drawImage(small,0,0);}if(!busy)status(mode==='normal'?'预览已更新。请核对泳道与上样记录。':mode==='crop'?(cropFresh?'按住鼠标拖动，框选需要保留的区域。':'完成选区后点击“确认选区”，再应用修改。'):'校正后点击“完成校正”，再应用修改。');}catch(e){if(version===previewVersion)status(e.message,true);}finally{previewFlight=false;if(previewPending)refresh();}
 }
 function draw(){
   const d=current();if(!frame||!d)return;const annotations=mode==='normal'&&!comparing?d.draft:null,scale=frame.width/frame.fullWidth;
-  const layout=annotations?labelLayout(frame.fullWidth,annotations,(text,size)=>{ctx.font=`bold ${size}px "Segoe UI","Microsoft YaHei",sans-serif`;return ctx.measureText(text).width;}):{height:0,items:[]};
-  canvas.width=frame.width;canvas.height=frame.height+Math.ceil(layout.height*scale);ctx.putImageData(new ImageData(frame.pixels,frame.width,frame.height),0,Math.ceil(layout.height*scale));if(layout.height){ctx.save();ctx.scale(scale,scale);drawLabels(ctx,frame.fullWidth,layout);ctx.restore();}
+  let layout;try{layout=annotationLayout(frame.fullWidth,frame.fullHeight,annotations||defaults(),(text,size)=>{ctx.font=`bold ${size}px "Segoe UI","Microsoft YaHei",sans-serif`;return ctx.measureText(text).width;});}catch(error){status(error.message,true);return false;}
+  const left=Math.ceil(layout.left*scale),top=Math.ceil(layout.top*scale);canvas.width=frame.width+left+Math.ceil(layout.right*scale);canvas.height=frame.height+top+Math.ceil(layout.bottom*scale);ctx.putImageData(new ImageData(frame.pixels,frame.width,frame.height),left,top);ctx.save();ctx.scale(scale,scale);drawAnnotations(ctx,layout);ctx.restore();
   const unit=canvas.width/Math.max(1,canvas.getBoundingClientRect().width);
   if(mode==='crop'&&!cropFresh){const [x,y,w,h]=cropDraft.map((v,i)=>v*(i%2?canvas.height:canvas.width));ctx.fillStyle='#15271b80';ctx.beginPath();ctx.rect(0,0,canvas.width,canvas.height);ctx.rect(x,y,w,h);ctx.fill('evenodd');ctx.strokeStyle='#dcaa59';ctx.lineWidth=2*unit;ctx.strokeRect(x,y,w,h);for(const [a,b] of [[x,y],[x+w,y],[x+w,y+h],[x,y+h]]){ctx.fillStyle='#dbaa60';ctx.fillRect(a-4*unit,b-4*unit,8*unit,8*unit);}}
   if(mode==='lanes'){for(const [i,lane] of (d.draft.lanes||[]).entries()){const x=lane.center*canvas.width;ctx.strokeStyle=i===selectedLane?'#d69030':'#4a9bba';ctx.lineWidth=1.5*unit;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();ctx.font=`bold ${11*unit}px sans-serif`;ctx.fillStyle=ctx.strokeStyle;ctx.fillText(String(i+1),x+3*unit,(14+(i%2)*15)*unit);}}
+  if(mode==='rows'){for(const [i,row] of (d.draft.rows||[]).entries()){const y=row.center*canvas.height;ctx.strokeStyle=i===selectedRow?'#d69030':'#4a9bba';ctx.lineWidth=1.5*unit;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();ctx.font=`bold ${11*unit}px sans-serif`;ctx.fillStyle=ctx.strokeStyle;ctx.fillText(String(i+1),5*unit,y-4*unit);}}
 }
 function boundCrop(rect,applyRatio=false){let [x,y,w,h]=rect;if(!rect.every(Number.isFinite))throw Error('裁剪数字必须有效。');w=Math.min(1,Math.max(.001,w));h=Math.min(1,Math.max(.001,h));const ratio=Number($('ratio').value);if(applyRatio&&ratio&&frame){h=w*frame.fullWidth/frame.fullHeight/ratio;if(h>1){h=1;w=h*ratio*frame.fullHeight/frame.fullWidth;}}return [Math.max(0,Math.min(1-w,x)),Math.max(0,Math.min(1-h,y)),w,h];}
 function on(id,fn){$(id).addEventListener('click',async()=>{try{await fn();}catch(e){status(e.message,true);}});}
@@ -87,8 +91,16 @@ on('even',()=>{const d=current();if(!d)return;if(mode==='crop')throw Error('请�
 on('laneEdit',()=>{const d=current();if(!d)return;if(!d.draft.lanes?.length)throw Error('请先自动定位或等距定位。');mode='lanes';comparing=false;frame=null;++previewVersion;selectedLane=-1;updateActions();refresh();});
 on('laneFinish',()=>{const d=current();if(!d)return;d.draft.labels=parseLabels(d.prompt);validate(d.draft);mode='normal';changed();});
 on('deleteLane',()=>{const d=current();if(d?.draft.lanes&&selectedLane>=0){d.draft.lanes.splice(selectedLane,1);selectedLane=-1;changed();}});
-canvas.addEventListener('pointerdown',e=>{const d=current();if(!d||busy||mode==='normal'||!frame)return;const r=canvas.getBoundingClientRect(),x=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y=Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));canvas.setPointerCapture(e.pointerId);if(mode==='crop'){const [a,b,w,h]=cropDraft,corner=cropFresh?-1:[[a,b],[a+w,b],[a+w,b+h],[a,b+h]].findIndex(p=>Math.abs(p[0]-x)*r.width<12&&Math.abs(p[1]-y)*r.height<12);drag={x,y,base:[...cropDraft],corner,creating:cropFresh,move:!cropFresh&&corner<0&&x>=a&&x<=a+w&&y>=b&&y<=b+h};}else if($('addLane').checked){if(d.draft.lanes.length>=200)return;const center=Math.min(.999,Math.max(.001,x));if(d.draft.lanes.some(l=>Math.abs(l.center-center)<=.0021))return;d.draft.lanes.push({center,width:.02});d.draft.lanes.sort((a,b)=>a.center-b.center);changed();draw();}else{let nearest=-1,distance=14/r.width;d.draft.lanes.forEach((l,i)=>{if(Math.abs(l.center-x)<distance){nearest=i;distance=Math.abs(l.center-x);}});selectedLane=nearest;drag=nearest>=0?{lane:nearest}:null;draw();}});
-canvas.addEventListener('pointermove',e=>{if(!drag||busy)return;const d=current(),r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(mode==='lanes'){const i=drag.lane,lo=i?d.draft.lanes[i-1].center+.0021:.001,hi=i===d.draft.lanes.length-1?.999:d.draft.lanes[i+1].center-.0021;if(lo<=hi)d.draft.lanes[i].center=Math.min(hi,Math.max(lo,x));unsaved=true;updateActions();draw();return;}if(mode!=='crop')return;if(drag.creating&&cropFresh&&Math.abs(x-drag.x)*r.width<3&&Math.abs(y-drag.y)*r.height<3)return;const [a,b,w,h]=drag.base;if(drag.move)cropDraft=boundCrop([a+x-drag.x,b+y-drag.y,w,h]);else if(drag.corner>=0){let left=a,top=b,right=a+w,bottom=b+h;if([0,3].includes(drag.corner))left=Math.min(right-.001,x);else right=Math.max(left+.001,x);if([0,1].includes(drag.corner))top=Math.min(bottom-.001,y);else bottom=Math.max(top+.001,y);cropDraft=boundCrop([left,top,right-left,bottom-top],true);}else cropDraft=boundCrop([Math.min(x,drag.x),Math.min(y,drag.y),Math.abs(x-drag.x),Math.abs(y-drag.y)],true);cropFresh=false;unsaved=true;cropFields();updateActions();draw();});
+for(const id of ['rowLeft','rowRight'])$(id).addEventListener('input',()=>{const d=current();if(!d||busy)return;d.draft[id]=$(id).value;changed();});
+on('rowDetect',async()=>{const d=current();if(!d)return;const names=parseRowLabels(d.draft.rowLeft,d.draft.rowRight);setBusy(true,'正在分析横向条带信号…');try{const result=await processor.call('detectRows',d.id,{edit:cleanEdit(d.draft),count:names.length,left:Number($('rowDetectLeft').value)/100,right:Number($('rowDetectRight').value)/100});d.draft.rows=result.rows;mode='rows';comparing=false;frame=null;++previewVersion;selectedRow=-1;changed();await refresh();status('已定位横向条带。请上下拖动横线核对位置；kDa 数值请按实际 Marker 填写。');}finally{setBusy(false);}});
+on('rowEven',()=>{const d=current();if(!d)return;const count=parseRowLabels(d.draft.rowLeft,d.draft.rowRight).length;if(!count)throw Error('请先逐行填写左侧样品信息或右侧 kDa。');d.draft.rows=count===1?[{center:.5}]:even(count).map(r=>({center:r.center}));mode='rows';comparing=false;frame=null;++previewVersion;selectedRow=-1;changed();});
+on('rowEdit',()=>{const d=current();if(!d)return;if(!d.draft.rows?.length)throw Error('请先自动定位或等距定位。');mode='rows';comparing=false;frame=null;++previewVersion;selectedRow=-1;updateActions();refresh();});
+on('rowFinish',()=>{const d=current();if(!d||!frame)return;validate({...cleanEdit(d.draft),rows:d.draft.rows,rowLeft:d.draft.rowLeft,rowRight:d.draft.rowRight});mode='normal';changed();});
+on('deleteRow',()=>{const d=current();if(d?.draft.rows&&selectedRow>=0){d.draft.rows.splice(selectedRow,1);selectedRow=-1;changed();}});
+on('rowClear',()=>{const d=current();if(!d)return;d.draft.rows=null;d.draft.rowLeft=d.draft.rowRight='';$('rowLeft').value=$('rowRight').value='';mode='normal';selectedRow=-1;changed();});
+canvas.addEventListener('pointerdown',e=>{if(mode!=='rows'||busy||!frame)return;const d=current(),r=canvas.getBoundingClientRect(),y=Math.min(.999,Math.max(.001,(e.clientY-r.top)/r.height));canvas.setPointerCapture(e.pointerId);if($('addRow').checked){let count;try{count=parseRowLabels(d.draft.rowLeft,d.draft.rowRight).length;}catch(error){status(error.message,true);return;}if(d.draft.rows.length>=count){status('横线数量已达到信息行数；如需增加，请先新增一行文字。');return;}if(d.draft.rows.some(row=>Math.abs(row.center-y)<=.0021))return;d.draft.rows.push({center:y});d.draft.rows.sort((a,b)=>a.center-b.center);changed();draw();}else{let nearest=-1,distance=14/r.height;d.draft.rows.forEach((row,i)=>{if(Math.abs(row.center-y)<distance){nearest=i;distance=Math.abs(row.center-y);}});selectedRow=nearest;drag=nearest>=0?{row:nearest}:null;draw();}});
+canvas.addEventListener('pointerdown',e=>{const d=current();if(!d||busy||mode==='normal'||mode==='rows'||!frame)return;const r=canvas.getBoundingClientRect(),x=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y=Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));canvas.setPointerCapture(e.pointerId);if(mode==='crop'){const [a,b,w,h]=cropDraft,corner=cropFresh?-1:[[a,b],[a+w,b],[a+w,b+h],[a,b+h]].findIndex(p=>Math.abs(p[0]-x)*r.width<12&&Math.abs(p[1]-y)*r.height<12);drag={x,y,base:[...cropDraft],corner,creating:cropFresh,move:!cropFresh&&corner<0&&x>=a&&x<=a+w&&y>=b&&y<=b+h};}else if($('addLane').checked){if(d.draft.lanes.length>=200)return;const center=Math.min(.999,Math.max(.001,x));if(d.draft.lanes.some(l=>Math.abs(l.center-center)<=.0021))return;d.draft.lanes.push({center,width:.02});d.draft.lanes.sort((a,b)=>a.center-b.center);changed();draw();}else{let nearest=-1,distance=14/r.width;d.draft.lanes.forEach((l,i)=>{if(Math.abs(l.center-x)<distance){nearest=i;distance=Math.abs(l.center-x);}});selectedLane=nearest;drag=nearest>=0?{lane:nearest}:null;draw();}});
+canvas.addEventListener('pointermove',e=>{if(!drag||busy)return;const d=current(),r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(mode==='rows'){const i=drag.row,lo=i?d.draft.rows[i-1].center+.0021:.001,hi=i===d.draft.rows.length-1?.999:d.draft.rows[i+1].center-.0021;if(lo<=hi)d.draft.rows[i].center=Math.min(hi,Math.max(lo,y));unsaved=true;updateActions();draw();return;}if(mode==='lanes'){const i=drag.lane,lo=i?d.draft.lanes[i-1].center+.0021:.001,hi=i===d.draft.lanes.length-1?.999:d.draft.lanes[i+1].center-.0021;if(lo<=hi)d.draft.lanes[i].center=Math.min(hi,Math.max(lo,x));unsaved=true;updateActions();draw();return;}if(mode!=='crop')return;if(drag.creating&&cropFresh&&Math.abs(x-drag.x)*r.width<3&&Math.abs(y-drag.y)*r.height<3)return;const [a,b,w,h]=drag.base;if(drag.move)cropDraft=boundCrop([a+x-drag.x,b+y-drag.y,w,h]);else if(drag.corner>=0){let left=a,top=b,right=a+w,bottom=b+h;if([0,3].includes(drag.corner))left=Math.min(right-.001,x);else right=Math.max(left+.001,x);if([0,1].includes(drag.corner))top=Math.min(bottom-.001,y);else bottom=Math.max(top+.001,y);cropDraft=boundCrop([left,top,right-left,bottom-top],true);}else cropDraft=boundCrop([Math.min(x,drag.x),Math.min(y,drag.y),Math.abs(x-drag.x),Math.abs(y-drag.y)],true);cropFresh=false;unsaved=true;cropFields();updateActions();draw();});
 for(const name of ['pointerup','pointercancel'])canvas.addEventListener(name,()=>{drag=null;});
 on('apply',async()=>{const d=current();if(!d)return;const names=parseLabels(d.prompt);if(d.draft.lanes)d.draft.labels=names;validate(d.draft);d.history.push({edit:clone(d.edit),prompt:d.appliedPrompt});if(d.history.length>20)d.history.shift();d.edit=clone(d.draft);d.appliedPrompt=d.prompt;unsaved=true;updateActions();await refresh();status('修改已应用。导出前请核对编号与实际泳道。');});
 on('discard',()=>{const d=current();if(!d)return;if(dirty(d))unsaved=true;d.draft=clone(d.edit);d.prompt=d.appliedPrompt;controls();});
@@ -108,7 +120,7 @@ on('copyImage',async()=>{
   catch(error){if(renderError)throw renderError;if(error.name==='NotAllowedError')throw Error('浏览器未允许写入剪贴板。请允许本站使用剪贴板后重试，或导出 PNG。');throw error;}
   finally{setBusy(false);}
 });
-on('exportTiff',async()=>{const d=requireApplied();setBusy(true,'正在生成 TIFF…');try{let header=null;if(d.edit.lanes){const size=geometry(d,d.edit),bar=document.createElement('canvas'),c=bar.getContext('2d'),layout=labelLayout(size.width,d.edit,(text,font)=>{c.font=`bold ${font}px "Segoe UI","Microsoft YaHei",sans-serif`;return c.measureText(text).width;});if(size.width*(size.height+layout.height)>24_000_000)throw Error('图片加上标签后超过 2400 万像素，请先缩小裁剪区域。');bar.width=size.width;bar.height=layout.height;drawLabels(c,size.width,layout);header={width:size.width,height:layout.height,pixels:c.getImageData(0,0,size.width,layout.height).data};}const result=await processor.call('tiff',d.id,{edit:cleanEdit(d.edit),header},header?[header.pixels.buffer]:[]);download(new Blob([result.buffer],{type:'image/tiff'}),filename(d,'-gel.tiff'));status(`TIFF 已生成，保留 ${d.bits}-bit 处理后位深。`);}finally{setBusy(false);}});
+on('exportTiff',async()=>{const d=requireApplied();setBusy(true,'正在生成 TIFF…');try{let header=null;if(d.edit.lanes||d.edit.rows){const size=geometry(d,cleanEdit(d.edit)),bar=document.createElement('canvas'),c=bar.getContext('2d'),layout=annotationLayout(size.width,size.height,d.edit,(text,font)=>{c.font=`bold ${font}px "Segoe UI","Microsoft YaHei",sans-serif`;return c.measureText(text).width;});bar.width=layout.width;bar.height=layout.height;drawAnnotations(c,layout);header={width:layout.width,height:layout.height,imageX:layout.left,imageY:layout.top,pixels:c.getImageData(0,0,layout.width,layout.height).data};}const result=await processor.call('tiff',d.id,{edit:cleanEdit(d.edit),header},header?[header.pixels.buffer]:[]);download(new Blob([result.buffer],{type:'image/tiff'}),filename(d,'-gel.tiff'));status(`TIFF 已生成，保留 ${d.bits}-bit 处理后位深。`);}finally{setBusy(false);}});
 on('exportPdf',async()=>{requireApplied();const target=window.open('about:blank','_blank');if(!target)throw Error('打印页被浏览器阻止，请允许本站弹出窗口。');setBusy(true,'正在准备打印页…');try{const {doc,frame}=await exportFrame();printFrame(target,frame,doc.edit);status('打印页已打开，可选择“另存为 PDF”。');}catch(e){target.close();throw e;}finally{setBusy(false);}});
 on('exportRecord',()=>{const d=requireApplied();const record={format:'blackblues.gel-record',version:1,createdAt:new Date().toISOString(),source:{name:d.name,sha256:d.sha256,width:d.width,height:d.height,bits:d.bits},edit:d.edit,processingOrder:['grayscale','brightness-contrast','invert','rotate','crop','labels'],arbitraryAngleResampled:Math.abs(d.edit.angle/90-Math.round(d.edit.angle/90))>=1e-9,displayExportBits:8,tiffExportBits:d.bits,metadataRoundTripGuaranteed:false};download(new Blob([JSON.stringify(record,null,2)],{type:'application/json'}),filename(d,'-gel-record.json'));});
 function base64(bytes){let out='';for(let i=0;i<bytes.length;i+=32768)out+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(out);}
@@ -128,7 +140,7 @@ async function saveProject(){
     }
     const images=[];
     for(const d of documents){const data=base64(new Uint8Array(await d.file.arrayBuffer()));images.push({name:d.name,type:d.file.type,data,sha256:d.sha256,edit:d.edit,draft:d.draft,prompt:d.prompt,appliedPrompt:d.appliedPrompt});}
-    const text=JSON.stringify({format:'blackblues.gelwork',version:1,active:documents.findIndex(d=>d.id===currentId),images});
+    const text=JSON.stringify({format:'blackblues.gelwork',version:2,active:documents.findIndex(d=>d.id===currentId),images});
     if(text.length>160_000_000)throw Error('项目文件过大，请减少同时打开的图片后保存。');
     const blob=new Blob([text],{type:'application/json'});
     if(handle){const file=await handle.createWritable();try{await file.write(blob);await file.close();}catch(error){try{await file.abort();}catch{}throw error;}}
@@ -171,11 +183,11 @@ $('projectInput').addEventListener('change',async e=>{
   try{
     if(file.size>160_000_000)throw Error('项目超过 160 MB 上限。');
     const project=JSON.parse(await file.text());
-    if(project.format!=='blackblues.gelwork'||project.version!==1||!Array.isArray(project.images)||project.images.length<1||project.images.length>8)throw Error('不是受支持的胶图项目。');
+    if(project.format!=='blackblues.gelwork'||![1,2].includes(project.version)||!Array.isArray(project.images)||project.images.length<1||project.images.length>8)throw Error('不是受支持的胶图项目。');
     next=createProcessor();const restored=[];
     for(const item of project.images){
-      if(typeof item.name!=='string'||item.name.length>255||typeof item.type!=='string'||typeof item.prompt!=='string'||typeof item.appliedPrompt!=='string')throw Error('项目字段不完整。');
-      validate(item.edit);validate(item.draft);const pending=parseLabels(item.prompt),applied=parseLabels(item.appliedPrompt);
+      if(!item||!item.edit||typeof item.edit!=='object'||Array.isArray(item.edit)||!item.draft||typeof item.draft!=='object'||Array.isArray(item.draft)||typeof item.name!=='string'||item.name.length>255||typeof item.type!=='string'||typeof item.prompt!=='string'||typeof item.appliedPrompt!=='string')throw Error('项目字段不完整。');
+      if(project.version===1){item.edit={rows:null,rowLeft:'',rowRight:'',...item.edit};item.draft={rows:null,rowLeft:'',rowRight:'',...item.draft};}else if([item.edit,item.draft].some(edit=>!Object.hasOwn(edit,'rows')||typeof edit.rowLeft!=='string'||typeof edit.rowRight!=='string'))throw Error('项目横向信息字段不完整。');validate(item.edit);validate(item.draft);const pending=parseLabels(item.prompt),applied=parseLabels(item.appliedPrompt);
       if((item.edit.lanes&&JSON.stringify(item.edit.labels)!==JSON.stringify(applied))||(item.draft.lanes&&JSON.stringify(item.draft.labels)!==JSON.stringify(pending)))throw Error('项目中的标签与上样顺序不一致。');
       const data=fromBase64(item.data),d=await decodeFile(new File([data],item.name,{type:item.type}),next);
       if(d.sha256!==item.sha256)throw Error(item.name+'：原图校验值不一致。');
@@ -197,7 +209,7 @@ document.addEventListener('click',async event=>{
 window.addEventListener('beforeunload',e=>{if(allowUnload){allowUnload=false;return;}if((unsaved||busy)&&documents.length){e.preventDefault();e.returnValue='';}});
 window.addEventListener('pageshow',()=>{allowUnload=false;});
 
-const toolButtons={adjust:$('toolAdjust'),crop:$('toolCrop'),lanes:$('toolLanes')},toolNames={adjust:'图像调整',crop:'精确裁剪',lanes:'泳道与样品编号'},resizeHandle=$('settingsResize');
+const toolButtons={adjust:$('toolAdjust'),crop:$('toolCrop'),lanes:$('toolLanes'),rows:$('toolRows')},toolNames={adjust:'图像调整',crop:'精确裁剪',lanes:'泳道与样品编号',rows:'横向信息与 kDa'},resizeHandle=$('settingsResize');
 function selectTool(name,collapsed=false){
   if(busy)return;
   let refreshNeeded=false;
@@ -206,6 +218,7 @@ function selectTool(name,collapsed=false){
     mode='normal';refreshNeeded=true;
   }
   if(mode==='lanes'&&(name!=='lanes'||collapsed)){mode='normal';refreshNeeded=true;}
+  if(mode==='rows'&&(name!=='rows'||collapsed)){mode='normal';refreshNeeded=true;}
   activeTool=name;panelCollapsed=collapsed;
   $('workspace').classList.toggle('settings-collapsed',collapsed);$('settingsShell').classList.toggle('is-collapsed',collapsed);$('settingsPanel').hidden=collapsed;$('toolPanelTitle').textContent=toolNames[name];
   for(const [key,button] of Object.entries(toolButtons)){button.setAttribute('aria-selected',String(key===name&&!collapsed));button.tabIndex=key===name?0:-1;$('panel-'+key).hidden=key!==name;}

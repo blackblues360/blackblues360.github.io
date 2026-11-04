@@ -1,5 +1,5 @@
-import {raster,render,rgba8,automatic,MAX_PIXELS} from './core.mjs?v=1';
-import {decodeTIFF,encodeTIFF} from './tiff.mjs?v=1';
+import {raster,render,rgba8,automatic,automaticRows,MAX_PIXELS} from './core.mjs?v=2';
+import {decodeTIFF,encodeTIFF} from './tiff.mjs?v=2';
 const images=new Map();
 async function handle(data){
   const {request,action,id}=data;
@@ -28,6 +28,7 @@ async function handle(data){
       const source=images.get(id);if(!source)throw Error('图片尚未打开或已被移除。');
       const image=render(source,data.edit);
       if(action==='detect')result=automatic(image,data.count,data.top,data.bottom);
+      else if(action==='detectRows')result=automaticRows(image,data.count,data.left,data.right);
       else if(action==='preview'||action==='pixels'){result=rgba8(image,action==='preview'?1500:Infinity,action==='preview'?1100:Infinity);transfers=[result.pixels.buffer];}
       else if(action==='tiff'){result={buffer:encodeTIFF(image,data.header)};transfers=[result.buffer];}
       else throw Error('未知的图片处理请求。');

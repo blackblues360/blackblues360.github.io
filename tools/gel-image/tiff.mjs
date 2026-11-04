@@ -56,8 +56,8 @@ export async function decodeTIFF(buffer) {
   return image;
 }
 export function encodeTIFF(image,header=null,description='BLACK BLUES Gel Image; retain the original image and processing record.') {
-  const bits=image.bits,step=bits/8,w=image.width,headerHeight=header?.height||0,h=image.height+headerHeight;
-  if(header&&(header.width!==w||header.pixels.length!==w*headerHeight*4))throw Error('标签图层尺寸不匹配。');
+  const bits=image.bits,step=bits/8,padded=header?.imageX!==undefined,w=padded?header.width:image.width,h=padded?header.height:image.height+(header?.height||0),imageX=padded?header.imageX:0,imageY=padded?header.imageY:(header?.height||0);
+  if(header&&(!Number.isInteger(w)||!Number.isInteger(h)||w<1||h<1||!Number.isInteger(imageX)||!Number.isInteger(imageY)||imageX<0||imageY<0||imageX+image.width>w||imageY+image.height>h||header.pixels.length!==header.width*header.height*4||(!padded&&header.width!==w)))throw Error('标注图层尺寸不匹配。');
   if(w*h>MAX_PIXELS)throw Error('加上标签后超过图片大小上限，请缩小图片或减少标签高度。');
   const text=new TextEncoder().encode(description+'\0'),entries=13,ifd=8,extras=ifd+2+entries*12+4,bitsAt=extras,descriptionAt=bitsAt+8,dataAt=(descriptionAt+text.length+1)&~1,length=w*h*4*step,buffer=new ArrayBuffer(dataAt+length),v=new DataView(buffer),bytes=new Uint8Array(buffer);
   bytes[0]=bytes[1]=73;v.setUint16(2,42,true);v.setUint32(4,ifd,true);v.setUint16(ifd,entries,true);
@@ -65,7 +65,9 @@ export function encodeTIFF(image,header=null,description='BLACK BLUES Gel Image;
   for(let i=0;i<tags.length;i++){const [id,type,n,val]=tags[i],at=ifd+2+i*12;v.setUint16(at,id,true);v.setUint16(at+2,type,true);v.setUint32(at+4,n,true);if(type===3&&n===1)v.setUint16(at+8,val,true);else v.setUint32(at+8,val,true);}
   for(let i=0;i<4;i++)v.setUint16(bitsAt+i*2,bits,true);bytes.set(text,descriptionAt);
   let pos=dataAt;
-  if(header)for(const channel of header.pixels){if(bits===16){v.setUint16(pos,channel*257,true);pos+=2;}else bytes[pos++]=channel;}
-  for(const channel of image.pixels){if(bits===16){v.setUint16(pos,channel,true);pos+=2;}else bytes[pos++]=Math.floor((channel+128)/257);}
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const inside=x>=imageX&&x<imageX+image.width&&y>=imageY&&y<imageY+image.height,index=inside?((y-imageY)*image.width+x-imageX)*4:(y*w+x)*4;
+    for(let c=0;c<4;c++){const channel=inside?image.pixels[index+c]:header.pixels[index+c]*257;if(bits===16){v.setUint16(pos,channel,true);pos+=2;}else bytes[pos++]=Math.floor((channel+128)/257);}
+  }
   return buffer;
 }
