@@ -4,6 +4,7 @@ import {labelLayout,drawLabels,makeCanvas,canvasBlob,download,printFrame} from '
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d'),documents=[];
 let currentId=null,processor=createProcessor(),mode='normal',cropDraft=[0,0,1,1],cropFresh=false,selectedLane=-1,drag=null,frame=null,previewVersion=0,previewTimer,previewFlight=false,previewPending=false,busy=false,comparing=false,unsaved=false;
 let allowUnload=false;
+let activeTool='adjust',panelCollapsed=false,preferredSettingsWidth=340,settingsDrag=null;
 const current=()=>documents.find(d=>d.id===currentId);
 const filename=(doc,suffix)=>doc.name.replace(/\.[^.]*$/,'')+suffix;
 const cleanEdit=edit=>({...clone(edit),lanes:null,labels:null});
@@ -21,6 +22,7 @@ function updateActions(){
   for(const id of ['add','demo','openProject'])$(id).disabled=busy;
   for(const id of ['copyImage','exportPng','exportTiff','exportPdf','exportRecord'])$(id).disabled=!has||changed||busy||mode!=='normal';
   $('saveProject').disabled=!has||busy;$('reset').disabled=!has||busy;$('compare').disabled=!has||busy||mode!=='normal';$('apply').disabled=!has||!changed||busy||mode!=='normal';$('discard').disabled=!has||!changed||busy;
+  for(const id of ['toolAdjust','toolCrop','toolLanes','closeSettings'])$(id).disabled=busy;
   $('reviewDot').classList.toggle('dirty',changed);$('reviewText').textContent=changed?'预览含未应用修改，应用后可导出。':has?'修改已应用，可以导出。':'先调整图片，再应用修改。';$('dirtyState').textContent=unsaved?'项目未保存':'项目已保存';
   $('compare').setAttribute('aria-pressed',String(comparing));$('cropActions').hidden=mode!=='crop';$('laneActions').hidden=mode!=='lanes';$('crop').classList.toggle('active',mode==='crop');$('laneEdit').classList.toggle('active',mode==='lanes');$('modeHint').hidden=mode==='normal';$('modeHint').textContent=mode==='crop'?(cropFresh?'按住鼠标拖动，框选需要保留的区域':'框内移动 · 四角缩放 · 框外重新框选'):'拖动辅助线 · 开启补加可添加泳道';
   for(const id of ['cropX','cropY','cropW','cropH','ratio','cropFinish'])$(id).disabled=mode==='crop'&&!frame;
@@ -194,5 +196,55 @@ document.addEventListener('click',async event=>{
 });
 window.addEventListener('beforeunload',e=>{if(allowUnload){allowUnload=false;return;}if((unsaved||busy)&&documents.length){e.preventDefault();e.returnValue='';}});
 window.addEventListener('pageshow',()=>{allowUnload=false;});
+
+const toolButtons={adjust:$('toolAdjust'),crop:$('toolCrop'),lanes:$('toolLanes')},toolNames={adjust:'图像调整',crop:'精确裁剪',lanes:'泳道与样品编号'},resizeHandle=$('settingsResize');
+function selectTool(name,collapsed=false){
+  if(busy)return;
+  let refreshNeeded=false;
+  if(mode==='crop'&&(name!=='crop'||collapsed)){
+    if(!cropFresh){status('请先确认选区或取消裁剪，再切换工具。');return;}
+    mode='normal';refreshNeeded=true;
+  }
+  if(mode==='lanes'&&(name!=='lanes'||collapsed)){mode='normal';refreshNeeded=true;}
+  activeTool=name;panelCollapsed=collapsed;
+  $('workspace').classList.toggle('settings-collapsed',collapsed);$('settingsShell').classList.toggle('is-collapsed',collapsed);$('settingsPanel').hidden=collapsed;$('toolPanelTitle').textContent=toolNames[name];
+  for(const [key,button] of Object.entries(toolButtons)){button.setAttribute('aria-selected',String(key===name&&!collapsed));button.tabIndex=key===name?0:-1;$('panel-'+key).hidden=key!==name;}
+  if(collapsed)toolButtons[name].focus();
+  updateActions();if(refreshNeeded)refresh();
+}
+for(const [name,button] of Object.entries(toolButtons)){
+  button.addEventListener('click',()=>selectTool(name,activeTool===name&&!panelCollapsed));
+  button.addEventListener('keydown',event=>{
+    const names=Object.keys(toolButtons),index=names.indexOf(name);let next;
+    if(['ArrowDown','ArrowRight'].includes(event.key))next=names[(index+1)%names.length];
+    else if(['ArrowUp','ArrowLeft'].includes(event.key))next=names[(index+names.length-1)%names.length];
+    else if(event.key==='Home')next=names[0];else if(event.key==='End')next=names.at(-1);else return;
+    event.preventDefault();selectTool(next);toolButtons[activeTool].focus();
+  });
+}
+on('closeSettings',()=>selectTool(activeTool,true));
+function layoutSettingsWidth(persist=false){
+  const style=getComputedStyle($('workspace')),padding=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight),gap=parseFloat(style.columnGap)||0,canvasMin=innerWidth>=1700?400:320;
+  const max=Math.max(300,Math.floor(Math.min(620,$('workspace').clientWidth-padding-2*gap-document.querySelector('.library').getBoundingClientRect().width-canvasMin)));
+  const width=Math.round(Math.max(300,Math.min(max,preferredSettingsWidth)));
+  $('workspace').style.setProperty('--settings-width',width+'px');resizeHandle.setAttribute('aria-valuemax',String(max));resizeHandle.setAttribute('aria-valuenow',String(width));resizeHandle.setAttribute('aria-valuetext',width+' 像素');
+  if(persist)try{localStorage.setItem('blackblues.gel-image.settings-width',String(width));}catch{}
+}
+resizeHandle.addEventListener('pointerdown',event=>{
+  if(event.button!==0||innerWidth<=950||panelCollapsed)return;
+  event.preventDefault();settingsDrag={x:event.clientX,width:$('settingsShell').getBoundingClientRect().width};resizeHandle.setPointerCapture(event.pointerId);document.body.classList.add('resizing-settings');
+});
+resizeHandle.addEventListener('pointermove',event=>{if(!settingsDrag)return;preferredSettingsWidth=Math.max(300,Math.min(620,settingsDrag.width+settingsDrag.x-event.clientX));layoutSettingsWidth();});
+function finishSettingsResize(){if(!settingsDrag)return;settingsDrag=null;document.body.classList.remove('resizing-settings');preferredSettingsWidth=Number(resizeHandle.getAttribute('aria-valuenow'));layoutSettingsWidth(true);}
+for(const event of ['pointerup','pointercancel','lostpointercapture'])resizeHandle.addEventListener(event,finishSettingsResize);
+resizeHandle.addEventListener('keydown',event=>{
+  let width=Number(resizeHandle.getAttribute('aria-valuenow'));
+  if(event.key==='ArrowLeft')width+=16;else if(event.key==='ArrowRight')width-=16;else if(event.key==='Home')width=300;else if(event.key==='End')width=Number(resizeHandle.getAttribute('aria-valuemax'));else return;
+  event.preventDefault();preferredSettingsWidth=Math.max(300,Math.min(620,width));layoutSettingsWidth(true);
+});
+resizeHandle.addEventListener('dblclick',()=>{preferredSettingsWidth=340;layoutSettingsWidth(true);});
+window.addEventListener('resize',()=>layoutSettingsWidth());
+try{const saved=Number(localStorage.getItem('blackblues.gel-image.settings-width'));if(Number.isFinite(saved)&&saved>=300&&saved<=620)preferredSettingsWidth=saved;}catch{}
+layoutSettingsWidth();selectTool('adjust');
 new ResizeObserver(()=>{if(frame)draw();}).observe($('stage'));
 controls();
