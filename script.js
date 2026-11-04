@@ -26,12 +26,25 @@ function toggleTheme() {
   const next = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   writeSavedTheme(next);
+  // 导航带入的主题也需更新，避免刷新后覆盖刚刚保存的选择。
+  if (themeFromUrl) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('theme', next);
+    window.history.replaceState(window.history.state, '', url);
+  }
   updateIcon(next);
 }
 
 function updateIcon(theme) {
   const themeButton = document.getElementById('theme-btn');
-  if (themeButton) themeButton.textContent = theme === 'dark' ? '☀️' : '🌙';
+  if (themeButton) {
+    themeButton.textContent = themeButton.hasAttribute('data-theme-label')
+      ? (theme === 'dark' ? '☀ 浅色' : '☾ 深色')
+      : (theme === 'dark' ? '☀️' : '🌙');
+    const label = theme === 'dark' ? '切换到浅色模式' : '切换到深色模式';
+    themeButton.setAttribute('aria-label', label);
+    themeButton.title = label;
+  }
 }
 
 window.toggleTheme = toggleTheme;
