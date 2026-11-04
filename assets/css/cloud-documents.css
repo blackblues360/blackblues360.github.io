@@ -1,1 +1,60 @@
-.cloud-bar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:9px 20px;background:#fff;border-bottom:1px solid #dce2eb;font:13px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;color:#4b5870}.cloud-bar #cloudIdentity{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cloud-bar #cloudStatus{flex:1;min-width:180px}.cloud-bar button,.cloud-doc-dialog button{font:inherit;padding:6px 12px;min-height:32px;border:1px solid #d8dfe9;border-radius:7px;background:#fff;color:#344863;cursor:pointer}.cloud-bar a{color:#496c9f;text-decoration:none}.cloud-bar [data-state=error],.cloud-bar [data-state=conflict]{color:#aa552e}.cloud-bar [data-state=saved]{color:#357449}.cloud-doc-dialog{width:min(780px,calc(100% - 28px));max-height:85svh;overflow:auto;border:1px solid #dbe1ea;border-radius:14px;padding:24px;background:#fff;color:#263850;font:14px/1.65 "Segoe UI","Microsoft YaHei",sans-serif}.cloud-doc-dialog::backdrop{background:#1e2b424d}.cloud-doc-dialog header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}.cloud-doc-dialog h2{margin:0;font-size:21px}.cloud-doc-dialog h3{font-size:16px}.cloud-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.cloud-doc-dialog label{display:block}.cloud-doc-dialog input:not([type=checkbox]){display:block;width:100%;padding:9px;border:1px solid #d6deea;border-radius:6px;margin:6px 0 16px;font:inherit}.cloud-doc-dialog #cloudImportPreview{border:1px solid #dee5ef;border-radius:9px;padding:16px;margin:18px 0;background:#f8faff}.cloud-doc-row{display:flex;align-items:center;gap:8px;padding:14px 0;border-top:1px solid #e5e9ef}.cloud-doc-row>div{flex:1;min-width:0}.cloud-doc-row strong{display:block;overflow-wrap:anywhere}.cloud-doc-row small{display:block;color:#778398}.cloud-doc-dialog #cloudDialogStatus{white-space:pre-wrap;overflow-wrap:anywhere}.cloud-doc-dialog button:disabled,.cloud-bar button:disabled{opacity:.45;cursor:wait}.cloud-doc-dialog [hidden],.cloud-bar [hidden]{display:none!important}@media(max-width:650px){.cloud-bar{padding:9px 12px}.cloud-bar #cloudStatus{flex-basis:100%;order:2}.cloud-doc-dialog{padding:16px}.cloud-doc-row{flex-wrap:wrap}.cloud-doc-row>div{flex-basis:100%}}
+/* Shared cloud controls and document browser. */
+.cloud-bar{position:relative;z-index:21;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 24px;min-height:64px;padding:12px 20px;background:#fff;border-bottom:1px solid #dce6e2;font:14px/1.6 "Segoe UI","Microsoft YaHei",sans-serif;color:#52665e}
+.cloud-account{display:flex;align-items:center;flex-wrap:wrap;gap:4px 16px;flex:1 1 350px;min-width:0}
+.cloud-bar #cloudIdentity{max-width:100%;overflow-wrap:anywhere;color:#254536}
+.cloud-bar #cloudStatus{flex:1 1 240px;min-width:0;overflow-wrap:anywhere}
+.cloud-bar-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.cloud-bar.cloud-bar--embedded{min-height:0;padding:0;border:0;background:transparent;gap:0;font:inherit;color:inherit;z-index:auto}
+.cloud-bar--embedded .cloud-bar-actions{gap:6px;justify-content:flex-end}
+.cloud-bar.cloud-bar--embedded button,.cloud-bar.cloud-bar--embedded a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 10px;border:1px solid #d1ded6;border-radius:7px;font-size:14px;white-space:nowrap}
+.cloud-dialog-account{flex:none;display:flex;align-items:flex-start;flex-direction:column;gap:3px;margin:-10px 0 22px;font-size:13px;color:#6a7b70;overflow-wrap:anywhere}
+.cloud-dialog-account #cloudIdentity{color:#345446}
+.cloud-dialog-account [data-state=error],.cloud-dialog-account [data-state=conflict]{color:#a14f28}
+.cloud-dialog-account [data-state=saved]{color:#357449}
+.cloud-bar button,.cloud-doc-dialog button{font:inherit;line-height:1.5;min-height:38px;padding:8px 14px;border:1px solid #d1ded6;border-radius:8px;background:#fff;color:#345446;cursor:pointer;white-space:nowrap}
+.cloud-bar #cloudManage{background:#edf6f0;border-color:#b9d2c2;color:#285d3e;font-weight:600}
+.cloud-bar a{color:#375f4c;text-decoration:none;padding:6px 4px}
+.cloud-bar [data-state=error],.cloud-bar [data-state=conflict]{color:#a14f28}
+.cloud-bar [data-state=saved]{color:#357449}
+.cloud-bar :focus-visible,.cloud-doc-dialog :focus-visible{outline:3px solid #7ba58b;outline-offset:3px}
+.cloud-doc-dialog{box-sizing:border-box;width:min(960px,calc(100% - 40px));max-width:none;max-height:90dvh;overflow:auto;overscroll-behavior:contain;border:1px solid #d7e2da;border-radius:20px;margin:auto;padding:28px;background:#fff;color:#263d31;font:14px/1.65 "Segoe UI","Microsoft YaHei",sans-serif;box-shadow:0 24px 90px #122c2540}
+.cloud-doc-dialog *{box-sizing:border-box}
+.cloud-doc-dialog::backdrop{background:#10271e70}
+.cloud-doc-dialog header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin:0 0 24px}
+.cloud-doc-dialog header>div{min-width:0}
+.cloud-doc-dialog h2{margin:0;font-size:24px;font-weight:650;line-height:1.4;white-space:normal}
+.cloud-doc-dialog #cloudDialogStatus{margin:8px 0 0;font-size:14px;line-height:1.6;color:#6a7b70;white-space:pre-wrap;overflow-wrap:anywhere}
+.cloud-doc-dialog #cloudClose{flex:none;display:grid;place-items:center;width:36px;min-height:36px;padding:0;font-size:26px;line-height:1;border:0;background:#f4f7f4;color:#596d5c}
+.cloud-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+.cloud-tabs{display:flex;flex-wrap:wrap;gap:3px;padding:4px;border:1px solid #e0e7df;border-radius:11px;background:#f3f6f2}
+.cloud-doc-dialog .cloud-tabs button{border:1px solid transparent;border-radius:7px;background:transparent;padding:8px 14px}
+.cloud-doc-dialog .cloud-tabs [aria-pressed=true]{border-color:#b8cdbc;background:#fff;color:#215e37;box-shadow:0 1px 4px #17351b0a}
+.cloud-count{display:inline-block;min-width:21px;border-radius:12px;padding:0 5px;margin-left:3px;background:#fff0cb;color:#8b6013;font-size:12px;line-height:21px;text-align:center}
+.cloud-create-actions,.cloud-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.cloud-actions{margin:14px 0}
+.cloud-doc-dialog .cloud-primary{background:#39734c;border-color:#39734c;color:#fff;font-weight:600}
+.cloud-doc-dialog .cloud-import-trigger{anchor-name:--cloud-import}
+.cloud-doc-dialog .cloud-import-options{position:fixed;inset:28dvh 24px auto auto;margin:0;width:min(250px,calc(100vw - 40px));max-height:60dvh;overflow:auto;padding:8px;border:1px solid #d3dfd6;border-radius:11px;background:#fff;box-shadow:0 10px 35px #14351e26;color:#263d31;font:14px/1.6 "Segoe UI","Microsoft YaHei",sans-serif}
+.cloud-doc-dialog .cloud-import-options:popover-open{display:grid;gap:4px}
+.cloud-doc-dialog .cloud-import-options button{border:0;background:transparent;white-space:normal;text-align:left}
+.cloud-doc-dialog .cloud-import-options button:hover{background:#edf5ef}
+@supports(top:anchor(bottom)){.cloud-doc-dialog .cloud-import-options{position-anchor:--cloud-import;top:anchor(bottom);right:anchor(right);margin-top:6px}}
+@media(max-width:700px){@supports(top:anchor(bottom)){.cloud-doc-dialog .cloud-import-options{left:anchor(left);right:auto}}}
+.cloud-doc-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;min-height:320px;padding:40px 24px;border:1px dashed #cbdacb;border-radius:14px;background:#fbfcfa;text-align:center}
+.cloud-empty-icon{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:#e7f2e8;color:#39734c}
+.cloud-doc-dialog .cloud-doc-empty h3{font-size:21px;font-weight:600;margin:4px 0 0}
+.cloud-doc-empty>p{max-width:510px;margin:0;color:#748273;font-size:14px;line-height:1.8}
+.cloud-doc-empty .cloud-actions{justify-content:center;margin:8px 0 0}
+.cloud-doc-dialog:has(#cloudImportPreview:not([hidden])) #cloudEmpty,.cloud-doc-dialog:has(#cloudNameLabel:not([hidden])) #cloudEmpty{display:none}
+.cloud-doc-dialog label{display:block;line-height:1.8}
+.cloud-doc-dialog input:not([type=checkbox]):not([type=file]){display:block;width:100%;padding:10px 12px;min-height:40px;border:1px solid #cfdcd2;border-radius:8px;margin:6px 0 16px;font:inherit;background:#fff;color:#263d31}
+.cloud-doc-dialog input[type=checkbox]{accent-color:#39734c}
+.cloud-doc-dialog #cloudImportPreview{border:1px solid #dce5dc;border-radius:12px;padding:20px;margin:18px 0;background:#f6f9f4}
+.cloud-doc-dialog h3{font-size:17px;line-height:1.5;margin:0 0 12px}
+.cloud-doc-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:18px 0;border-bottom:1px solid #e6ece5}
+.cloud-doc-row>div{flex:1 1 200px;min-width:0}
+.cloud-doc-row strong{display:block;overflow-wrap:anywhere;font-size:15px;font-weight:600}
+.cloud-doc-row small{display:block;color:#758373;font-size:12px;line-height:1.7;margin-top:4px;overflow-wrap:anywhere}
+.cloud-doc-dialog button:disabled,.cloud-bar button:disabled{opacity:.55;cursor:not-allowed}
+.cloud-doc-dialog [hidden],.cloud-bar [hidden]{display:none!important}
+@media(max-width:700px){.cloud-bar{gap:10px;padding:12px}.cloud-account{flex-basis:100%;align-items:flex-start;flex-direction:column;gap:2px}.cloud-bar #cloudStatus{flex-basis:auto}.cloud-bar-actions{justify-content:flex-start;width:100%}.cloud-doc-dialog{width:calc(100% - 24px);max-height:92dvh;padding:20px 16px;border-radius:15px}.cloud-doc-dialog header{margin-bottom:20px}.cloud-doc-dialog h2{font-size:22px}.cloud-toolbar{align-items:stretch;gap:12px;margin-bottom:18px}.cloud-tabs{flex:1 1 100%;flex-wrap:nowrap}.cloud-doc-dialog .cloud-tabs button{flex:1;min-width:0;padding:8px 7px;font-size:14px}.cloud-create-actions{justify-content:space-between;width:100%}.cloud-doc-empty{min-height:280px;padding:28px 16px}.cloud-doc-empty .cloud-actions{width:100%}.cloud-doc-empty .cloud-actions>button{flex:1 1 100%}.cloud-doc-row>div{flex-basis:100%}}

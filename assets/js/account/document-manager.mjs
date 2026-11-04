@@ -5,17 +5,26 @@ import {acquireDraftGuard} from '../draft-lock.mjs';
 
 export function mountDocumentManager(adapter){
   const bar=document.createElement('section');bar.className='cloud-bar';bar.dataset.cloudPanel='';
-  bar.innerHTML='<span id="cloudIdentity">游客 · 本机方案</span><span id="cloudStatus" role="status" aria-live="polite">本地编辑</span><button id="cloudManage" type="button">云端方案</button><button id="cloudSave" type="button" hidden>保存到云端</button><button id="cloudLocal" type="button" hidden>返回本机方案</button><button id="cloudExport" type="button">导出当前文件</button><button id="cloudRecoveryExport" type="button" hidden>导出恢复副本</button><a href="../../account/">账户中心</a>';
-  document.body.prepend(bar);
+  bar.innerHTML='<div class="cloud-account"><span id="cloudIdentity">游客 · 本机方案</span><span id="cloudStatus" role="status" aria-live="polite">本地编辑</span></div><div class="cloud-bar-actions"><button id="cloudManage" type="button">云端方案</button><button id="cloudSave" type="button" hidden>保存到云端</button><button id="cloudLocal" type="button" hidden>返回本机方案</button><button id="cloudExport" type="button">导出当前文件</button><button id="cloudRecoveryExport" type="button" hidden>导出恢复副本</button><a href="../../account/">账户中心</a></div>';
+  const toolbar=document.querySelector('[data-cloud-toolbar]');
+  if(toolbar){bar.classList.add('cloud-bar--embedded');toolbar.append(bar);}else document.body.prepend(bar);
   const dialog=document.createElement('dialog');dialog.id='cloudDialog';dialog.className='cloud-doc-dialog';dialog.dataset.cloudPanel='';
-  dialog.innerHTML='<header><h2>云端文档</h2><button id="cloudClose" type="button">关闭</button></header><p id="cloudDialogStatus" role="status"></p><div class="cloud-actions"><button id="cloudListView" type="button">当前工具</button><button id="cloudTrashView" type="button">统一回收站</button><button id="cloudDraftView" type="button">本机未同步草稿</button><button id="cloudNew" type="button">新建云端文档</button><button id="cloudImportLocal" type="button">导入当前本机方案</button></div><label id="cloudNameLabel" hidden>云端文档名称<input id="cloudName" maxlength="1000"></label><section id="cloudImportPreview" hidden><h3>核对本机方案</h3><p id="cloudImportSummary"></p><label><input id="cloudImportSelected" type="checkbox" checked>导入这个方案，保留本机原件</label><div class="cloud-actions"><button id="cloudBackupSource" type="button">下载原始备份</button><button id="cloudConfirmImport" type="button" disabled>备份后确认导入</button></div></section><button id="cloudRawExport" type="button" hidden>导出无法读取的原始数据</button><div id="cloudList"></div><div id="cloudConflict" class="cloud-actions" hidden><button id="cloudCopy" type="button">另存为新文档</button><button id="cloudReload" type="button">确认后重载云端</button></div>';
+  dialog.setAttribute('aria-labelledby','cloudDialogTitle');
+  dialog.innerHTML='<header><div><h2 id="cloudDialogTitle">云端文档</h2><p id="cloudDialogStatus" role="status"></p></div><button id="cloudClose" type="button" aria-label="关闭云端文档" title="关闭">×</button></header><div class="cloud-toolbar"><div class="cloud-tabs" role="group" aria-label="文档分类"><button id="cloudListView" type="button" aria-pressed="true">当前工具</button><button id="cloudDraftView" type="button" aria-pressed="false">本机草稿 <span id="cloudDraftCount" class="cloud-count" hidden></span></button><button id="cloudTrashView" type="button" aria-pressed="false">回收站</button></div><div class="cloud-create-actions"><button type="button" popovertarget="cloudImportMenu" class="cloud-import-trigger">导入 <span aria-hidden="true">⌄</span></button><button id="cloudNew" class="cloud-primary" type="button">＋ 新建云端文档</button></div></div><div id="cloudImportMenu" class="cloud-import-options" popover="auto" aria-label="导入方案"><button id="cloudImportLocal" type="button">导入当前本机方案</button><button id="cloudRecoveryImport" type="button">导入恢复副本</button><input id="cloudRecoveryFile" type="file" accept=".json,application/json" hidden></div><label id="cloudNameLabel" hidden>云端文档名称<input id="cloudName" maxlength="1000"></label><section id="cloudImportPreview" hidden><h3>核对本机方案</h3><p id="cloudImportSummary"></p><label><input id="cloudImportSelected" type="checkbox" checked>导入这个方案，保留本机原件</label><div class="cloud-actions"><button id="cloudBackupSource" type="button">下载原始备份</button><button id="cloudConfirmImport" type="button" disabled>备份后确认导入</button></div></section><button id="cloudRawExport" type="button" hidden>导出无法读取的原始数据</button><section id="cloudEmpty" class="cloud-doc-empty" hidden><span class="cloud-empty-icon" aria-hidden="true"><svg viewBox="0 0 32 32" width="32" height="32" fill="none"><path d="M10 24H8a6 6 0 0 1-1-12 9 9 0 0 1 17-1 6.5 6.5 0 0 1 0 13h-2M16 16v12m-4-4 4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3 id="cloudEmptyTitle">还没有云端文档</h3><p id="cloudEmptyDescription">新建一个，或把本机方案导入云端，换设备也能继续编辑。</p><div id="cloudEmptyActions" class="cloud-actions"><button type="button" data-cloud-action="cloudImportLocal">导入当前本机方案</button><button type="button" data-cloud-action="cloudRecoveryImport">导入恢复副本</button></div></section><div id="cloudList"></div><div id="cloudConflict" class="cloud-actions" hidden><button id="cloudCopy" type="button">另存为新文档</button><button id="cloudReload" type="button">确认后重载云端</button></div>';
   document.body.append(dialog);
-  dialog.insertAdjacentHTML('beforeend','<div class="cloud-actions"><button id="cloudRecoveryImport" type="button">导入恢复副本</button><input id="cloudRecoveryFile" type="file" accept=".json,application/json" hidden></div>');
+  if(toolbar){const account=bar.querySelector('.cloud-account');account.classList.add('cloud-dialog-account');dialog.querySelector('header').after(account);}
   const $=id=>document.getElementById(id);
+  dialog.addEventListener('click',event=>{
+    const shortcut=event.target.closest('[data-cloud-action]');
+    if(shortcut&&!shortcut.disabled)$(shortcut.dataset.cloudAction).click();
+    if(event.target.closest('#cloudImportLocal,#cloudRecoveryImport')){
+      const menu=$('cloudImportMenu');if(menu.matches(':popover-open'))menu.hidePopover();
+    }
+  });
   let owner=null,current=null,guest=null,cache=null,cacheKey=null,pendingCreate=null,dirty=false,busy=false,sequence=0,context=0,listRequest=0,view='list',failedRaw=null,preview=null;
   const memoryDrafts=new Map();let exportedCreate=null;
   const manager={get cloudMode(){return current!==null;},get contextToken(){return `${currentAccount().epoch}:${context}`;},changed,importContent};
-  function status(text,state='local'){ $('cloudStatus').textContent=text;$('cloudStatus').dataset.state=state; }
+  function status(text,state='local'){ $('cloudStatus').textContent=text;$('cloudStatus').dataset.state=state;$('cloudManage').title=text; }
   function info(text){$('cloudDialogStatus').textContent=text;}
   function setBusy(value){busy=value;$('cloudName').disabled=value;for(const button of dialog.querySelectorAll('button:not(#cloudClose):not(#cloudRawExport)'))button.disabled=value;for(const id of ['cloudSave','cloudLocal'])$(id).disabled=value;if(!value){$('cloudConfirmImport').disabled=!preview?.backedUp;if(dirty&&$('cloudStatus').dataset.state==='saved')status('本页已修改 · 尚未保存到云端','dirty');}}
   function download(value,name){const url=URL.createObjectURL(new Blob([typeof value==='string'?value:JSON.stringify(value,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}
@@ -98,7 +107,9 @@ export function mountDocumentManager(adapter){
   }
   async function refreshList(nextView=view){
     if(!owner){info('请先在账户中心登录。游客本地功能仍可使用。');return;}
-    view=nextView;const request=++listRequest,epoch=currentAccount().epoch;$('cloudList').replaceChildren();info('正在读取…');
+    view=nextView;$('cloudEmpty').hidden=true;
+    for(const [id,mode] of [['cloudListView','list'],['cloudDraftView','drafts'],['cloudTrashView','trash']])$(id).setAttribute('aria-pressed',String(view===mode));
+    const request=++listRequest,epoch=currentAccount().epoch;$('cloudList').replaceChildren();info('正在读取…');
     try{
       let rows;
       if(view==='drafts'){
@@ -108,6 +119,11 @@ export function mountDocumentManager(adapter){
       }else rows=view==='trash'?await listDeletedDocuments():await listToolDocuments(adapter.appId);
       if(currentAccount().epoch!==epoch||request!==listRequest)return;
       info(view==='trash'?'回收站保留两个工具的删除记录，不自动清理。':`${rows.length} 个${view==='drafts'?'本机未同步草稿':'云端方案'}`);
+      if(view==='drafts'){$('cloudDraftCount').textContent=String(rows.length);$('cloudDraftCount').hidden=false;}
+      $('cloudEmpty').hidden=rows.length!==0;
+      $('cloudEmptyTitle').textContent=view==='trash'?'回收站为空':view==='drafts'?'没有未同步的本机草稿':'还没有云端文档';
+      $('cloudEmptyDescription').textContent=view==='trash'?'删除的云端文档会出现在这里，可选择恢复。':view==='drafts'?'当前账户在此工具中没有需要恢复的本机修改。':'新建一个，或把本机方案导入云端，换设备也能继续编辑。';
+      $('cloudEmptyActions').hidden=view!=='list';
       for(const row of rows){
         const item=document.createElement('section');item.className='cloud-doc-row';const detail=document.createElement('div'),name=document.createElement('strong'),meta=document.createElement('small');name.textContent=row.title;meta.textContent=view==='trash'?`${row.app_id==='plate-layout'?'孔板':'SOP'} · 删除于 ${new Date(row.deleted_at).toLocaleString()}`:view==='drafts'?row.memory?'仅在此页面内存中，请导出恢复副本':'仅在当前账户的本机分区':new Date(row.updated_at).toLocaleString();detail.append(name,meta);item.append(detail);
         const button=(text,action)=>{const el=document.createElement('button');el.type='button';el.textContent=text;el.disabled=busy;el.onclick=()=>{const epoch=currentAccount().epoch;action().catch(error=>{if(currentAccount().epoch===epoch)info(readableError(error));});};item.append(el);};
@@ -126,6 +142,7 @@ export function mountDocumentManager(adapter){
     const pendingInput=adapter.pendingInput?.();if(current){adapter.flush();writeCache(pendingInput);}
     context++;listRequest++;cache?.release();cache=null;cacheKey=null;current=null;pendingCreate=null;dirty=false;busy=false;owner=user?.id||null;
     if(guest)adapter.apply(guest);guest=null;preview=null;failedRaw=null;$('cloudRawExport').hidden=true;$('cloudImportPreview').hidden=true;$('cloudConflict').hidden=true;$('cloudNameLabel').hidden=true;$('cloudSave').hidden=true;$('cloudLocal').hidden=true;$('cloudRecoveryExport').hidden=true;$('cloudList').replaceChildren();setBusy(false);
+    $('cloudEmpty').hidden=true;$('cloudDraftCount').hidden=true;
     let localFound=false;try{localFound=adapter.localRaw()!==null;}catch{}
     $('cloudIdentity').textContent=user?user.email:'游客 · 本机方案';status(user?localFound?'发现本机方案 · 可核对后导入云端':'本机方案未上传 · 可新建云端文档':'游客模式 · 仅在本机编辑');info(user?'选择云端文档，或核对后导入本机方案。':'请先登录，游客原件不会自动上传。');
   });
