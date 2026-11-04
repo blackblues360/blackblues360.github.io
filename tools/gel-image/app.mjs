@@ -1,5 +1,5 @@
-import {defaults,clone,parseLabels,parseRowLabels,validate,even,geometry} from './core.mjs?v=2';
-import {annotationLayout,drawAnnotations,makeCanvas,canvasBlob,download,printFrame} from './export.mjs?v=2';
+import {defaults,clone,parseLabels,parseRowLabels,validate,even,geometry,composeCrop} from './core.mjs?v=3';
+import {annotationLayout,drawAnnotations,makeCanvas,canvasBlob,download,printFrame} from './export.mjs?v=3';
 
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d'),documents=[];
 let currentId=null,processor=createProcessor(),mode='normal',cropDraft=[0,0,1,1],cropFresh=false,selectedLane=-1,drag=null,frame=null,previewVersion=0,previewTimer,previewFlight=false,previewPending=false,busy=false,comparing=false,unsaved=false;
@@ -11,7 +11,7 @@ const cleanEdit=edit=>({...clone(edit),lanes:null,labels:null,rows:null,rowLeft:
 const dirty=doc=>!!doc&&(JSON.stringify(doc.draft)!==JSON.stringify(doc.edit)||doc.prompt!==doc.appliedPrompt);
 function status(message,error=false){$('status').textContent=message;$('status').classList.toggle('error',error);}
 function createProcessor(){
-  const worker=new Worker(new URL('./worker.mjs?v=2',import.meta.url),{type:'module'}),pending=new Map();let serial=0;
+  const worker=new Worker(new URL('./worker.mjs?v=3',import.meta.url),{type:'module'}),pending=new Map();let serial=0;
   worker.onmessage=({data})=>{const p=pending.get(data.request);if(!p)return;pending.delete(data.request);data.error?p.reject(Error(data.error)):p.resolve(data.result);};
   worker.onerror=()=>{for(const p of pending.values())p.reject(Error('图片处理线程意外停止，请保存项目后刷新页面。'));pending.clear();};
   return {call(action,id,data={},transfers=[]){return new Promise((resolve,reject)=>{const request=++serial;pending.set(request,{resolve,reject});worker.postMessage({request,action,id,...data},transfers);});},close(){worker.terminate();for(const p of pending.values())p.reject(Error('处理任务已结束。'));pending.clear();}};
@@ -27,6 +27,7 @@ function updateActions(){
   $('compare').setAttribute('aria-pressed',String(comparing));$('cropActions').hidden=mode!=='crop';$('laneActions').hidden=mode!=='lanes';$('crop').classList.toggle('active',mode==='crop');$('laneEdit').classList.toggle('active',mode==='lanes');$('modeHint').hidden=mode==='normal';$('modeHint').textContent=mode==='crop'?(cropFresh?'按住鼠标拖动，框选需要保留的区域':'框内移动 · 四角缩放 · 框外重新框选'):'拖动辅助线 · 开启补加可添加泳道';
   for(const id of ['cropX','cropY','cropW','cropH','ratio','cropFinish'])$(id).disabled=mode==='crop'&&!frame;
   if(mode==='crop'&&cropFresh)$('cropFinish').disabled=true;
+  $('cropReset').disabled=!has||busy||mode==='crop'||!d?.draft.cropHistory?.length;$('cropDepth').textContent=`已裁剪 ${d?.draft.cropHistory?.length||0} 层`;
   $('rowActions').hidden=mode!=='rows';$('rowEdit').classList.toggle('active',mode==='rows');$('rowFinish').disabled=mode==='rows'&&!frame;
   if(mode==='rows')$('modeHint').textContent='上下拖动横线 · 左右文字按行对应';
   canvas.style.cursor=mode==='crop'?'crosshair':mode==='lanes'?'ew-resize':mode==='rows'?'ns-resize':'default';
@@ -40,7 +41,7 @@ function controls(){
   const d=current();mode='normal';comparing=false;selectedLane=selectedRow=-1;frame=null;++previewVersion;$('addLane').checked=false;$('addRow').checked=false;
   for(const id of ['grayscale','invert'])$(id).checked=d?.draft[id]??true;
   for(const id of ['angle','brightness','contrast'])$(id).value=d?.draft[id]??(id==='contrast'?1:0);
-  $('brightnessValue').textContent=Number($('brightness').value).toFixed(2);$('contrastValue').textContent=Number($('contrast').value).toFixed(2);$('labels').value=d?.prompt??'M,1-6,M';cropDraft=d?.draft.crop?[...d.draft.crop]:[0,0,1,1];cropFields();
+  $('angleRange').value=$('angle').value;$('brightnessValue').textContent=Number($('brightness').value).toFixed(2);$('contrastValue').textContent=Number($('contrast').value).toFixed(2);$('labels').value=d?.prompt??'M,1-6,M';cropDraft=[0,0,1,1];cropFields();
   for(const id of ['rowLeft','rowRight'])$(id).value=d?.draft[id]??'';
   $('imageTitle').textContent=d?.name??'让每一道，都有清晰的名字。';$('imageMeta').textContent=d?`${d.width} × ${d.height} · ${d.bits}-bit 原图`:'WB / GEL IMAGE EDITOR';$('empty').hidden=!!d;canvas.hidden=!d;updateCounts();updateActions();schedulePreview();
 }
@@ -52,7 +53,7 @@ function schedulePreview(){++previewVersion;previewPending=true;clearTimeout(pre
 async function refresh(){
   clearTimeout(previewTimer);if(previewFlight){previewPending=true;++previewVersion;return;}previewPending=false;
   const d=current(),version=++previewVersion;if(!d){ctx.clearRect(0,0,canvas.width,canvas.height);return;}previewFlight=true;
-  const edit=comparing?{...defaults(),grayscale:false,invert:false}:cleanEdit(d.draft);if(mode==='crop')edit.crop=null;
+  const edit=comparing?{...defaults(),grayscale:false,invert:false}:cleanEdit(d.draft);
   try{const result=await processor.call('preview',d.id,{edit});if(version!==previewVersion||d.id!==currentId)return;frame=result;if(draw()===false)return;updateActions();if(!d.thumbnail){const small=document.createElement('canvas');small.width=180;small.height=76;const raw=document.createElement('canvas');raw.width=frame.width;raw.height=frame.height;raw.getContext('2d').putImageData(new ImageData(frame.pixels,frame.width,frame.height),0,0);const c=small.getContext('2d');c.fillStyle='#edf1eb';c.fillRect(0,0,180,76);const scale=Math.min(180/frame.width,76/frame.height);c.drawImage(raw,(180-frame.width*scale)/2,(76-frame.height*scale)/2,frame.width*scale,frame.height*scale);d.thumbnail=small.toDataURL();const thumb=document.querySelector(`[data-thumbnail="${d.id}"]`);if(thumb)thumb.getContext('2d').drawImage(small,0,0);}if(!busy)status(mode==='normal'?'预览已更新。请核对泳道与上样记录。':mode==='crop'?(cropFresh?'按住鼠标拖动，框选需要保留的区域。':'完成选区后点击“确认选区”，再应用修改。'):'校正后点击“完成校正”，再应用修改。');}catch(e){if(version===previewVersion)status(e.message,true);}finally{previewFlight=false;if(previewPending)refresh();}
 }
 function draw(){
@@ -77,13 +78,14 @@ for(const type of ['dragenter','dragover'])$('workspace').addEventListener(type,
 $('workspace').addEventListener('dragleave',e=>{if(!$('workspace').contains(e.relatedTarget))$('stage').classList.remove('dragover');});
 $('workspace').addEventListener('drop',e=>{e.preventDefault();$('stage').classList.remove('dragover');openFiles([...e.dataTransfer.files]);});
 on('demo',async()=>{const c=document.createElement('canvas');c.width=1000;c.height=440;const x=c.getContext('2d');x.fillStyle='#111';x.fillRect(0,0,c.width,c.height);for(let i=0;i<8;i++){const center=80+i*120;for(const [j,y] of [85,190,315].entries()){x.fillStyle=`rgb(${190-i%3*25},${190-i%3*25},${190-i%3*25})`;x.fillRect(center-16,y+(i%3)*6,32,9+j*2);}if(i===0||i===7){for(const y of [45,130,250,375]){x.fillStyle='#999';x.fillRect(center-16,y,32,5);}}}const blob=await canvasBlob(c);await openFiles([new File([blob],'演示胶图-8道.png',{type:'image/png'})]);});
-for(const id of ['grayscale','invert','brightness','contrast','angle'])$(id).addEventListener('input',()=>{const d=current();if(!d||busy)return;const number=['brightness','contrast','angle'].includes(id),v=number?Number($(id).value):$(id).checked;if(number&&(!Number.isFinite(v)||$(id).value===''))return;d.draft[id]=v;mode='normal';if(id==='brightness'||id==='contrast')$(id+'Value').textContent=v.toFixed(2);changed(id==='angle');});
-for(const [id,delta] of [['rotateLeft',90],['rotateRight',-90]])on(id,()=>{const d=current();if(!d)return;d.draft.angle=Math.min(360,Math.max(-360,d.draft.angle+delta));$('angle').value=d.draft.angle;mode='normal';changed(true);});
-on('crop',()=>{const d=current();if(!d)return;mode='crop';cropFresh=true;drag=null;comparing=false;frame=null;++previewVersion;cropDraft=d.draft.crop?[...d.draft.crop]:[0,0,1,1];cropFields();updateActions();refresh();});
-on('cropFinish',()=>{const d=current();if(mode!=='crop'||!d||!frame||cropFresh)return;d.draft.crop=[...cropDraft];mode='normal';changed(true);});
+for(const id of ['grayscale','invert','brightness','contrast','angle'])$(id).addEventListener('input',()=>{const d=current();if(!d||busy)return;const number=['brightness','contrast','angle'].includes(id),v=number?Number($(id).value):$(id).checked;if(number&&(!Number.isFinite(v)||$(id).value===''))return;d.draft[id]=v;if(id==='angle')$('angleRange').value=v;mode='normal';if(id==='brightness'||id==='contrast')$(id+'Value').textContent=v.toFixed(2);changed(id==='angle');});
+$('angleRange').addEventListener('input',()=>{if(busy||!current())return;$('angle').value=$('angleRange').value;$('angle').dispatchEvent(new Event('input',{bubbles:true}));});
+for(const [id,delta] of [['rotateLeft',90],['rotateRight',-90]])on(id,()=>{const d=current();if(!d)return;d.draft.angle=Math.min(360,Math.max(-360,d.draft.angle+delta));$('angle').value=$('angleRange').value=d.draft.angle;mode='normal';changed(true);});
+on('crop',()=>{const d=current();if(!d)return;mode='crop';cropFresh=true;drag=null;comparing=false;frame=null;++previewVersion;cropDraft=[0,0,1,1];cropFields();updateActions();refresh();});
+on('cropFinish',()=>{const d=current();if(mode!=='crop'||!d||!frame||cropFresh)return;const next=composeCrop(d,cleanEdit(d.draft),cropDraft);if(JSON.stringify(next)===JSON.stringify(d.draft.crop)){mode='normal';updateActions();refresh();return;}if(d.draft.cropHistory.length>=200)throw Error('最多保留 200 层裁剪，请先恢复部分步骤或另存图片。');d.draft.cropHistory.push(clone(d.draft.crop));d.draft.crop=next;mode='normal';frame=null;++previewVersion;cropDraft=[0,0,1,1];cropFields();changed(true);});
 on('cropCancel',()=>{mode='normal';updateActions();refresh();});
-on('cropReset',()=>{const d=current();if(!d)return;d.draft.crop=null;cropDraft=[0,0,1,1];cropFields();mode='normal';changed(true);});
-for(const id of ['cropX','cropY','cropW','cropH'])$(id).addEventListener('change',()=>{try{if(mode!=='crop'){status('请先点击“图上裁剪”，再调整百分比。',true);return;}cropDraft=boundCrop(['cropX','cropY','cropW','cropH'].map(id=>Number($(id).value)/100),true);cropFresh=false;unsaved=true;cropFields();updateActions();draw();}catch(e){status(e.message,true);}});
+on('cropReset',()=>{const d=current();if(!d||mode==='crop'||!d.draft.cropHistory.length)return;d.draft.crop=d.draft.cropHistory.pop();cropDraft=[0,0,1,1];cropFields();mode='normal';frame=null;++previewVersion;changed(true);});
+for(const id of ['cropX','cropY','cropW','cropH'])$(id).addEventListener('change',()=>{try{if(mode!=='crop'){status('请先点击“开始裁剪”，再调整百分比。',true);return;}cropDraft=boundCrop(['cropX','cropY','cropW','cropH'].map(id=>Number($(id).value)/100),true);cropFresh=false;unsaved=true;cropFields();updateActions();draw();}catch(e){status(e.message,true);}});
 $('ratio').addEventListener('change',()=>{if(mode==='crop'&&!cropFresh){cropDraft=boundCrop(cropDraft,true);cropFields();draw();}});
 $('labels').addEventListener('input',()=>{const d=current();if(!d)return;d.prompt=$('labels').value;try{const names=parseLabels(d.prompt);if(d.draft.lanes)d.draft.labels=names;}catch{}changed();});
 on('detect',async()=>{const d=current();if(!d)return;if(mode==='crop')throw Error('请先确认或取消裁剪选区。');const names=parseLabels(d.prompt);setBusy(true,'正在分析泳道信号，请稍候…');try{const result=await processor.call('detect',d.id,{edit:cleanEdit(d.draft),count:names.length,top:Number($('detectTop').value)/100,bottom:Number($('detectBottom').value)/100});d.draft.lanes=result.lanes;d.draft.labels=names;mode='lanes';comparing=false;frame=null;++previewVersion;selectedLane=-1;changed();await refresh();status(result.weak.length?'以下泳道信号弱，位置为估计，请核对：'+result.weak.join('、'):'已按标签数量定位，请逐道核对后完成校正。');}finally{setBusy(false);}});
@@ -140,7 +142,7 @@ async function saveProject(){
     }
     const images=[];
     for(const d of documents){const data=base64(new Uint8Array(await d.file.arrayBuffer()));images.push({name:d.name,type:d.file.type,data,sha256:d.sha256,edit:d.edit,draft:d.draft,prompt:d.prompt,appliedPrompt:d.appliedPrompt});}
-    const text=JSON.stringify({format:'blackblues.gelwork',version:2,active:documents.findIndex(d=>d.id===currentId),images});
+    const text=JSON.stringify({format:'blackblues.gelwork',version:3,active:documents.findIndex(d=>d.id===currentId),images});
     if(text.length>160_000_000)throw Error('项目文件过大，请减少同时打开的图片后保存。');
     const blob=new Blob([text],{type:'application/json'});
     if(handle){const file=await handle.createWritable();try{await file.write(blob);await file.close();}catch(error){try{await file.abort();}catch{}throw error;}}
@@ -183,14 +185,15 @@ $('projectInput').addEventListener('change',async e=>{
   try{
     if(file.size>160_000_000)throw Error('项目超过 160 MB 上限。');
     const project=JSON.parse(await file.text());
-    if(project.format!=='blackblues.gelwork'||![1,2].includes(project.version)||!Array.isArray(project.images)||project.images.length<1||project.images.length>8)throw Error('不是受支持的胶图项目。');
+    if(project.format!=='blackblues.gelwork'||![1,2,3].includes(project.version)||!Array.isArray(project.images)||project.images.length<1||project.images.length>8)throw Error('不是受支持的胶图项目。');
     next=createProcessor();const restored=[];
     for(const item of project.images){
       if(!item||!item.edit||typeof item.edit!=='object'||Array.isArray(item.edit)||!item.draft||typeof item.draft!=='object'||Array.isArray(item.draft)||typeof item.name!=='string'||item.name.length>255||typeof item.type!=='string'||typeof item.prompt!=='string'||typeof item.appliedPrompt!=='string')throw Error('项目字段不完整。');
-      if(project.version===1){item.edit={rows:null,rowLeft:'',rowRight:'',...item.edit};item.draft={rows:null,rowLeft:'',rowRight:'',...item.draft};}else if([item.edit,item.draft].some(edit=>!Object.hasOwn(edit,'rows')||typeof edit.rowLeft!=='string'||typeof edit.rowRight!=='string'))throw Error('项目横向信息字段不完整。');validate(item.edit);validate(item.draft);const pending=parseLabels(item.prompt),applied=parseLabels(item.appliedPrompt);
+      if(project.version===1){item.edit={rows:null,rowLeft:'',rowRight:'',...item.edit};item.draft={rows:null,rowLeft:'',rowRight:'',...item.draft};}else if([item.edit,item.draft].some(edit=>!Object.hasOwn(edit,'rows')||typeof edit.rowLeft!=='string'||typeof edit.rowRight!=='string'))throw Error('项目横向信息字段不完整。');for(const edit of [item.edit,item.draft]){if(project.version<3)edit.cropHistory=edit.crop?[null]:[];else if(!Array.isArray(edit.cropHistory)||(edit.crop&&!edit.cropHistory.length))throw Error('项目裁剪历史字段不完整。');}validate(item.edit);validate(item.draft);const pending=parseLabels(item.prompt),applied=parseLabels(item.appliedPrompt);
       if((item.edit.lanes&&JSON.stringify(item.edit.labels)!==JSON.stringify(applied))||(item.draft.lanes&&JSON.stringify(item.draft.labels)!==JSON.stringify(pending)))throw Error('项目中的标签与上样顺序不一致。');
       const data=fromBase64(item.data),d=await decodeFile(new File([data],item.name,{type:item.type}),next);
       if(d.sha256!==item.sha256)throw Error(item.name+'：原图校验值不一致。');
+      geometry(d,cleanEdit(item.edit));geometry(d,cleanEdit(item.draft));
       d.edit=clone(item.edit);d.draft=clone(item.draft);d.prompt=item.prompt;d.appliedPrompt=item.appliedPrompt;restored.push(d);
     }
     processor.close();processor=next;next=null;documents.splice(0,documents.length,...restored);

@@ -1,6 +1,6 @@
 // Port of the statically recovered GelFlip numerical core. All channels use uint16 RGBA.
 export const MAX_PIXELS = 24_000_000;
-export const defaults = () => ({grayscale:true,invert:true,angle:0,brightness:0,contrast:1,crop:null,lanes:null,labels:null,rows:null,rowLeft:'',rowRight:''});
+export const defaults = () => ({grayscale:true,invert:true,angle:0,brightness:0,contrast:1,crop:null,cropHistory:[],lanes:null,labels:null,rows:null,rowLeft:'',rowRight:''});
 export const clone = value => structuredClone(value);
 export function roundEven(x) { const lo=Math.floor(x), f=x-lo; return f===.5 ? (lo%2===0?lo:lo+1) : Math.round(x); }
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -32,6 +32,11 @@ export function parseRowLabels(left='',right='') {
 export function validate(e) {
   if(!e||typeof e.grayscale!=='boolean'||typeof e.invert!=='boolean'||!Number.isFinite(e.angle)||Math.abs(e.angle)>360||!Number.isFinite(e.brightness)||Math.abs(e.brightness)>1||!Number.isFinite(e.contrast)||e.contrast<0||e.contrast>3)throw Error('旋转、亮度或对比度超出范围。');
   if(e.crop&&(!Array.isArray(e.crop)||e.crop.length!==4||e.crop.some(x=>!Number.isFinite(x))||e.crop[0]<0||e.crop[1]<0||e.crop[2]<=0||e.crop[3]<=0||e.crop[0]+e.crop[2]>1.000001||e.crop[1]+e.crop[3]>1.000001))throw Error('裁剪区域无效。');
+  if(e.cropHistory!==undefined){
+    if(!Array.isArray(e.cropHistory)||e.cropHistory.length>200)throw Error('裁剪历史无效，最多保留 200 层。');
+    for(const rect of e.cropHistory)if(rect!==null&&(!Array.isArray(rect)||rect.length!==4||rect.some(x=>!Number.isFinite(x))||rect[0]<0||rect[1]<0||rect[2]<=0||rect[3]<=0||rect[0]+rect[2]>1.000001||rect[1]+rect[3]>1.000001))throw Error('裁剪历史中存在无效区域。');
+    if(e.cropHistory.length&&(!e.crop||e.cropHistory[0]!==null||e.cropHistory.slice(1).some(rect=>rect===null)))throw Error('裁剪历史与当前区域不一致。');
+  }
   if(e.lanes!==null) {
     if(!Array.isArray(e.lanes)||!Array.isArray(e.labels)||e.lanes.length!==e.labels.length||!e.lanes.length||e.lanes.length>200||e.labels.some(s=>typeof s!=='string'||!s.length||s.length>100))throw Error('标签与泳道数量不一致。');
     let prev=-1;
@@ -46,6 +51,12 @@ export function validate(e) {
 }
 export function geometry(source,e) {
   validate(e);
+  if(e.cropHistory?.length){
+    // Account for subpixel coordinates in old projects, conservatively using
+    // the source's shorter dimension when checking successive stored regions.
+    const tolerance=1/Math.max(1,Math.min(source.width,source.height))+1e-9;let previous=[0,0,1,1];
+    for(const rect of [...e.cropHistory.slice(1),e.crop]){if(rect[0]<previous[0]-tolerance||rect[1]<previous[1]-tolerance||rect[0]+rect[2]>previous[0]+previous[2]+tolerance||rect[1]+rect[3]>previous[1]+previous[3]+tolerance)throw Error('裁剪历史区域未逐层包含，无法安全恢复。');previous=rect;}
+  }
   const w=source.width,h=source.height;
   let cos=Math.cos(e.angle*Math.PI/180),sin=Math.sin(e.angle*Math.PI/180);
   const orth=Math.abs(e.angle/90-roundEven(e.angle/90))<1e-9;
@@ -53,8 +64,15 @@ export function geometry(source,e) {
   const rw=Math.ceil(Math.abs(w*cos)+Math.abs(h*sin)-1e-10),rh=Math.ceil(Math.abs(w*sin)+Math.abs(h*cos)-1e-10);
   if(rw*rh>MAX_PIXELS)throw Error('旋转后的完整画布超过 2400 万像素，请先使用较小图片。');
   let x=0,y=0,width=rw,height=rh;
-  if(e.crop){x=clamp(Math.floor(e.crop[0]*rw),0,rw-1);y=clamp(Math.floor(e.crop[1]*rh),0,rh-1);width=clamp(roundEven(e.crop[2]*rw),1,rw-x);height=clamp(roundEven(e.crop[3]*rh),1,rh-y);}
+  if(e.crop){x=clamp(Math.floor(e.crop[0]*rw+1e-9),0,rw-1);y=clamp(Math.floor(e.crop[1]*rh+1e-9),0,rh-1);width=clamp(roundEven(e.crop[2]*rw),1,rw-x);height=clamp(roundEven(e.crop[3]*rh),1,rh-y);}
   return {cos,sin,orth,rw,rh,x,y,width,height};
+}
+export function composeCrop(source,edit,selection) {
+  const size=geometry(source,edit);
+  validate({...edit,crop:selection,cropHistory:[],lanes:null,labels:null,rows:null,rowLeft:'',rowRight:''});
+  const x=clamp(Math.floor(selection[0]*size.width+1e-9),0,size.width-1),y=clamp(Math.floor(selection[1]*size.height+1e-9),0,size.height-1),width=clamp(roundEven(selection[2]*size.width),1,size.width-x),height=clamp(roundEven(selection[3]*size.height),1,size.height-y);
+  if(x===0&&y===0&&width===size.width&&height===size.height)return clone(edit.crop);
+  return [(size.x+x)/size.rw,(size.y+y)/size.rh,width/size.rw,height/size.rh];
 }
 export function render(source,e) {
   const size=geometry(source,e);

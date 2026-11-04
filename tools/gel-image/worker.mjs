@@ -1,4 +1,4 @@
-import {raster,render,rgba8,automatic,automaticRows,MAX_PIXELS} from './core.mjs?v=2';
+import {raster,render,rgba8,automatic,automaticRows,MAX_PIXELS} from './core.mjs?v=3';
 import {decodeTIFF,encodeTIFF} from './tiff.mjs?v=2';
 const images=new Map();
 async function handle(data){

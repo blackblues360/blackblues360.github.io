@@ -1,4 +1,4 @@
-import {parseRowLabels} from './core.mjs?v=2';
+import {parseRowLabels} from './core.mjs?v=3';
 
 export function labelLayout(width,edit,measure) {
   if(!edit.lanes?.length||!edit.labels||edit.lanes.length!==edit.labels.length)return {height:0,items:[]};
