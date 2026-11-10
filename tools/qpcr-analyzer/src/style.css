@@ -210,6 +210,9 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflo
 }
 .plate .well:hover { outline: 2px solid #91c4b6; outline-offset: 1px; }
 .plate .well[aria-pressed=true] { outline: 2px solid #096d56; outline-offset: 2px; }
+.plate-select { user-select: none; }
+.plate-select .well { touch-action: none; }
+.plate-swap[aria-pressed=true] { background: var(--soft); border-color: var(--accent); color: var(--accent-dark); }
 .legend { padding: 0; list-style: none; margin: 0; display: grid; gap: 8px; }
 .legend li { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .legend i { width: 10px; height: 10px; flex: 0 0 10px; border-radius: 50%; }

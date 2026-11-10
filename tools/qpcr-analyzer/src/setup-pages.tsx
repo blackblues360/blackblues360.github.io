@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type FormEvent } from 'react';
+import { useRef, useState, type CSSProperties, type FormEvent, type PointerEvent } from 'react';
 import { autoLayout, masterMix, rnaRecipe } from './engine';
 import { wellName, type Config, type Dataset, type Project, type Sample } from './model';
 import { template } from './project';
@@ -197,19 +197,64 @@ export function PrepPage({ project: p, change, importTemplate }: SetupProps & { 
 export function PlatePage({ project: p, data, change }: SetupProps & { data?: Dataset }) {
   const [plate, setPlate] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
+  const [swapMode, setSwapMode] = useState(false);
+  const drag = useRef<{ pointerId: number; start: number; end: number; previous: string[]; append: boolean } | null>(null);
+  const dragged = useRef(false);
   const [sample, setSample] = useState('');
   const [target, setTarget] = useState('');
   const plateCount = Math.max(1, ...p.layout.map(a => a.plate));
   const activePlate = Math.min(plate, plateCount);
   const assignments = p.layout.filter(a => a.plate === activePlate);
   const { rows, columns } = p.config;
+
+  function startSelection(event: PointerEvent<HTMLButtonElement>, index: number) {
+    if (!event.isPrimary || event.button !== 0) return;
+    dragged.current = false;
+    if (swapMode) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = {
+      pointerId: event.pointerId,
+      start: index,
+      end: index,
+      previous: selected,
+      append: event.ctrlKey || event.metaKey,
+    };
+  }
+
+  function extendSelection(event: PointerEvent<HTMLDivElement>) {
+    const active = drag.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    const well = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-well-index]');
+    if (!well || !event.currentTarget.contains(well)) return;
+    const index = Number(well.dataset.wellIndex);
+    if (index === active.end) return;
+    active.end = index;
+    dragged.current = true;
+    const startRow = Math.floor(active.start / columns), endRow = Math.floor(index / columns);
+    const startCol = active.start % columns, endCol = index % columns;
+    const next = new Set(active.append ? active.previous : []);
+    for (let row = Math.min(startRow, endRow); row <= Math.max(startRow, endRow); row++) {
+      for (let col = Math.min(startCol, endCol); col <= Math.max(startCol, endCol); col++) {
+        next.add(wellName(row * columns + col, columns));
+      }
+    }
+    setSelected([...next]);
+  }
+
+  function finishSelection(event: PointerEvent<HTMLDivElement>, cancelled = false) {
+    const active = drag.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    if (cancelled) setSelected(active.previous);
+    drag.current = null;
+  }
+
   return <div className="page-grid plate-grid">
     <div className="stack">
       <Panel title="布局设置">
         <div className="form-stack">
-          <label>孔板规格<select aria-label="孔板规格" value={rows + 'x' + columns} onChange={event => {
+          <label>孔板规格<select aria-label="孔板规格" value={rows + 'x' + columns} onChange={async event => {
             const [r, c] = event.target.value.split('x').map(Number);
-            void change('修改孔板规格', next => { next.config.rows = r; next.config.columns = c; });
+            if (await change('修改孔板规格', next => { next.config.rows = r; next.config.columns = c; })) setSelected([]);
           }}>
             <option value="8x12">96-well (8 × 12)</option><option value="16x24">384-well (16 × 24)</option>
             {!['8x12', '16x24'].includes(rows + 'x' + columns) && <option value={rows + 'x' + columns}>{rows} × {columns}</option>}
@@ -235,8 +280,13 @@ export function PlatePage({ project: p, data, change }: SetupProps & { data?: Da
       </Panel>
     </div>
     <div className="stack">
-      <Panel title={'Plate ' + activePlate} note="点击选择孔位，Ctrl / ⌘ 多选，拖动交换孔位。" action={<span className="tag">{assignments.length} / {rows * columns} 已分配</span>}>
-        <div className="plate-scroll"><div className="plate" style={{ '--columns': columns } as CSSProperties}>
+      <Panel title={'Plate ' + activePlate}
+        note={swapMode ? '拖动已分配的孔位，与目标孔位交换。' : '点击选择单孔，从一个孔拖到另一个孔可框选。按住 Ctrl / ⌘ 可追加。'}
+        action={<><span className="tag">{assignments.length} / {rows * columns} 已分配</span>
+          <button type="button" className="plate-swap" aria-pressed={swapMode} onClick={() => setSwapMode(!swapMode)}>交换模式</button></>}>
+        <div className="plate-scroll"><div className={'plate' + (swapMode ? '' : ' plate-select')} style={{ '--columns': columns } as CSSProperties}
+          onPointerMove={extendSelection} onPointerUp={event => finishSelection(event)}
+          onPointerCancel={event => finishSelection(event, true)} onLostPointerCapture={event => finishSelection(event, true)}>
           <span/>{Array.from({ length: columns }, (_, i) => <span className="coordinate" key={i}>{i + 1}</span>)}
           {Array.from({ length: rows }, (_, row) => <div className="plate-row" key={row}>
             <span className="coordinate">{String.fromCharCode(65 + row)}</span>
@@ -245,12 +295,17 @@ export function PlatePage({ project: p, data, change }: SetupProps & { data?: Da
               const assignment = assignments.find(a => a.well === well);
               const index = p.targets.findIndex(t => t.name === assignment?.target);
               const title = well + (assignment ? ' · ' + assignment.sample + ' · ' + assignment.target : ' · 空孔');
-              return <button key={well} type="button" className="well" aria-label={title} title={title} aria-pressed={selected.includes(well)}
+              return <button key={well} type="button" className="well" aria-label={title} title={title} aria-pressed={selected.includes(well)} data-well-index={row * columns + col}
                 style={{ '--well-color': index < 0 ? '#e8eeed' : palette[index % palette.length] } as CSSProperties}
-                draggable={Boolean(assignment)} onClick={event => setSelected(event.ctrlKey || event.metaKey
-                  ? selected.includes(well) ? selected.filter(value => value !== well) : [...selected, well] : [well])}
+                onPointerDown={event => startSelection(event, row * columns + col)}
+                draggable={swapMode && Boolean(assignment)} onClick={event => {
+                  if (event.detail && dragged.current) return;
+                  setSelected(previous => event.ctrlKey || event.metaKey
+                    ? previous.includes(well) ? previous.filter(value => value !== well) : [...previous, well] : [well]);
+                }}
                 onDragStart={event => event.dataTransfer.setData('text/qpcr-well', well)}
-                onDragOver={event => event.preventDefault()} onDrop={event => {
+                onDragOver={event => { if (swapMode) event.preventDefault(); }} onDrop={event => {
+                  if (!swapMode) return;
                   event.preventDefault();
                   const from = event.dataTransfer.getData('text/qpcr-well');
                   if (from === well || !assignments.some(a => a.well === from)) return;
@@ -266,7 +321,7 @@ export function PlatePage({ project: p, data, change }: SetupProps & { data?: Da
         </div></div>
         <div className="panel-foot">{rows * columns} 孔 · 已分配 {assignments.length} · 空孔 {rows * columns - assignments.length}</div>
       </Panel>
-      <Panel title="孔位分配" note={selected.length ? '已选 ' + selected.join('、') : '在上方孔板选择需要调整的孔位。'}>
+      <Panel title="孔位分配" note={selected.length ? '已选 ' + selected.length + ' 孔 · ' + selected.join('、') : '在上方孔板选择需要调整的孔位。'}>
         <div className="actions">
           <select aria-label="分配样本" value={sample} onChange={event => setSample(event.target.value)}><option value="">选择样本</option>{p.samples.map(s => <option key={s.id}>{s.id}</option>)}</select>
           <select aria-label="分配 Target" value={target} onChange={event => setTarget(event.target.value)}><option value="">选择 Target</option>{p.targets.map(t => <option key={t.name}>{t.name}</option>)}</select>
