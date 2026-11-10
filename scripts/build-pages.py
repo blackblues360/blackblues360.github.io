@@ -18,9 +18,13 @@ out=root/'.local/pages';out.mkdir(parents=True,exist_ok=True)
 assert not any(out.iterdir()),'Use a fresh output directory; do not mix old artifacts'
 files=subprocess.check_output(['git','ls-files','-z'],cwd=root).decode().split('\0')
 count=0;tool_pages=0
+assert 'tools/qpcr-analyzer/published/index.html' in files, 'Build and commit qPCR Pages files with npm run build:pages'
 for name in files:
     if not name:continue
     path=pathlib.PurePosixPath(name)
+    if path.parts[:2] == ('tools', 'qpcr-analyzer'):
+        if path.parts[2:3] != ('published',):continue
+        path=pathlib.PurePosixPath(*path.parts[:2],*path.parts[3:])
     if name not in ['index.html','script.js','CNAME','favicon.svg'] and not (path.parts[0] in ['assets','account','tools','config'] and 'tests' not in path.parts and path.suffix.lower() in ['.html','.css','.js','.mjs','.json','.svg','.png','.jpg','.jpeg','.webp','.ico','.woff','.woff2','.txt']):continue
     data=subprocess.check_output(['git','show',':'+name],cwd=root) if args.index else (root/name).read_bytes()
     if path.parts[0]=='tools' and path.suffix=='.html':
@@ -30,7 +34,7 @@ for name in files:
     if path.suffix in ['.html','.css','.js','.mjs','.json','.txt']:
         text=data.decode('utf8')
         assert not re.search(r'\b(?:sb_secret_[A-Za-z0-9_-]{20,}|sbp_[A-Za-z0-9]{20,}|re_[A-Za-z0-9]{24,}|eyJ[A-Za-z0-9_-]{30,}\.[A-Za-z0-9_-]{30,}\.[A-Za-z0-9_-]{20,})',text),'Potential secret in '+name
-    target=out/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data);count+=1
+    target=out/path;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data);count+=1
 if tool_pages:
     assert (out/'assets/css/tool-access.css').is_file() and (out/'assets/js/account/tool-access.mjs').is_file(),'Missing shared tool login assets'
 config=(out/'assets/js/account/config.mjs').read_text()

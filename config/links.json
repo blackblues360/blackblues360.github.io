@@ -12,6 +12,12 @@
           "description": "设计实验分组与孔板布局"
         },
         {
+          "name": "qPCR Analyzer",
+          "url": "tools/qpcr-analyzer/",
+          "iconUrl": "tools/qpcr-analyzer/icon.svg",
+          "description": "导入 qPCR 数据，查看质控、扩增曲线和相对表达量"
+        },
+        {
           "name": "SOP 时间轴编辑器",
           "url": "tools/sop-timeline/",
           "iconUrl": "tools/sop-timeline/icon.svg",

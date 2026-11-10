@@ -6,6 +6,8 @@
 
 Windows 双击 `start.cmd`，或在本目录运行 `npm ci`、`npm run dev`。使用启动终端显示的地址（默认 http://127.0.0.1:5178/ ）。生产构建用 `npm run build`，静态产物在 `dist/`；需通过 HTTP/HTTPS 提供，不能直接双击 index.html。
 
+更新网站版时，在本目录运行 `npm run build:pages`，提交生成的 `published/`。网站发布脚本把该目录的静态文件放到 `/tools/qpcr-analyzer/`，通过网站的统一登录入口加载。
+
 IndexedDB 按访问地址保存项目；刷新后自动打开最近保存项目。换网址、端口、浏览器或清理浏览数据前导出 `.qpcrproj`。保存失败会明确报错，不报告已保存。并发页面的陈旧写入会被拒绝；此时重新打开项目读取最新状态。
 
 ## 已实现
