@@ -3,7 +3,7 @@ import { utils, write } from 'xlsx';
 import { mappedWells } from './engine';
 import { mean, sd, type Analysis, type Project, type Quant, type Well } from './model';
 import { restoreVersion, snapshot } from './project';
-import { csv, download, Empty, fmt, Icon, Metrics, palette, Panel, Table, Tabs, time, type Change } from './ui';
+import { csv, download, Empty, fmt, Icon, InlineTextForm, Metrics, palette, Panel, Table, Tabs, time, type Change } from './ui';
 
 type AnalysisProps = { project: Project; analysis: Analysis | null; change: Change };
 type Series = { name: string; values: [number, number][] };
@@ -38,6 +38,7 @@ export function QcPage({ project: p, analysis, change }: AnalysisProps) {
   const [tab, setTab] = useState<'overview' | 'amp' | 'melt' | 'wells'>('overview');
   const [selection, setSelection] = useState('');
   const [query, setQuery] = useState('');
+  const [excluding, setExcluding] = useState('');
   const [signal, setSignal] = useState<'deltaRn' | 'rn' | 'raw'>('deltaRn');
   const wells = mappedWells(p);
   const ids = selection ? new Set(selection.split(',').map(value => value.trim().toUpperCase())) : new Set(wells.slice(0, 1).map(w => w.well));
@@ -51,19 +52,14 @@ export function QcPage({ project: p, analysis, change }: AnalysisProps) {
     point.cycle, (signal === 'raw' ? point.raw?.['x1-m1'] : point[signal]) ?? NaN,
   ]) }));
   function toggleWell(well: Well) {
-    const excludedReason = p.exclusions[well.well];
-    const reason = excludedReason ? '' : prompt('排除 ' + well.well + ' 的理由（必填）');
-    if (reason === null) return;
-    void change(excludedReason ? '恢复人工排除孔' : '人工排除孔', next => {
-      if (excludedReason) delete next.exclusions[well.well];
-      else {
-        if (!reason.trim()) throw new Error('必须填写排除理由');
-        next.exclusions[well.well] = reason.trim();
-      }
-    });
+    if (p.exclusions[well.well]) {
+      void change('恢复人工排除孔', next => { delete next.exclusions[well.well]; });
+    } else {
+      setExcluding(excluding === well.well ? '' : well.well);
+    }
   }
   return <>
-    <Tabs label="质控视图" active={tab} onChange={setTab} values={[['overview', '概览'], ['amp', '扩增曲线'], ['melt', '熔解曲线'], ['wells', '孔位与排除']]}/>
+    <Tabs label="质控视图" active={tab} onChange={value => { setTab(value); setExcluding(''); }} values={[['overview', '概览'], ['amp', '扩增曲线'], ['melt', '熔解曲线'], ['wells', '孔位与排除']]}/>
     <Metrics items={[
       { label: '正常孔', value: wells.filter(w => !review.has(w.well) && !excluded.includes(w)).length, icon: 'check' },
       { label: '待检查孔', value: wells.filter(w => review.has(w.well) && !excluded.includes(w)).length, icon: 'alert', tone: 'amber' },
@@ -107,11 +103,16 @@ export function QcPage({ project: p, analysis, change }: AnalysisProps) {
     </Panel>}
     {tab === 'wells' && <Panel title="孔的纳入与排除" note="保留仪器 Ct 和 Omit 状态，人工排除需填写理由。"
       action={<label className="search"><Icon name="search" size={16}/><input aria-label="搜索孔位" placeholder="孔位、样本或 Target" value={query} onChange={event => setQuery(event.target.value)}/></label>}>
+      {excluding && <InlineTextForm key={excluding} label={'排除 ' + excluding + ' 的理由'} submit="确认排除"
+        onCancel={() => setExcluding('')} onSave={reason => change('人工排除孔', next => {
+          next.exclusions[excluding] = reason;
+        })}/>}
       <Table headers={['Well', 'Sample', 'Target', '仪器 Ct', '纳入状态', '质控提示', '操作']} rows={rows.map(well => [
         well.well, well.sample, well.target, fmt(well.ct),
         <span className={'tag ' + (well.instrumentOmit || p.exclusions[well.well] ? 'muted' : '')}>{well.instrumentOmit ? '仪器 Omit' : p.exclusions[well.well] ?? '纳入'}</span>,
         warnings.filter(issue => issue.well === well.well).map(issue => issue.message).join(' · ') || '—',
-        <button disabled={well.instrumentOmit} onClick={() => toggleWell(well)}>{p.exclusions[well.well] ? '恢复' : '排除'}</button>,
+        <button disabled={well.instrumentOmit} aria-expanded={p.exclusions[well.well] ? undefined : excluding === well.well}
+          onClick={() => toggleWell(well)}>{p.exclusions[well.well] ? '恢复' : '排除'}</button>,
       ])} onRow={index => { setSelection(rows[index].well); setTab('amp'); }}/>
     </Panel>}
   </>;

@@ -2,7 +2,7 @@ import { useState, type CSSProperties, type FormEvent } from 'react';
 import { autoLayout, masterMix, rnaRecipe } from './engine';
 import { wellName, type Config, type Dataset, type Project, type Sample } from './model';
 import { template } from './project';
-import { csv, download, Empty, fmt, Icon, Metrics, NumberEdit, palette, Panel, Table, Tabs, type Change } from './ui';
+import { csv, download, Empty, fmt, Icon, InlineTextForm, Metrics, NumberEdit, palette, Panel, Table, Tabs, type Change } from './ui';
 
 type SetupProps = { project: Project; change: Change };
 const projectFields = [
@@ -67,6 +67,7 @@ export function ExperimentPage({ project: p, data, change, openImport, openPrep 
 
 export function PrepPage({ project: p, change, importTemplate }: SetupProps & { importTemplate: (file: File) => void }) {
   const [mode, setMode] = useState<'rna' | 'mix' | 'samples' | 'advanced'>('rna');
+  const [adding, setAdding] = useState<'sample' | 'target' | null>(null);
   const [configText, setConfigText] = useState('');
   const c = p.config;
   const mix = masterMix(p.layout, c);
@@ -78,7 +79,7 @@ export function PrepPage({ project: p, change, importTemplate }: SetupProps & { 
     if (value !== null) void change('修改逆转录体系', next => { next.config[key] = value; });
   };
   return <>
-    <Tabs label="实验准备视图" active={mode} onChange={setMode} values={[[ 'rna', 'RNA 与逆转录' ], [ 'mix', 'Master Mix' ], [ 'samples', '样本与靶标' ], [ 'advanced', '高级参数' ]]}/>
+    <Tabs label="实验准备视图" active={mode} onChange={value => { setMode(value); setAdding(null); }} values={[[ 'rna', 'RNA 与逆转录' ], [ 'mix', 'Master Mix' ], [ 'samples', '样本与靶标' ], [ 'advanced', '高级参数' ]]}/>
     {mode === 'rna' && <div className="page-grid prep-grid">
       <Panel title="RNA 与 RT 体系计算" note="填写 RNA 浓度后自动计算加样和补水体积。">
         <Table headers={['Sample', '浓度 (ng/μL)', 'RNA (μL)', '5× RT Mix (μL)', '水 (μL)', '状态']} empty="导入数据或在「样本与靶标」添加样本"
@@ -129,13 +130,13 @@ export function PrepPage({ project: p, change, importTemplate }: SetupProps & { 
       </Panel>
     </div>}
     {mode === 'samples' && <div className="stack">
-      <Panel title="样本与实验设计" note="填写生物学 ID、分组、控制孔类型和每个样本的 Target。" action={<button onClick={() => {
-        const id = prompt('新样本名称')?.trim();
-        if (id) void change('新增样本', next => {
-          if (next.samples.some(s => s.id === id)) throw new Error('样本名称重复');
-          next.samples.push({ id, group: '', biologicalId: id, control: 'sample', concentration: null, availableRna: null });
-        });
-      }}><Icon name="plus" size={16}/>添加样本</button>}>
+      <Panel title="样本与实验设计" note="填写生物学 ID、分组、控制孔类型和每个样本的 Target。"
+        action={<button aria-expanded={adding === 'sample'} onClick={() => setAdding(adding === 'sample' ? null : 'sample')}><Icon name="plus" size={16}/>添加样本</button>}>
+        {adding === 'sample' && <InlineTextForm label="样本名称" submit="保存样本" onCancel={() => setAdding(null)}
+          validate={id => p.samples.some(sample => sample.id === id) ? '样本名称重复' : undefined}
+          onSave={id => change('新增样本', next => {
+            next.samples.push({ id, group: '', biologicalId: id, control: 'sample', concentration: null, availableRna: null });
+          })}/>}
         <Table headers={['Sample', '生物学 ID', '分组', '类型', '可用 RNA (ng)', 'Targets（逗号分隔）']} rows={p.samples.map((sample, i) => [
           <strong>{sample.id}</strong>,
           ...(['biologicalId', 'group'] as const).map(key => <input key={sample[key]} aria-label={sample.id + ' ' + key} defaultValue={sample[key]} onBlur={event => {
@@ -152,13 +153,13 @@ export function PrepPage({ project: p, change, importTemplate }: SetupProps & { 
           }}/>,
         ])}/>
       </Panel>
-      <Panel title="Target 与技术重复" action={<button onClick={() => {
-        const name = prompt('Target 名称')?.trim();
-        if (name) void change('新增 Target', next => {
-          if (next.targets.some(target => target.name === name)) throw new Error('Target 重复');
-          next.targets.push({ name, replicates: 3, efficiency: null, primerForward: '', primerReverse: '' });
-        });
-      }}><Icon name="plus" size={16}/>添加 Target</button>}>
+      <Panel title="Target 与技术重复"
+        action={<button aria-expanded={adding === 'target'} onClick={() => setAdding(adding === 'target' ? null : 'target')}><Icon name="plus" size={16}/>添加 Target</button>}>
+        {adding === 'target' && <InlineTextForm label="Target 名称" submit="保存 Target" onCancel={() => setAdding(null)}
+          validate={name => p.targets.some(target => target.name === name) ? 'Target 名称重复' : undefined}
+          onSave={name => change('新增 Target', next => {
+            next.targets.push({ name, replicates: 3, efficiency: null, primerForward: '', primerReverse: '' });
+          })}/>}
         <Table headers={['Target', '重复数', '效率 (0–1，记录用)', 'Forward primer', 'Reverse primer']} rows={p.targets.map((target, i) => [
           <strong>{target.name}</strong>,
           <NumberEdit label={target.name + ' 重复数'} value={target.replicates} step={1} onSave={value => {

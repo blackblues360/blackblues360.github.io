@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { Project } from './model';
 
 export const pages = [
@@ -84,6 +84,40 @@ export function NumberEdit({ label, value, onSave, step = 'any' }: {
       const next = event.currentTarget.value === '' ? null : event.currentTarget.valueAsNumber;
       if (next !== value && (next === null || Number.isFinite(next))) onSave(next);
     }}/>;
+}
+export function InlineTextForm({ label, submit, onSave, onCancel, validate }: {
+  label: string;
+  submit: string;
+  onSave: (value: string) => Promise<boolean>;
+  onCancel: () => void;
+  validate?: (value: string) => string | undefined;
+}) {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState('');
+  const errorId = useId();
+  return <form className="inline-form" noValidate onSubmit={async event => {
+    event.preventDefault();
+    const text = value.trim();
+    const message = text ? validate?.(text) : '请填写' + label;
+    if (message) {
+      setError(message);
+      return;
+    }
+    if (await onSave(text)) onCancel();
+  }} onKeyDown={event => {
+    if (event.key === 'Escape') onCancel();
+  }}>
+    <label>{label}<input autoFocus required value={value} aria-invalid={Boolean(error)}
+      aria-describedby={error ? errorId : undefined} onChange={event => {
+        setValue(event.target.value);
+        setError('');
+      }}/></label>
+    <div className="actions">
+      <button className="primary" type="submit">{submit}</button>
+      <button type="button" onClick={onCancel}>取消</button>
+    </div>
+    {error && <p id={errorId} className="inline-form-error" role="alert">{error}</p>}
+  </form>;
 }
 export function download(data: Uint8Array | string, name: string, type = 'application/octet-stream') {
   const blob = new Blob([typeof data === 'string' ? data : new Uint8Array(data)], { type });
