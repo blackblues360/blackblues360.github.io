@@ -25,7 +25,8 @@ for name in files:
     if path.parts[:2] == ('tools', 'qpcr-analyzer'):
         if path.parts[2:3] != ('published',):continue
         path=pathlib.PurePosixPath(*path.parts[:2],*path.parts[3:])
-    if name not in ['index.html','script.js','CNAME','favicon.svg'] and not (path.parts[0] in ['assets','account','tools','config'] and 'tests' not in path.parts and path.suffix.lower() in ['.html','.css','.js','.mjs','.json','.svg','.png','.jpg','.jpeg','.webp','.ico','.woff','.woff2','.txt']):continue
+    public_directory=path.parts[0] in ['assets','account','tools','config'] or path.parts[:2]==('games','minesweeper')
+    if name not in ['index.html','script.js','CNAME','favicon.svg'] and not (public_directory and 'tests' not in path.parts and path.suffix.lower() in ['.html','.css','.js','.mjs','.json','.svg','.png','.jpg','.jpeg','.webp','.ico','.woff','.woff2','.txt']):continue
     data=subprocess.check_output(['git','show',':'+name],cwd=root) if args.index else (root/name).read_bytes()
     if path.parts[0]=='tools' and path.suffix=='.html':
         page=ToolPage();page.feed(data.decode('utf8'))

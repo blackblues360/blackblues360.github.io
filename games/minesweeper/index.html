@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="无需登录的网页版扫雷，支持鼠标、键盘和触屏操作。">
+    <title>扫雷 · blackblues</title>
+    <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <script src="game.js" defer></script>
+  </head>
+  <body>
+    <header class="site-bar">
+      <div class="site-bar-inner">
+        <a class="site-name" href="../../"><span class="site-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>blackblues</a>
+        <a class="back-link" href="../../">← 返回首页</a>
+      </div>
+    </header>
+    <main class="shell">
+      <div class="intro">
+        <h1>扫雷<span aria-hidden="true">.</span></h1>
+        <p>根据数字推断地雷位置，翻开所有安全格。</p>
+      </div>
+      <div class="game-layout">
+        <section class="game-panel" aria-label="扫雷游戏">
+          <div class="scorebar">
+            <dl class="readouts">
+              <div><dt>剩余地雷</dt><dd id="mines-left">10</dd></div>
+              <div><dt>用时</dt><dd id="elapsed">00:00</dd></div>
+            </dl>
+            <button class="restart" id="restart" type="button"><span aria-hidden="true">↻</span> 新游戏</button>
+          </div>
+          <div class="game-controls">
+            <p id="status" role="status">选一个格子开始</p>
+            <div class="mode" role="group" aria-label="点击模式">
+              <button type="button" data-mode="reveal" aria-pressed="true">翻开</button>
+              <button type="button" data-mode="flag" aria-pressed="false"><span aria-hidden="true">⚑</span> 插旗</button>
+            </div>
+          </div>
+          <div class="playfield">
+            <div id="board" class="board" role="group" aria-label="扫雷棋盘" aria-describedby="keyboard-help"></div>
+            <noscript><p>请启用 JavaScript 以开始游戏。</p></noscript>
+          </div>
+        </section>
+        <aside class="sidebar">
+          <section class="side-card" aria-labelledby="difficulty">
+            <h2 id="difficulty">难度</h2>
+            <div class="levels" role="group" aria-label="选择难度">
+              <button type="button" data-level="beginner" aria-pressed="true"><span>初级<small>9×9 · 10 雷</small></span><i aria-hidden="true"></i></button>
+              <button type="button" data-level="intermediate" aria-pressed="false"><span>中级<small>16×16 · 40 雷</small></span><i aria-hidden="true"></i></button>
+              <button type="button" data-level="expert" aria-pressed="false"><span>高级<small>30×16 · 99 雷</small></span><i aria-hidden="true"></i></button>
+            </div>
+          </section>
+          <section class="side-card guide" aria-labelledby="instructions">
+            <h2 id="instructions">玩法</h2>
+            <div class="guide-row"><span class="example number" aria-hidden="true">2</span><p>数字表示周围八格中的地雷数。周围插旗数等于数字时，点数字可翻开其余邻格。</p></div>
+            <div class="guide-row"><span class="example flag" aria-hidden="true">⚑</span><p>用右键插旗或取消。触屏上切换到「插旗」再点格子。</p></div>
+            <p id="keyboard-help" class="keyboard-help">方向键移动，回车或空格执行当前模式，F 插旗或取消。</p>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>

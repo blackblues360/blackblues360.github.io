@@ -36,6 +36,12 @@
           "description": "旋转裁剪 WB 胶图，定位泳道与样品编号"
         },
         {
+          "name": "扫雷",
+          "url": "games/minesweeper/",
+          "icon": "code",
+          "description": "三档难度，打开即玩"
+        },
+        {
           "name": "账户中心",
           "url": "account/",
           "icon": "notebook",
