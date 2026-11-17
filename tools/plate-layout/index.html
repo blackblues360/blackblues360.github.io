@@ -42,6 +42,7 @@
       <div id="exportMenu" class="toolbar-menu" popover="auto" aria-label="导出设置">
         <h2>导出图片</h2>
         <label class="switch-row" for="exportLegend">包含标签图例<input id="exportLegend" type="checkbox" checked role="switch"></label>
+        <label class="switch-row" for="exportNotes" id="exportNotesRow" hidden>包含孔位备注<input id="exportNotes" type="checkbox" checked role="switch"></label>
         <div hidden><input id="exportIds" type="checkbox" checked></div>
         <label class="resolution-label" for="exportScale">清晰度</label>
         <select id="exportScale"><option value="1">标准 · 1×</option><option value="2" selected>高清 · 2×</option><option value="3">超清 · 3×</option></select>
@@ -82,9 +83,18 @@
             <div id="selectionList" class="selection-list" aria-label="选中的孔位"></div>
             <button id="clearSelection" class="selection-clear" type="button">取消当前选择</button>
             <form id="labelForm">
-              <label for="labelName">标签名称</label><input id="labelName" maxlength="160" placeholder="例如 OVA + LPS" autocomplete="off" required>
+              <label for="labelName">主标签名称</label><input id="labelName" maxlength="160" placeholder="例如 OVA" autocomplete="off" required>
               <label for="labelColor">标签颜色 <span id="colorMode">自动推荐</span></label><div class="color-field"><input id="labelColor" type="color" value="#a9c9ed" aria-label="新标签颜色"><span id="colorHex">#A9C9ED</span><button id="autoColor" type="button" title="自动选择未使用的浅色">自动配色</button></div>
+              <label for="secondaryLabel">二级标签 <span class="secondary-text">选填</span></label>
+              <input id="secondaryLabel" maxlength="160" placeholder="例如 LPS" list="secondaryLabelOptions" autocomplete="off" aria-describedby="secondaryLabelHint">
+              <datalist id="secondaryLabelOptions"></datalist>
+              <p id="secondaryLabelHint" class="editor-hint well-field-hint">可填写第二种实验条件。</p>
+              <div id="secondaryLabelActions" class="two-buttons well-field-actions" hidden><button id="saveSecondaryLabel" class="button subtle" type="button">保存二级标签</button><button id="clearSecondaryLabel" class="button subtle" type="button">清除二级标签</button></div>
+              <label for="wellNote">孔位备注 <span class="secondary-text">选填</span></label>
+              <input id="wellNote" maxlength="160" placeholder="例如 样本 S01、重复 2" autocomplete="off" aria-describedby="wellNoteHint">
+              <p id="wellNoteHint" class="editor-hint well-field-hint">备注可随标签一起应用。</p>
               <button id="applyLabel" class="button primary full-width" type="submit">创建并应用</button>
+              <div id="wellNoteActions" class="two-buttons well-field-actions" hidden><button id="saveWellNote" class="button subtle" type="button">保存备注</button><button id="clearWellNote" class="button subtle" type="button">清除备注</button></div>
             </form>
             <button id="clearLabels" class="button subtle full-width">清除选中孔位的标签</button>
             <p id="editorHint" class="editor-hint">先在孔板上选择需要分组的孔位。</p>

@@ -1,6 +1,6 @@
 import {
   PLATE_TYPES, createState, restoreState, cleanText, wellIds, nextColor, assignLabel,
-  setLabelColor, clearSelectedLabels, deleteLabel, usedLabels, plateMarkup,
+  setLabelColor, setWellText, clearSelectedLabels, deleteLabel, usedLabels, plateMarkup,
   buildExportSvg, exportFilename
 } from './core.mjs';
 import {prepareImport,backupBeforeImport,readImportBackup} from './files.mjs';
@@ -14,8 +14,16 @@ const elements = Object.fromEntries([
   'deselectAll', 'exportScale', 'exportIds', 'exportLegend', 'plateHeading', 'assignedCount', 'plate', 'plateDimensions',
   'legendSummary', 'legend', 'selectionCount', 'selectionList', 'clearSelection', 'labelForm',
   'labelName', 'labelColor', 'colorMode', 'colorHex', 'autoColor', 'applyLabel', 'clearLabels',
-  'editorHint', 'labelCount', 'labelLibrary', 'notice'
+  'wellNote', 'wellNoteHint', 'wellNoteActions', 'saveWellNote', 'clearWellNote',
+  'secondaryLabel', 'secondaryLabelHint', 'secondaryLabelActions', 'saveSecondaryLabel', 'clearSecondaryLabel', 'secondaryLabelOptions',
+  'exportNotes', 'exportNotesRow', 'editorHint', 'labelCount', 'labelLibrary', 'notice'
 ].map(id => [id, document.getElementById(id)]));
+const wellFields = [
+  { key: 'wellSecondaryLabels', name: '二级标签', input: elements.secondaryLabel, hint: elements.secondaryLabelHint,
+    actions: elements.secondaryLabelActions, save: elements.saveSecondaryLabel, clear: elements.clearSecondaryLabel },
+  { key: 'wellNotes', name: '备注', input: elements.wellNote, hint: elements.wellNoteHint,
+    actions: elements.wellNoteActions, save: elements.saveWellNote, clear: elements.clearWellNote }
+];
 
 let state = createState();
 let storageAvailable = true;
@@ -48,6 +56,7 @@ let exporting = false;
 let noticeTimer;
 let pendingImport = null;
 let cloudDocuments = null;
+const wellFieldContexts = new Map();
 
 function notify(message) {
   clearTimeout(noticeTimer);
@@ -141,10 +150,41 @@ function renderSelection() {
   elements.selectAll.disabled = state.ui.selected.length === Number(state.plate.type);
   elements.clearLabels.disabled = !state.ui.selected.some(id => state.wells[id]);
   elements.applyLabel.disabled = empty;
-  elements.editorHint.textContent = empty ? '先在孔板上选择需要分组的孔位。' : `将标签应用到 ${state.ui.selected.length} 个孔位；已有标签将被覆盖。`;
+  elements.editorHint.textContent = empty ? '先在孔板上选择需要分组的孔位。' : `将主标签应用到 ${state.ui.selected.length} 个孔位；已有主标签将被覆盖。`;
+  const canSave = !empty && state.ui.selected.every(id => state.wells[id]);
+  for (const field of wellFields) {
+    const values = state.ui.selected.map(id => state[field.key]?.[id] || '');
+    const context = JSON.stringify([state.ui.selected, values]);
+    const mixed = new Set(values).size > 1;
+    if (wellFieldContexts.get(field.key) !== context) {
+      wellFieldContexts.set(field.key, context);
+      field.input.value = mixed ? '' : values[0] || '';
+    }
+    const hasValue = values.some(Boolean);
+    field.input.disabled = empty;
+    field.actions.hidden = !canSave && !hasValue;
+    field.save.disabled = !canSave || !cleanText(field.input.value);
+    field.clear.disabled = !hasValue;
+    field.hint.textContent = mixed ? `选中的孔位${field.name}不同。填写后可统一更新，留空应用主标签时保留各自的内容。`
+      : canSave ? `可单独保存${field.name}，也可随主标签一起应用。` : `${field.name}可随主标签一起应用。`;
+  }
+  elements.clearLabels.textContent = elements.clearWellNote.disabled ? '清除选中孔位的标签' : '清除选中孔位的标签和备注';
+}
+
+function applyWellLabels(name, color) {
+  assignLabel(state, name, color);
+  for (const field of wellFields) {
+    if (cleanText(field.input.value)) setWellText(state, field.key, state.ui.selected, field.input.value);
+  }
+  state.ui.selected = [];
 }
 
 function renderLabels() {
+  elements.secondaryLabelOptions.replaceChildren(...[...new Set(Object.values(state.wellSecondaryLabels || {}))].map(value => {
+    const option = document.createElement('option');
+    option.value = value;
+    return option;
+  }));
   const used = usedLabels(state);
   const marked = used.reduce((count, label) => count + label.wells.length, 0);
   elements.assignedCount.textContent = `${marked} / ${state.plate.type} 已标记`;
@@ -236,6 +276,7 @@ function render() {
   elements.titleCount.textContent = `${state.plate.title.length} / 160`;
   for (const key of ['showIds', 'showAxes', 'showFrame', 'exportLegend']) elements[key].checked = state.ui[key];
   elements.exportIds.checked = state.ui.showIds;
+  elements.exportNotesRow.hidden = !Object.keys(state.wellNotes || {}).length;
   elements.wellScale.value = state.ui.wellScale;
   elements.wellScaleValue.textContent = `${state.ui.wellScale}%`;
   elements.undo.disabled = !undoStack.length;
@@ -338,10 +379,11 @@ elements.plate.addEventListener('keydown', event => {
 elements.plateTypes.addEventListener('click', event => {
   const type = event.target.closest('[data-type]')?.dataset.type;
   if (!type || type === state.plate.type) return;
-  if ((state.labels.length || Object.values(state.wells).some(Boolean)) && !window.confirm(`切换为 ${type} 孔板将清空孔位标签和标签库，方案标题保留。此操作可撤销。是否继续？`)) return;
+  if ((state.labels.length || Object.values(state.wells).some(Boolean)) && !window.confirm(`切换为 ${type} 孔板将清空孔位标签、备注和标签库，方案标题保留。此操作可撤销。是否继续？`)) return;
   change(() => {
     const title = state.plate.title;
     state = createState(type);
+    wellFieldContexts.clear();
     state.plate.title = title;
   }, `已切换为 ${type} 孔板，可撤销恢复原方案。`);
 });
@@ -360,35 +402,40 @@ elements.selectionList.addEventListener('click', event => {
 elements.labelName.addEventListener('input', suggestColor);
 elements.labelColor.addEventListener('input', () => { manualColor = true; suggestColor(); });
 elements.autoColor.addEventListener('click', () => { manualColor = false; suggestColor(); });
+for (const field of wellFields) {
+  field.input.addEventListener('input', () => {
+    field.save.disabled = !state.ui.selected.length || !state.ui.selected.every(id => state.wells[id]) || !cleanText(field.input.value);
+  });
+  field.save.addEventListener('click', () => {
+    change(() => setWellText(state, field.key, state.ui.selected, field.input.value), `已保存选中孔位的${field.name}。`);
+  });
+  field.clear.addEventListener('click', () => {
+    change(() => setWellText(state, field.key, state.ui.selected, ''), `已清除选中孔位的${field.name}。`);
+  });
+}
 elements.labelForm.addEventListener('submit', event => {
   event.preventDefault();
   const name = elements.labelName.value;
   const color = elements.labelColor.value;
-  if (change(() => {
-    assignLabel(state, name, color);
-    state.ui.selected = [];
-  }, `已为 ${state.ui.selected.length} 个孔位应用标签，选择已清空。`)) {
+  if (change(() => applyWellLabels(name, color), `已为 ${state.ui.selected.length} 个孔位应用标签，选择已清空。`)) {
     elements.labelName.value = '';
     manualColor = false;
     suggestColor();
   }
 });
-elements.clearLabels.addEventListener('click', () => change(() => clearSelectedLabels(state), '已清除选中孔位的标签；标签库保留，可继续复用。'));
+elements.clearLabels.addEventListener('click', () => change(() => clearSelectedLabels(state), '已清除选中孔位的标签和备注。标签库仍可复用。'));
 elements.labelLibrary.addEventListener('click', event => {
   const applyId = event.target.closest('[data-apply-label]')?.dataset.applyLabel;
   if (applyId) {
     const label = state.labels.find(item => item.id === applyId);
     if (!state.ui.selected.length) { notify('请先选择孔位，再点击标签名称应用。'); return; }
-    change(() => {
-      assignLabel(state, label.name, label.color);
-      state.ui.selected = [];
-    }, '已应用已有标签，选择已清空。');
+    change(() => applyWellLabels(label.name, label.color), '已应用已有主标签，选择已清空。');
   }
   const deleteId = event.target.closest('[data-delete-label]')?.dataset.deleteLabel;
   if (deleteId) {
     const label = state.labels.find(item => item.id === deleteId);
     const count = Object.values(state.wells).filter(id => id === deleteId).length;
-    if (window.confirm(`删除标签「${label.name}」？${count ? `使用此标签的 ${count} 个孔位将恢复为未标记。` : '此标签尚未使用。'}此操作可撤销。`)) change(() => deleteLabel(state, deleteId), '标签已删除。');
+    if (window.confirm(`删除标签「${label.name}」？${count ? `使用此标签的 ${count} 个孔位将清除标签和备注。` : '此标签尚未使用。'}此操作可撤销。`)) change(() => deleteLabel(state, deleteId), '标签已删除。');
   }
 });
 elements.labelLibrary.addEventListener('change', event => {
@@ -415,8 +462,8 @@ document.addEventListener('keydown', event => {
   if (event.key.toLowerCase() === 'y') { event.preventDefault(); travelHistory(true); }
 });
 elements.reset.addEventListener('click', () => {
-  if ((state.labels.length || state.plate.title || state.ui.selected.length) && !window.confirm('重置将清空当前方案的标题、标签与孔位分配。此操作可撤销。是否继续？')) return;
-  change(() => { state = createState(state.plate.type); }, '已重置当前方案，可撤销恢复。');
+  if ((state.labels.length || state.plate.title || state.ui.selected.length) && !window.confirm('重置将清空当前方案的标题、标签和孔位备注。此操作可撤销。是否继续？')) return;
+  change(() => { state = createState(state.plate.type); wellFieldContexts.clear(); }, '已重置当前方案，可撤销恢复。');
 });
 
 async function exportImage(format) {
@@ -429,7 +476,7 @@ async function exportImage(format) {
   try {
     const exportState = JSON.parse(JSON.stringify(state));
     const exportedAt = new Date();
-    const artwork = buildExportSvg(exportState, exportedAt);
+    const artwork = buildExportSvg(exportState, exportedAt, elements.exportNotes.checked);
     const requestedScale = Number(elements.exportScale.value);
     // 极长图例自动控制画布内存和边长，不裁切或省略任何标签。
     const scale = Math.min(requestedScale, 16000 / artwork.height, Math.sqrt(24000000 / (artwork.width * artwork.height)));
@@ -553,7 +600,7 @@ document.getElementById('confirmImport').onclick = async () => {
     }
   }
   catch (error) { notify(`未导入：无法保存方案。${error.message}`); return; }
-  change(() => { state = next; }, '已导入，可撤销或恢复导入前备份。');
+  change(() => { state = next; wellFieldContexts.clear(); }, '已导入，可撤销或恢复导入前备份。');
   pendingImport = null; importDialog.close();
 };
 document.getElementById('cancelImport').onclick = () => importDialog.close();
@@ -568,7 +615,7 @@ document.getElementById('restoreImportBackup').onclick = () => {
     const text = JSON.stringify(next);
     draftStorage.setItem(STORAGE_KEY, text);
     lastStoredText = text;
-    change(() => { state = next; }, '已恢复导入前备份，可撤销。');
+    change(() => { state = next; wellFieldContexts.clear(); }, '已恢复导入前备份，可撤销。');
   } catch (error) { notify(`无法恢复备份：${error.message}`); }
 };
 
@@ -587,7 +634,7 @@ cloudDocuments = mountDocumentManager({
   read:()=>structuredClone(state),
   flush:()=>{document.activeElement?.blur?.();finishDrag();},
   validate:value=>{const result=prepareImport(JSON.stringify(value));if(result.changes.length)throw new Error('孔板内容需要规范化，请先导出原文并通过 JSON 导入预览核对，不能静默改写');return result.normalized;},
-  apply:value=>{state=structuredClone(value);drag=null;undoStack=[];redoStack=[];lastAction='';pendingImport=null;if(importDialog.open)importDialog.close();render();const mode=cloudDocuments?.cloudMode?'云端文档 · 请手动保存':'本机方案 · 保留独立文件备份';elements.saveStatus.textContent=mode;const footer=document.querySelector('.workspace-footer span');if(footer)footer.textContent=mode;document.getElementById('draftAccessNotice').hidden=Boolean(cloudDocuments?.cloudMode)||!(restoreFailed||!draftStorage.canWrite);},
+  apply:value=>{state=structuredClone(value);wellFieldContexts.clear();drag=null;undoStack=[];redoStack=[];lastAction='';pendingImport=null;if(importDialog.open)importDialog.close();render();const mode=cloudDocuments?.cloudMode?'云端文档 · 请手动保存':'本机方案 · 保留独立文件备份';elements.saveStatus.textContent=mode;const footer=document.querySelector('.workspace-footer span');if(footer)footer.textContent=mode;document.getElementById('draftAccessNotice').hidden=Boolean(cloudDocuments?.cloudMode)||!(restoreFailed||!draftStorage.canWrite);},
   create:()=>createState(),title:value=>value.plate.title,
   summary:value=>`${value.plate.type} 孔板 · ${value.labels.length} 个标签 · ${Object.values(value.wells).filter(Boolean).length} 个孔位分配`,
   localRaw:()=>draftStorage.getItem(STORAGE_KEY),canImportLocal:()=>!restoreFailed,

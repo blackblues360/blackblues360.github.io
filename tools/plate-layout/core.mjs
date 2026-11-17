@@ -7,6 +7,7 @@ export const PLATE_TYPES = Object.freeze({
 
 const PALETTE = ['#a9c9ed', '#f4dc91', '#efa9b7', '#b5dba9', '#c9b4eb', '#f4bd91', '#94d5d4', '#deb9cf', '#d0d59b', '#aab9da', '#dfc3a3', '#b5d1be'];
 const FONT = '-apple-system, BlinkMacSystemFont, Segoe UI, Microsoft YaHei, sans-serif';
+const WELL_TEXT_FIELDS = ['wellSecondaryLabels', 'wellNotes'];
 
 export function cleanText(value) {
   const text = String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/[\ufffe\uffff]/g, '').replace(/\s+/gu, ' ').trim();
@@ -62,6 +63,16 @@ export function restoreState(raw) {
   }
   for (const id of Object.keys(state.wells)) {
     if (ids.has(raw.wells?.[id])) state.wells[id] = raw.wells[id];
+  }
+  for (const field of WELL_TEXT_FIELDS) {
+    const values = raw[field];
+    if (!values || typeof values !== 'object' || Array.isArray(values)) continue;
+    state[field] = {};
+    for (const id of Object.keys(state.wells)) {
+      if (!state.wells[id] || typeof values[id] !== 'string') continue;
+      const text = cleanText(values[id]);
+      if (text) state[field][id] = text;
+    }
   }
   const selected = new Set(Array.isArray(raw.ui?.selected) ? raw.ui.selected : []);
   state.ui.selected = Object.keys(state.wells).filter(id => selected.has(id));
@@ -122,17 +133,31 @@ export function setLabelColor(state, id, color) {
   if (label) label.color = color.toLowerCase();
 }
 
+export function setWellText(state, field, ids, value) {
+  const text = cleanText(value);
+  if (text && ids.some(id => !Object.hasOwn(state.wells, id) || !state.wells[id])) {
+    throw new Error('请先给选中的孔位应用主标签。');
+  }
+  if (text) state[field] ??= {};
+  for (const id of ids) {
+    if (text) state[field][id] = text;
+    else delete state[field]?.[id];
+  }
+  if (state[field] && !Object.keys(state[field]).length) delete state[field];
+}
+
 export function clearSelectedLabels(state) {
   for (const id of state.ui.selected) {
     if (Object.hasOwn(state.wells, id)) state.wells[id] = null;
   }
+  for (const field of WELL_TEXT_FIELDS) setWellText(state, field, state.ui.selected, '');
 }
 
 export function deleteLabel(state, id) {
   state.labels = state.labels.filter(label => label.id !== id);
-  for (const well of Object.keys(state.wells)) {
-    if (state.wells[well] === id) state.wells[well] = null;
-  }
+  const wells = Object.keys(state.wells).filter(well => state.wells[well] === id);
+  for (const well of wells) state.wells[well] = null;
+  for (const field of WELL_TEXT_FIELDS) setWellText(state, field, wells, '');
   if (state.ui.activeLabelId === id) state.ui.activeLabelId = null;
 }
 
@@ -211,12 +236,22 @@ export function plateMarkup(state, interactive = true) {
       const x = 68 + (col - .5) * step;
       const y = 64 + (row + .5) * step;
       const name = label ? shorten(label.name, radius * 1.65, fontSize) : '';
-      const description = `${id}：${label?.name || '未分配标签'}`;
+      const secondary = state.wellSecondaryLabels?.[id];
+      const note = interactive ? state.wellNotes?.[id] : '';
+      const description = `${id}：${label?.name || '未分配标签'}${secondary ? `；二级标签：${secondary}` : ''}${note ? `；备注：${note}` : ''}`;
       content.push(`<g transform="translate(${x} ${y})" ${interactive ? `data-well="${id}" role="button" tabindex="0" aria-pressed="${selected.has(id)}" aria-label="${escapeXml(description)}"` : ''}><title>${escapeXml(description)}</title>`);
       if (selected.has(id)) content.push(`<circle r="${radius + 4.5}" fill="none" stroke="#386f61" stroke-width="2.5"/><circle cx="${radius * .72}" cy="${-radius * .72}" r="6" fill="#386f61" stroke="#ffffff" stroke-width="1.5"/>`);
       content.push(`<circle class="well-circle" r="${radius}" fill="${fill}" stroke="${label ? '#263f4b20' : '#dce4e7'}" stroke-width="1.2"/>`);
-      if (showIds) content.push(`<text y="${label ? -fontSize * .47 : coordinateSize * .34}" text-anchor="middle" fill="${ink}" opacity="${label ? '.72' : '.67'}" font-size="${coordinateSize}">${id}</text>`);
-      if (label) content.push(`<text y="${showIds ? fontSize * .91 : fontSize * .34}" text-anchor="middle" fill="${ink}" font-size="${fontSize}" font-weight="550">${escapeXml(name)}</text>`);
+      if (note) content.push(`<circle cx="${radius * -.55}" cy="${radius * -.55}" r="${Math.min(5, radius * .14)}" fill="${ink}" opacity=".8"/>`);
+      const idY = label ? -fontSize * (secondary ? .72 : .47) : coordinateSize * .34;
+      const labelY = fontSize * (showIds ? (secondary ? .27 : .91) : (secondary ? -.16 : .34));
+      if (showIds) content.push(`<text y="${idY}" text-anchor="middle" fill="${ink}" opacity="${label ? '.72' : '.67'}" font-size="${coordinateSize}">${id}</text>`);
+      if (label) content.push(`<text y="${labelY}" text-anchor="middle" fill="${ink}" font-size="${fontSize}" font-weight="550">${escapeXml(name)}</text>`);
+      if (secondary) {
+        const size = fontSize * .87;
+        const text = shorten(secondary, radius * 1.45, size);
+        content.push(`<text y="${labelY + fontSize}" text-anchor="middle" fill="${ink}" opacity=".82" font-size="${size}">${escapeXml(text)}</text>`);
+      }
       content.push('</g>');
     }
   }
@@ -224,7 +259,7 @@ export function plateMarkup(state, interactive = true) {
 }
 
 // 导出独立的 SVG 图稿，而非截取编辑界面；图例按内容计算高度。
-export function buildExportSvg(state, date = new Date()) {
+export function buildExportSvg(state, date = new Date(), includeNotes = true) {
   const width = 1200;
   const body = [];
   const title = `${cleanText(state.plate.title) || '孔板铺板方案'} · ${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
@@ -266,6 +301,23 @@ export function buildExportSvg(state, date = new Date()) {
   if (includeLegend && !labels.length) {
     body.push(`<text x="48" y="${y + 23}" font-size="16" fill="#718591">尚未分配实验标签 / No labels assigned</text>`);
     y += 60;
+  }
+  for (const [field, heading] of [['wellSecondaryLabels', '孔位二级标签'], ['wellNotes', '孔位备注']]) {
+    if (field === 'wellNotes' && !includeNotes) continue;
+    const wells = Object.keys(state.wells).filter(id => state[field]?.[id]);
+    if (!wells.length) continue;
+    y += 45;
+    body.push(`<text x="48" y="${y}" font-size="20" font-weight="600">${heading}</text>`);
+    y += 28;
+    for (const id of wells) {
+      const lines = wrapText(state[field][id], 1024, 16);
+      body.push(`<text x="48" y="${y}" font-size="16" font-weight="600">${id}</text>`);
+      for (const line of lines) {
+        body.push(`<text x="110" y="${y}" font-size="16">${escapeXml(line)}</text>`);
+        y += 23;
+      }
+      y += 4;
+    }
   }
   const height = Math.ceil(y + 67);
   body.push(`<text x="48" y="${height - 28}" font-size="12" fill="#8a9ca5">Plate Layout Designer · blackblues.xyz</text>`);

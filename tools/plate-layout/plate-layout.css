@@ -111,6 +111,9 @@ input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 input[type="color"]::-webkit-color-swatch { border: 1px solid #00000015; border-radius: 5px; }
 #autoColor { background: none; border: none; padding: 4px 0; color: var(--green-dark); font-size: 12px; margin-left: auto; }
 #clearLabels { margin-top: 8px; }
+.well-field-hint { margin: 6px 0 12px; }
+.well-field-actions { margin-top: 8px; flex-wrap: wrap; }
+.well-field-actions > button { flex: 1; }
 .label-library { display: grid; gap: 6px; max-height: 340px; overflow: auto; }
 .library-row { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 7px; }
 .library-row.is-active { border-color: #86ad9c; background: #f5f9f6; }
