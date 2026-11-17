@@ -82,6 +82,10 @@
             <div class="section-heading"><h2>给选中孔位打标签</h2><strong id="selectionCount" class="selection-count">0 个孔位</strong></div>
             <div id="selectionList" class="selection-list" aria-label="选中的孔位"></div>
             <button id="clearSelection" class="selection-clear" type="button">取消当前选择</button>
+            <div class="personal-library-launch">
+              <button id="openPersonalLibrary" class="button secondary" type="button">个人标签库</button>
+              <span id="personalLibrarySummary" class="secondary-text" aria-live="polite"></span>
+            </div>
             <form id="labelForm">
               <label for="labelName">主标签名称</label><input id="labelName" maxlength="160" placeholder="例如 OVA" autocomplete="off" required>
               <label for="labelColor">标签颜色 <span id="colorMode">自动推荐</span></label><div class="color-field"><input id="labelColor" type="color" value="#a9c9ed" aria-label="新标签颜色"><span id="colorHex">#A9C9ED</span><button id="autoColor" type="button" title="自动选择未使用的浅色">自动配色</button></div>
@@ -100,7 +104,7 @@
             <p id="editorHint" class="editor-hint">先在孔板上选择需要分组的孔位。</p>
           </section>
           <section class="panel labels-panel">
-            <div class="section-heading"><h2>已有标签</h2><span id="labelCount" class="small-stat">0</span></div>
+            <div class="section-heading"><h2>方案标签</h2><span id="labelCount" class="small-stat">0</span></div>
             <div id="labelLibrary" class="label-library"></div>
           </section>
         </aside>
@@ -108,6 +112,28 @@
       <footer class="workspace-footer"><a href="../../">返回导航站 ↗</a><span>方案保存在当前浏览器</span></footer>
     </div>
     <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <dialog id="personalLibraryDialog" aria-labelledby="personalLibraryHeading">
+      <header class="section-heading">
+        <h2 id="personalLibraryHeading">个人主标签库</h2>
+        <button id="closePersonalLibrary" class="button subtle" type="button">关闭</button>
+      </header>
+      <div class="personal-library-status">
+        <p id="personalLibraryStatus" class="editor-hint" role="status"></p>
+        <button id="refreshPersonalLibrary" class="button subtle" type="button">同步</button>
+      </div>
+      <form id="personalLabelForm" class="personal-label-form">
+        <label>标签名称<input id="personalLabelName" maxlength="160" required></label>
+        <label>颜色<input id="personalLabelColor" type="color" value="#a9c9ed"></label>
+        <label>分类<select id="personalLabelGroup"><option value="">未分类</option></select></label>
+        <button class="button primary" type="submit">加入标签库</button>
+      </form>
+      <div class="personal-library-tools">
+        <label>搜索标签<input id="personalLabelSearch" type="search" placeholder="输入标签名称"></label>
+        <form id="personalGroupForm"><label>新分类<input id="personalGroupName" maxlength="60" required></label><button class="button subtle" type="submit">新建分类</button></form>
+      </div>
+      <p class="editor-hint">拖动标签到分类，或用标签旁的下拉框移动。点击标签名称可将它应用到已选孔位。</p>
+      <div id="personalLibraryGroups"></div>
+    </dialog>
     <input id="jsonInput" type="file" accept=".json,application/json" hidden>
     <dialog id="importDialog"><h2>确认导入原始方案</h2><p id="importSummary"></p><p id="importProtection"></p><p id="importChanges"></p><button id="downloadBeforeImport" class="button secondary">下载当前方案备份</button><button id="downloadImportOriginal" class="button secondary">下载待导入原文</button><button id="downloadImportNormalized" class="button secondary">下载规范化预览</button><button id="confirmImport" class="button primary">确认导入规范化方案</button><button id="cancelImport" class="button secondary">取消</button></dialog>
     <noscript><p class="noscript">请启用 JavaScript 以使用孔板设计和图片导出功能。</p></noscript>

@@ -6,6 +6,7 @@ import {
 import {prepareImport,backupBeforeImport,readImportBackup} from './files.mjs';
 import {acquireDraftGuard} from '../../assets/js/draft-lock.mjs';
 import {mountDocumentManager} from '../../assets/js/account/document-manager.mjs';
+import {mountLabelLibrary} from './label-library-panel.mjs';
 
 const STORAGE_KEY = 'blackblues.plate-layout.v1';
 const elements = Object.fromEntries([
@@ -56,6 +57,7 @@ let exporting = false;
 let noticeTimer;
 let pendingImport = null;
 let cloudDocuments = null;
+let accountLibrary = null;
 const wellFieldContexts = new Map();
 
 function notify(message) {
@@ -116,10 +118,14 @@ function change(mutator, message = '', action = '') {
 function suggestColor() {
   const name = cleanText(elements.labelName.value).toLowerCase();
   const existing = state.labels.find(label => label.name.toLowerCase() === name);
+  const personal = name ? accountLibrary?.find(name) : null;
+  const colorConflict = personal && state.labels.some(label => label.color === personal.color);
   if (existing) elements.labelColor.value = existing.color;
-  else if (!manualColor) elements.labelColor.value = nextColor(state.labels);
-  elements.labelColor.disabled = Boolean(existing);
-  elements.colorMode.textContent = existing ? '复用已有标签颜色' : manualColor ? '自定义颜色' : '自动推荐';
+  else if (personal && !colorConflict) elements.labelColor.value = personal.color;
+  else if (!manualColor || personal) elements.labelColor.value = accountLibrary?.suggest(state.labels) || nextColor(state.labels);
+  elements.labelColor.disabled = Boolean(existing || personal);
+  elements.colorMode.textContent = existing ? '沿用方案颜色' : colorConflict ? '库中颜色已占用，使用区分色'
+    : personal ? '沿用个人库颜色' : manualColor ? '自定义颜色' : '自动推荐';
   elements.colorHex.textContent = elements.labelColor.value.toUpperCase();
 }
 
@@ -171,12 +177,17 @@ function renderSelection() {
   elements.clearLabels.textContent = elements.clearWellNote.disabled ? '清除选中孔位的标签' : '清除选中孔位的标签和备注';
 }
 
-function applyWellLabels(name, color) {
-  assignLabel(state, name, color);
-  for (const field of wellFields) {
-    if (cleanText(field.input.value)) setWellText(state, field.key, state.ui.selected, field.input.value);
-  }
-  state.ui.selected = [];
+function applyWellLabels(name, color, message) {
+  let label;
+  const applied = change(() => {
+    label = assignLabel(state, name, color);
+    for (const field of wellFields) {
+      if (cleanText(field.input.value)) setWellText(state, field.key, state.ui.selected, field.input.value);
+    }
+    state.ui.selected = [];
+  }, message);
+  if (applied) accountLibrary?.remember(label);
+  return applied;
 }
 
 function renderLabels() {
@@ -415,9 +426,10 @@ for (const field of wellFields) {
 }
 elements.labelForm.addEventListener('submit', event => {
   event.preventDefault();
+  suggestColor();
   const name = elements.labelName.value;
   const color = elements.labelColor.value;
-  if (change(() => applyWellLabels(name, color), `已为 ${state.ui.selected.length} 个孔位应用标签，选择已清空。`)) {
+  if (applyWellLabels(name, color, `已为 ${state.ui.selected.length} 个孔位应用标签，选择已清空。`)) {
     elements.labelName.value = '';
     manualColor = false;
     suggestColor();
@@ -429,7 +441,7 @@ elements.labelLibrary.addEventListener('click', event => {
   if (applyId) {
     const label = state.labels.find(item => item.id === applyId);
     if (!state.ui.selected.length) { notify('请先选择孔位，再点击标签名称应用。'); return; }
-    change(() => applyWellLabels(label.name, label.color), '已应用已有主标签，选择已清空。');
+    applyWellLabels(label.name, label.color, '已应用已有主标签，选择已清空。');
   }
   const deleteId = event.target.closest('[data-delete-label]')?.dataset.deleteLabel;
   if (deleteId) {
@@ -457,7 +469,7 @@ function travelHistory(redo = false) {
 elements.undo.addEventListener('click', () => travelHistory());
 elements.redo.addEventListener('click', () => travelHistory(true));
 document.addEventListener('keydown', event => {
-  if ((!event.ctrlKey && !event.metaKey) || event.altKey || event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+  if ((!event.ctrlKey && !event.metaKey) || event.altKey || event.target.closest('input, textarea, select, [contenteditable="true"], #personalLibraryDialog')) return;
   if (event.key.toLowerCase() === 'z') { event.preventDefault(); travelHistory(event.shiftKey); }
   if (event.key.toLowerCase() === 'y') { event.preventDefault(); travelHistory(true); }
 });
@@ -640,3 +652,21 @@ cloudDocuments = mountDocumentManager({
   localRaw:()=>draftStorage.getItem(STORAGE_KEY),canImportLocal:()=>!restoreFailed,
   export:()=>{finishDrag();downloadJson(JSON.stringify(state,null,2),'plate-layout-v1.json');}
 });
+accountLibrary = mountLabelLibrary({
+  onChange: suggestColor,
+  onApply: label => {
+    elements.labelName.value = label.name;
+    manualColor = false;
+    suggestColor();
+    if (!state.ui.selected.length) {
+      notify('已选好标签，请选择孔位后应用。');
+      return true;
+    }
+    if (!applyWellLabels(label.name, elements.labelColor.value, '已应用个人库标签，选择已清空。')) return false;
+    elements.labelName.value = '';
+    suggestColor();
+    return true;
+  },
+  notify
+});
+suggestColor();

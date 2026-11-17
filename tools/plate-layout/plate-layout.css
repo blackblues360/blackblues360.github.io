@@ -122,6 +122,27 @@ input[type="color"]::-webkit-color-swatch { border: 1px solid #00000015; border-
 .label-usage { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .delete-label { background: none; border: none; color: #a0443f; font-size: 20px; padding: 4px; }
 .library-empty { color: var(--muted); font-size: 12px; text-align: center; }
+.personal-library-launch { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+#personalLibraryDialog { width: min(760px, 94vw); max-width: none; max-height: 88dvh; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: white; color: var(--ink); }
+#personalLibraryDialog::backdrop { background: #20343c66; }
+.personal-library-status, .personal-library-tools, .personal-label-form, #personalGroupForm { display: flex; align-items: end; flex-wrap: wrap; gap: 10px; }
+.personal-library-status { align-items: center; margin: 12px 0; }
+.personal-library-status p { flex: 1; margin: 0; }
+.personal-library-tools { margin-top: 16px; justify-content: space-between; }
+#personalLibraryDialog label { display: grid; gap: 5px; min-width: 0; font-size: 13px; }
+.personal-label-form > label:first-child, .personal-library-tools > label { flex: 1 1 145px; }
+.personal-label-form input[type="color"] { width: 38px; height: 38px; }
+#personalLibraryGroups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 10px; margin-top: 12px; }
+.personal-library-group { padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); min-width: 0; }
+.personal-library-group.is-drop-target { outline: 2px dashed var(--green); outline-offset: -3px; }
+.personal-library-group h3 { flex: 1; margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.personal-library-group .section-heading { flex-wrap: wrap; }
+.personal-library-group .button { font-size: 12px; padding: 4px 7px; min-height: 28px; }
+.personal-library-entry { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; margin-top: 8px; padding: 8px; background: white; border-radius: 7px; }
+.personal-library-entry select { grid-column: 3 / -1; }
+.personal-library-grip { cursor: grab; color: var(--muted); }
+.personal-library-entry .apply-existing { width: 100%; }
+.personal-library-entry .delete-label { line-height: 1; }
 .workspace-footer { display: flex; justify-content: space-between; gap: 12px; padding: 20px 0; color: var(--muted); font-size: 12px; }
 .notice { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); max-width: min(90vw,650px); background: #22463d; color: white; padding: 12px 18px; border-radius: 8px; font-size: 14px; line-height: 1.6; z-index: 30; }
 #importDialog { max-width: min(680px, 90vw); max-height: 85dvh; overflow: auto; border: 1px solid #cadbd5; border-radius: 12px; padding: 24px; line-height: 1.7; }
