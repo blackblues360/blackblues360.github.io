@@ -72,5 +72,5 @@ export function parseEventFields(type, module, input = {}) {
 }
 
 export function fieldLabel(event, key) {
-  return event.fieldSchema?.find(field=>field.key===key)?.label || ({value:'测量值',unit:'单位',from:'原位置',to:'新位置',operator:'操作人员'}[key]) || key;
+  return event.fieldSchema?.find(field=>field.key===key)?.label || ({value:'测量值',unit:'单位',from:'原位置',to:'新位置',operator:'操作人员',previousGenotype:'原基因型',previousConditions:'原培养条件'}[key]) || key;
 }
