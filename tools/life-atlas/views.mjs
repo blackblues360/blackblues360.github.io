@@ -1,8 +1,8 @@
-import {profileDetails} from './profiles.mjs?v=20261119.5';
-import {storageView} from './storage.mjs?v=20261119.5';
-import {studiesPage} from './studies.mjs?v=20261119.5';
-import {measurementsPage} from './measurements.mjs?v=20261119.5';
-import {types,age,day,days,lifecycle,isCellReference} from './core.mjs?v=20261119.5';
+import {profileDetails} from './profiles.mjs?v=20261119.6';
+import {storageView} from './storage.mjs?v=20261119.6';
+import {studiesPage} from './studies.mjs?v=20261119.6';
+import {measurementsPage} from './measurements.mjs?v=20261119.6';
+import {types,age,day,days,lifecycle,isCellReference} from './core.mjs?v=20261119.6';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const name=(db,id)=>db.entities.find(e=>e.id===id)?.name||'未知实体';
 const stamp=v=>new Date(v).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false});
@@ -20,19 +20,26 @@ function lineageCanvas(db,e){
   const box=(v,x,y,current=false)=>`<g><rect x="${x}" y="${y-32}" width="180" height="66" rx="12" fill="${current?'#eeebff':'white'}" stroke="${current?'#6450df':'#d9ddec'}" stroke-width="${current?2.5:1.3}"/><circle cx="${x+19}" cy="${y-9}" r="6" fill="${v.status==='ended'?'#94a3b8':v.status==='stored'?'#0d9488':'#7c3aed'}"/><text x="${x+33}" y="${y-4}" fill="#25283c" font-size="14" font-weight="600">${esc(v.name.slice(0,17))}</text><text x="${x+18}" y="${y+20}" fill="#7a8298" font-size="12">${state(db,v)} · ${age(db,v.id)}</text></g>`;
   return `<div class="lineage-canvas"><svg viewBox="0 0 ${width} ${height}" style="min-width:650px;width:100%" aria-label="${esc(e.name)}来源与衍生图">${parents.map((v,i)=>`<path d="M200,${cy+i*80} C250,${cy+i*80} 240,${cy} ${rootX},${cy}" stroke="#6551df" stroke-width="2" fill="none"/>${box(v,20,cy+i*80)}`).join('')}${children.map((v,i)=>{const y=(i+1)*height/(children.length+1);return `<path d="M${rootX+180},${cy} C${rootX+290},${cy} 590,${y} 650,${y}" stroke="#6551df" stroke-width="2" fill="none"/>${box(v,650,y)}`;}).join('')}${box(e,rootX,cy,true)}</svg><div class="canvas-entity-links">${parents.map(v=>`<button data-focus="${v.id}">来源：${esc(v.name)}</button>`).join('')}${children.map(v=>`<button data-focus="${v.id}">进入 ${esc(v.name)}</button>`).join('')}</div></div>`;
 }
-function activeCellCards(db,selectedId,actions){
-  const cells=db.entities.filter(e=>{const l=lifecycle(db,e.id);return e.type==='cell'&&e.subtype!=='冻存管'&&e.status==='active'&&l?.startAt&&!l.endAt;});
-  return `<section class="culture-switcher" aria-label="正在培养的细胞"><div class="culture-heading"><h2>正在培养</h2><span>${cells.length} 个正在计时</span></div><div class="culture-row"><div class="culture-cards">${cells.map(e=>`<button class="culture-card ${e.id===selectedId?'active':''}" data-focus="${e.id}" aria-pressed="${e.id===selectedId}"><strong title="${esc(e.name)}">${esc(e.name)}</strong><b class="culture-day">${age(db,e.id)}</b><span class="culture-code">${esc(e.code)}</span><span class="culture-passage">P${e.passage}</span></button>`).join('')||'<p class="muted">暂无正在计时的培养实体。开始培养后，会在这里显示。</p>'}</div>${actions}</div></section>`;
+function entityCards(db,type,selectedId,actions){
+  const entities=db.entities.filter(e=>{
+    if(e.type!==type||e.status==='ended')return false;
+    const l=lifecycle(db,e.id);
+    if(type==='cell')return e.subtype!=='冻存管'&&e.status==='active'&&l?.startAt&&!l.endAt;
+    if(type==='mouse')return !l?.endAt;
+    return true;
+  });
+  const title={cell:'正在培养',sample:'可用样品',mouse:'在管小鼠'}[type],count={cell:'个正在计时',sample:'份可用',mouse:'只在管'}[type];
+  return `<section class="culture-switcher" aria-label="${title}"><div class="culture-heading"><h2>${title}</h2><span>${entities.length} ${count}</span></div><div class="culture-row"><div class="culture-cards">${entities.map(e=>`<button class="culture-card ${e.id===selectedId?'active':''}" data-focus="${e.id}" aria-pressed="${e.id===selectedId}"><strong title="${esc(e.name)}">${esc(e.name)}</strong><b class="culture-day">${age(db,e.id)}</b><span class="culture-code">${esc(e.code)}</span><span class="culture-passage">${type==='cell'?'P'+e.passage:e.status==='stored'?'保存中':type==='mouse'?'在管':'处理中'}</span></button>`).join('')||`<p class="muted">暂无${title}记录，历史记录可从“全部档案”查看。</p>`}</div>${actions}</div></section>`;
 }
 export function management(db,type,{selected,tab,filter,table,timeline,selectedStudy,measurementCohort,measurementType}){
-  const items=db.entities.filter(e=>e.type===type),e=items.find(e=>e.id===selected)||items.find(e=>e.status==='active'&&lifecycle(db,e.id)?.startAt&&!lifecycle(db,e.id)?.endAt)||items.find(e=>e.status==='active')||items[0];
+  const items=db.entities.filter(e=>e.type===type),e=items.find(e=>e.id===selected)||items.find(e=>e.status==='active'&&lifecycle(db,e.id)?.startAt&&!lifecycle(db,e.id)?.endAt)||items.find(e=>e.status==='active')||items.find(e=>e.status!=='ended')||items[0];
   const tabs=[['lifecycle','生命周期'],['events','事件列表'],['info','基本信息'],['related','关联样品'],['all','全部档案'],...(type==='mouse'?[['studies','实验项目与分组']]:[])];
   const actions=`<div class="actions">${type==='mouse'?'<button data-action="batch">批量记录</button>':''}<button data-action="create">新建${types[type]}</button>${e?`<button class="primary" data-record="${e.id}" ${isCellReference(db,e)?'disabled':''}>新建事件</button>`:''}</div>`;
-  const header=(type==='cell'?activeCellCards(db,e?.id,actions):`<div class="module-toolbar"><select id="focusEntity" aria-label="选择实体"><option value="">选择研究实体</option>${items.map(v=>`<option value="${v.id}" ${v.id===e?.id?'selected':''}>${esc(v.name)} · ${esc(v.code)}</option>`).join('')}</select>${actions}</div>`)+`<div class="tabs">${tabs.map(([key,label])=>`<button data-page-tab="${key}" class="${tab===key?'active':''}">${label}</button>`).join('')}</div>`;
+  const header=entityCards(db,type,e?.id,actions)+`<div class="tabs">${tabs.map(([key,label])=>`<button data-page-tab="${key}" class="${tab===key?'active':''}">${label}</button>`).join('')}</div>`;
   if(tab==='studies'&&type==='mouse')return header+studiesPage(db,selectedStudy)+measurementsPage(db,{studyId:selectedStudy,cohortId:measurementCohort,eventType:measurementType});
   if(!e)return header+`<section class="card">${table([])}</section>`;
   const events=db.events.filter(v=>v.entityIds.includes(e.id)).sort((a,b)=>Date.parse(a.at)-Date.parse(b.at)),last=events.at(-1),l=lifecycle(db,e.id),children=db.relations.filter(r=>r.parentId===e.id);
-  if(tab==='all')return header+`<div class="toolbar"><input id="entityFilter" value="${esc(filter)}" placeholder="搜索名称、编号或位置"><button data-action="filter">筛选</button><button data-action="csv">导出 CSV</button></div><section class="card">${table(items.filter(v=>`${v.name} ${v.code} ${v.location}`.toLowerCase().includes(filter.toLowerCase())),type==='cell')}</section>`;
+  if(tab==='all')return header+`<div class="toolbar"><input id="entityFilter" value="${esc(filter)}" placeholder="搜索名称、编号或位置"><button data-action="filter">筛选</button><button data-action="csv">导出 CSV</button></div><section class="card">${table(items.filter(v=>`${v.name} ${v.code} ${v.location}`.toLowerCase().includes(filter.toLowerCase())),true)}</section>`;
   if(tab==='events')return header+eventList(db,events);
   if(tab==='info')return header+`<section class="card"><div class="card-body"><h2>${esc(e.name)}</h2>${[['实体编号',e.code],['类型',e.subtype],['获得时间',stamp(e.createdAt)],['生命周期起点',l.startAt?stamp(l.startAt):'未启动'],['位置',e.location||'未分配'],['状态',state(db,e)],...(type==='cell'&&!isCellReference(db,e)?[['传代次数','P'+e.passage]]:[])].map(([k,v])=>`<div class="field-line"><span>${k}</span><span>${esc(v)}</span></div>`).join('')}${profileDetails(db,e)}<button data-entity="${e.id}">查看完整档案</button></div></section>`;
   if(tab==='related')return header+`<section class="card">${table(db.entities.filter(v=>children.some(r=>r.childId===v.id)))}</section>`;
