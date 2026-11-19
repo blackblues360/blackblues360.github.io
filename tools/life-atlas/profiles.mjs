@@ -12,7 +12,7 @@ export function profileFields(type,subtype) {
     {key:'reference',label:'文献 / 来源文献'},{key:'establishedDate',label:'建立日期',type:'date'},
     {key:'defaultConditions',label:'默认培养条件',multiline:true},...common
   ];
-  if(type==='cell')return [{key:'conditions',label:'培养条件',multiline:true},{key:'container',label:'培养容器'},...common];
+  if(type==='cell')return [...(subtype==='冻存管'?[{key:'frozenDate',label:'实际冻存日期',type:'date'},{key:'cryoprotectant',label:'冻存液'}]:[]),{key:'conditions',label:'培养条件',multiline:true},{key:'container',label:'培养容器'},...common];
   return common;
 }
 export function parseProfile(type,subtype,input={},acquiredAt) {
@@ -41,11 +41,13 @@ export function animalAge(entity,at=new Date().toISOString()) {
   const days=Math.round((Date.parse(day(at))-Date.parse(birth))/86400000);
   return `${Math.floor(days/7)} 周 ${days%7} 天（${days} 天）`;
 }
+export const passageLabel=entity=>entity.passage===null?'P 未知':'P'+entity.passage;
 export function validateProfiles(db) {
   db.entities.forEach(e=>{
     if(e.attributes!==undefined)parseProfile(e.type,e.subtype,e.attributes,e.createdAt);
     if(e.cellLineId){required(e.type==='cell'&&e.subtype!=='细胞系','细胞系关联不适用于当前实体');cellLine(db,e.cellLineId);}
-    if(e.type==='cell')required(Number.isInteger(e.passage)&&e.passage>=0,'传代次数必须为非负整数');
+    if(e.type==='cell')required(e.passage===null||Number.isInteger(e.passage)&&e.passage>=0,'传代次数必须为非负整数或未知');
+    if(e.registrationKind!==undefined)required(e.registrationKind==='existing_stock'&&e.type==='cell'&&e.subtype==='冻存管'&&db.events.some(v=>v.type==='历史库存登记'&&v.entityIds[0]===e.id),'历史库存登记来源无效');
   });
   db.events.filter(e=>e.type==='档案修订').forEach(e=>{
     const entity=db.entities.find(v=>v.id===e.entityIds[0]);
@@ -58,6 +60,11 @@ export function validateProfiles(db) {
   db.events.forEach(e=>{
     if(e.profileSchema!==undefined)required(Array.isArray(e.profileSchema)&&e.profileSchema.every(f=>f&&typeof f.key==='string'&&typeof f.label==='string'),'档案字段快照无效');
     if(e.data.profile){const entity=db.entities.find(v=>v.id===e.entityIds[0]);required(entity&&typeof e.data.profile==='object'&&e.data.profile.attributes,'建档快照无效');parseProfile(entity.type,entity.subtype,e.data.profile.attributes,entity.createdAt);if(e.data.profile.cellLineId)cellLine(db,e.data.profile.cellLineId);}
+    if(e.type==='历史库存登记'){
+      const entity=db.entities.find(v=>v.id===e.entityIds[0]),snapshot=e.data.profile;
+      required(entity?.registrationKind==='existing_stock'&&snapshot&&(snapshot.passage===null||Number.isInteger(snapshot.passage)&&snapshot.passage>=0),'库存登记传代数快照无效');
+      required(snapshot.quantity===null?typeof snapshot.unit==='string'&&!snapshot.unit:Number.isFinite(snapshot.quantity)&&snapshot.quantity>0&&typeof snapshot.unit==='string'&&snapshot.unit.trim(),'库存登记数量快照无效');
+    }
   });
 }
 
@@ -75,7 +82,7 @@ export function profileValues(entity,formData) {
 export function profileDetails(db,entity) {
   const fields=profileFields(entity.type,entity.subtype),line=db.entities.find(e=>e.id===entity.cellLineId);
   const ended=db.lifecycles.filter(l=>l.entityId===entity.id).at(-1)?.endAt;
-  return `<div class="detail-section"><h3>基础档案</h3>${entity.type==='mouse'?`<div class="field-line"><span>${ended?'终点时年龄':'实际年龄'}</span><span>${esc(animalAge(entity,ended||new Date().toISOString()))}</span></div><p class="form-hint">出生日期用于年龄；入库日期用于管理生命周期 D0，两者分别保存。</p>`:''}${entity.type==='cell'&&entity.subtype!=='细胞系'?`<div class="field-line"><span>所属细胞系</span><span>${line?`<button data-entity="${line.id}">${esc(line.name)}</button>`:'尚未关联'}</span></div>`:''}${fields.map(field=>`<div class="field-line"><span>${field.label}</span><span style="white-space:pre-wrap">${esc(entity.attributes?.[field.key]||'未记录')}</span></div>`).join('')}<button data-edit-profile="${entity.id}">补充 / 修订档案</button>${entity.type==='cell'&&entity.subtype==='细胞系'?`<button data-create-batch="${entity.id}">创建关联培养批次</button>`:''}</div>`;
+  return `<div class="detail-section"><h3>基础档案</h3>${entity.registrationKind==='existing_stock'?'<p class="form-hint">已有冻存库存：获得时间为本次登记确认时间；实际冻存日期单独记录，未知历史不补造。</p>':''}${entity.type==='mouse'?`<div class="field-line"><span>${ended?'终点时年龄':'实际年龄'}</span><span>${esc(animalAge(entity,ended||new Date().toISOString()))}</span></div><p class="form-hint">出生日期用于年龄；入库日期用于管理生命周期 D0，两者分别保存。</p>`:''}${entity.type==='cell'&&entity.subtype!=='细胞系'?`<div class="field-line"><span>所属细胞系</span><span>${line?`<button data-entity="${line.id}">${esc(line.name)}</button>`:'尚未关联'}</span></div>`:''}${fields.map(field=>`<div class="field-line"><span>${field.label}</span><span style="white-space:pre-wrap">${esc(entity.attributes?.[field.key]||'未记录')}</span></div>`).join('')}<button data-edit-profile="${entity.id}">补充 / 修订档案</button>${entity.type==='cell'&&entity.subtype==='细胞系'?`<button data-create-batch="${entity.id}">创建关联培养批次</button>`:''}</div>`;
 }
 export function profileEventDetails(db,event) {
   const entity=db.entities.find(e=>e.id===event.entityIds[0]);if(!entity)return '';
@@ -85,5 +92,6 @@ export function profileEventDetails(db,event) {
   const lineName=id=>db.entities.find(e=>e.id===id)?.name||'未关联';
   const rows=schema.filter(f=>before?(before.attributes[f.key]||'')!==(after.attributes[f.key]||''):after.attributes[f.key]).map(f=>`<div class="field-line"><span>${esc(f.label)}</span><span style="white-space:pre-wrap">${before?esc(before.attributes[f.key]||'未记录')+' → ':''}${esc(after.attributes[f.key]||'未记录')}</span></div>`).join('');
   const line=before?before.cellLineId!==after.cellLineId:after.cellLineId;
-  return rows+(line?`<div class="field-line"><span>所属细胞系</span><span>${before?esc(lineName(before.cellLineId))+' → ':''}${esc(lineName(after.cellLineId))}</span></div>`:'')+(event.data.to?`<div class="field-line"><span>初始位置</span><span>${esc(event.data.to)}</span></div>`:'')||'<p class="muted">暂无已填写的基础字段</p>';
+  const stock=event.type==='历史库存登记'?`<p class="form-hint">本事件记录现有库存的登记确认，不代表今天进行了冻存。未知历史信息保留未知，位置从登记确认时间起跟踪。</p><div class="field-line"><span>登记时传代数</span><span>${after.passage===null?'未知':'P'+after.passage}</span></div><div class="field-line"><span>登记时每管数量</span><span>${after.quantity===null?'未知':esc(after.quantity+' '+after.unit)}</span></div>`:'';
+  return rows+stock+(line?`<div class="field-line"><span>所属细胞系</span><span>${before?esc(lineName(before.cellLineId))+' → ':''}${esc(lineName(after.cellLineId))}</span></div>`:'')+(event.data.to?`<div class="field-line"><span>初始位置</span><span>${esc(event.data.to)}</span></div>`:'')||'<p class="muted">暂无已填写的基础字段</p>';
 }

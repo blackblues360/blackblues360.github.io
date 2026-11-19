@@ -1,7 +1,7 @@
-import {parseEventFields} from './event-fields.mjs?v=20261119.6';
-import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261119.6';
-import {initializeStorage,addStorageBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261119.6';
-import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261119.6';
+import {parseEventFields} from './event-fields.mjs?v=20261119.7';
+import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261119.7';
+import {initializeStorage,addStorageBox,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261119.7';
+import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261119.7';
 export const types = {sample:'样品',cell:'细胞',mouse:'小鼠'};
 export const templates = {sample:['接收','处理','分装','冻存','解冻','提取','检测','转移','取出','归还','消耗','废弃'],cell:['培养','换液','传代','冻存','复苏','转移','取出','归还','废弃','质量检测','实验使用','终止培养'],mouse:['入库','转笼','基因分型','荷瘤','给药','细胞回输','体重测量','肿瘤测量','活检','终点取材','实际处置']};
 const uid = prefix => prefix+'-'+crypto.randomUUID();
@@ -21,9 +21,9 @@ function entity(db,input,at){
   const subtype=input.subtype||types[input.type],reference=input.type==='cell'&&subtype==='细胞系';
   required(!reference||!input.location,'细胞系为基础档案，请为具体批次或冻存管分配物理位置');
   const attributes=parseProfile(input.type,subtype,input.attributes,at);
-  if(input.type==='cell')required(Number.isInteger(Number(input.passage??0))&&Number(input.passage??0)>=0,'传代次数必须为非负整数');
+  if(input.type==='cell')required(input.passage===null||Number.isInteger(Number(input.passage??0))&&Number(input.passage??0)>=0,'传代次数必须为非负整数或未知');
   if(input.cellLineId){required(input.type==='cell'&&!reference,'只有培养批次和冻存管可以关联细胞系');const line=cellLine(db,input.cellLineId);if(!attributes.conditions)attributes.conditions=line.attributes?.defaultConditions||'';}
-  const e={id,code,name:input.name.trim(),type:input.type,subtype,status:reference?'active':input.dormant?'stored':'active',location:input.location||'',passage:Number(input.passage)||0,createdAt:at,attributes,...(input.cellLineId?{cellLineId:input.cellLineId}:{})};db.entities.push(e);
+  const e={id,code,name:input.name.trim(),type:input.type,subtype,status:reference?'active':input.dormant?'stored':'active',location:input.location||'',passage:input.passage===null?null:Number(input.passage)||0,createdAt:at,attributes,...(input.cellLineId?{cellLineId:input.cellLineId}:{})};db.entities.push(e);
   checkLocation(db,e,e.location);
   db.lifecycles.push({id:uid('LC'),entityId:id,acquiredAt:at,startAt:input.dormant||reference?null:at,countingStartedAt:input.dormant||reference?null:at,endAt:null,status:input.dormant||reference?'waiting':'active',sequence:1});return e;
 }
@@ -51,8 +51,19 @@ export function execute(original,command,actor='local'){
     for(const item of p.items)next=execute(next,{type:'event',key:command.key+':'+item.entityId,data:{...p,...item,eventType:p.eventType,batchId:command.key}},actor);
     return next;
   }
-  if(command.type==='entity'){
-    required(Date.parse(at)<=Date.now(),'获得时间不能在未来');const e=entity(db,p,at);db.events.push({id:uid('EV'),type:'建档',at,createdAt:now,actor,entityIds:[e.id],participants:[{entityId:e.id,role:'subject',lifecycleId:lifecycle(db,e.id).id}],outputIds:[],note:p.note||'',profileSchema:profileFields(e.type,e.subtype),data:{profile:{attributes:structuredClone(e.attributes),cellLineId:e.cellLineId||null}}});
+  if(['entity','inventory-register'].includes(command.type)){
+    const stock=command.type==='inventory-register';let input=p,quantity;
+    if(stock){
+      required(locationBox(db,p.location||'')?.kind==='cell','请选择已建档的细胞冻存盒和格位');
+      input={...p,type:'cell',subtype:'冻存管',dormant:true,passage:p.passage===undefined||p.passage===''?null:p.passage};
+      if(p.quantity!==undefined&&p.quantity!==null&&p.quantity!==''){
+        quantity=Number(p.quantity);required(Number.isFinite(quantity)&&quantity>0,'每管数量必须大于 0');
+        required(typeof p.unit==='string'&&p.unit.trim()&&p.unit.length<=40,'请填写数量单位');
+      }else required(!p.unit?.trim(),'填写单位时也需要填写每管数量');
+    }
+    required(Date.parse(at)<=Date.now(),'获得时间不能在未来');const e=entity(db,input,at);
+    if(stock){e.registrationKind='existing_stock';if(quantity!==undefined){e.quantity=quantity;e.unit=p.unit.trim();}}
+    db.events.push({id:uid('EV'),type:stock?'历史库存登记':'建档',at,createdAt:now,actor,idempotencyKey:command.key||null,entityIds:[e.id],participants:[{entityId:e.id,role:'subject',lifecycleId:lifecycle(db,e.id).id}],outputIds:[],note:p.note||'',profileSchema:profileFields(e.type,e.subtype),data:{profile:{attributes:structuredClone(e.attributes),cellLineId:e.cellLineId||null,...(stock?{passage:e.passage,quantity:quantity??null,unit:e.unit||''}:{})}}});
     if(e.location)Object.assign(db.events.at(-1).data,changeLocation(db,e,e.location,at,db.events.at(-1).id));
     if(e.cellLineId){const ev=db.events.at(-1);ev.entityIds.push(e.cellLineId);ev.outputIds.push(e.id);ev.participants.push({entityId:e.cellLineId,role:'source',lifecycleId:lifecycle(db,e.cellLineId).id});db.relations.push({parentId:e.cellLineId,childId:e.id,eventId:ev.id,relationType:'cell_line_origin'});}
   }else if(command.type==='profile-update'){
@@ -115,7 +126,7 @@ export function execute(original,command,actor='local'){
       for(let i=0;i<count;i++){
         const frozen=p.eventType==='冻存'||(p.eventType==='分装'&&p.longTerm),type=['活检','终点取材','提取'].includes(p.eventType)?'sample':e.type;
         const subtype=p.eventType==='冻存'?'冻存管':p.eventType==='复苏'||p.eventType==='传代'?'培养批次':p.eventType==='提取'?parsed.data.productSubtype:['活检','终点取材'].includes(p.eventType)?'组织':e.subtype;
-        const child=entity(db,{name:`${p.childName?.trim()||e.name+' · '+p.eventType}${count>1?' '+(i+1):''}`,type,subtype,dormant:frozen,passage:e.passage+(p.eventType==='传代'?1:0),...(type==='cell'?{cellLineId:e.cellLineId||(e.subtype==='细胞系'?e.id:undefined),attributes:{conditions:p.conditions||e.attributes?.conditions||e.attributes?.defaultConditions||'',container:p.container||e.attributes?.container||''}}:{})},at);
+        const child=entity(db,{name:`${p.childName?.trim()||e.name+' · '+p.eventType}${count>1?' '+(i+1):''}`,type,subtype,dormant:frozen,passage:e.passage===null?null:e.passage+(p.eventType==='传代'?1:0),...(type==='cell'?{cellLineId:e.cellLineId||(e.subtype==='细胞系'?e.id:undefined),attributes:{conditions:p.conditions||e.attributes?.conditions||e.attributes?.defaultConditions||'',container:p.container||e.attributes?.container||'',...(p.eventType==='冻存'?{frozenDate:day(at),cryoprotectant:parsed.data.cryoprotectant||''}:{})}}:{})},at);
         if(parsed.data.quantity!==undefined){child.quantity=parsed.data.quantity;child.unit=parsed.data.unit;}
         ev.outputIds.push(child.id);ev.entityIds.push(child.id);ev.participants.push({entityId:child.id,role:'output',lifecycleId:lifecycle(db,child.id).id});db.relations.push({parentId:e.id,childId:child.id,eventId:ev.id});
       }
@@ -135,7 +146,7 @@ export function execute(original,command,actor='local'){
     if(p.eventType==='冻存'&&e.type==='sample'){e.status='stored';l.endAt=at;l.status='ended';db.lifecycles.push({id:uid('LC'),entityId:e.id,acquiredAt:at,startAt:null,countingStartedAt:null,endAt:null,status:'waiting',sequence:db.lifecycles.filter(v=>v.entityId===e.id).length+1,sourceLifecycleId:l.id,sourceEventId:ev.id});}
     db.events.push(ev);if(p.planId)db.plans.find(x=>x.id===p.planId).eventId=ev.id;
   }else throw Error('不支持的操作');
-  db.revision++;db.audit.push({id:uid('LOG'),at:now,actor,action:command.type,objectId:['event','profile-update'].includes(command.type)?db.events.at(-1).id:command.type==='entity'?db.entities.at(-1).id:command.type==='plan-update'?p.planId:db.plans.at(-1).id,reason:p.reason||p.note||'',revision:db.revision});return db;
+  db.revision++;db.audit.push({id:uid('LOG'),at:now,actor,action:command.type,objectId:['event','profile-update'].includes(command.type)?db.events.at(-1).id:['entity','inventory-register'].includes(command.type)?db.entities.at(-1).id:command.type==='plan-update'?p.planId:db.plans.at(-1).id,reason:p.reason||p.note||'',revision:db.revision});return db;
 }
 export function validate(db){
   required(db?.version===1&&Number.isInteger(db.revision)&&db.revision>=0,'备份版本不受支持');
