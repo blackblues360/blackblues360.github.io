@@ -1,6 +1,6 @@
 # Life Atlas
 
-科研实体生命周期与谱系管理工具，当前为本地开发预览。需求与 UI 原件保存在 `docs/development/life-atlas/`，完整 V0.2 基线及实现边界见该目录下的 `implementation.md`。
+科研实体生命周期与谱系管理工具。开发预览已发布于 https://blackblues.xyz/tools/life-atlas/ 。当前版本包含项目分组、标签、多盒与位置历史。需求与 UI 原件保存在 `docs/development/life-atlas/`，完整 V0.2 基线及实现边界见该目录下的 `implementation.md`。
 
 从仓库根目录运行 `python scripts/serve.py --port 8765`，浏览器打开 `/tools/life-atlas/`。沿用网站登录服务；需已配置且有效的网站账户。无需额外安装或构建。
 
@@ -9,7 +9,7 @@
 验证：
 
 ```powershell
-node --test tools/life-atlas/tests/core.test.mjs tools/life-atlas/tests/workflows.test.mjs
+node --test tools/life-atlas/tests/core.test.mjs tools/life-atlas/tests/workflows.test.mjs tools/life-atlas/tests/studies.test.mjs tools/life-atlas/tests/storage.test.mjs
 node tools/life-atlas/tests/browser.cjs
 ```
 

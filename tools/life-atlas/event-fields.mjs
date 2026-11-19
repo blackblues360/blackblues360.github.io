@@ -31,6 +31,8 @@ export function eventFields(type, module) {
     '实验使用':[text('purpose','使用目的',true),number('usedQuantity','使用数量',true,Number.MIN_VALUE),text('unit','单位',true),select('allUsed','是否全部使用',['部分使用','全部使用']),number('remainingQuantity','剩余数量（部分使用必填）')],
     '消耗':[text('purpose','使用目的',true),number('usedQuantity','消耗数量',true,Number.MIN_VALUE),text('unit','单位',true),number('remainingQuantity','剩余数量',true)],
     '废弃':[text('reason','废弃原因',true)],
+    '取出':[text('reason','取出原因',true)],
+    '归还':[text('reason','归还说明')],
     '实际处置':[text('method','处置方式',true),text('reason','处置说明',true)]
   };
   return structuredClone(fields[type] || []);

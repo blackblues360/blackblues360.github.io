@@ -1,6 +1,8 @@
-import {parseEventFields} from './event-fields.mjs';
+import {parseEventFields} from './event-fields.mjs?v=20261119.2';
+import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261119.2';
+import {initializeStorage,addStorageBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261119.2';
 export const types = {sample:'样品',cell:'细胞',mouse:'小鼠'};
-export const templates = {sample:['接收','处理','分装','冻存','解冻','提取','检测','转移','消耗','废弃'],cell:['培养','换液','传代','冻存','复苏','转移','废弃','质量检测','实验使用','终止培养'],mouse:['入库','转笼','基因分型','荷瘤','给药','细胞回输','体重测量','肿瘤测量','活检','终点取材','实际处置']};
+export const templates = {sample:['接收','处理','分装','冻存','解冻','提取','检测','转移','取出','归还','消耗','废弃'],cell:['培养','换液','传代','冻存','复苏','转移','取出','归还','废弃','质量检测','实验使用','终止培养'],mouse:['入库','转笼','基因分型','荷瘤','给药','细胞回输','体重测量','肿瘤测量','活检','终点取材','实际处置']};
 const uid = prefix => prefix+'-'+crypto.randomUUID();
 export const empty = () => ({version:1,revision:0,entities:[],lifecycles:[],events:[],relations:[],plans:[],audit:[]});
 export function day(date){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(date));return `${p.find(x=>x.type==='year').value}-${p.find(x=>x.type==='month').value}-${p.find(x=>x.type==='day').value}`;}
@@ -14,14 +16,22 @@ function entity(db,input,at){
   required(types[input.type],'实体类型无效');required(input.name?.trim(),'请填写实体名称');validDate(at);
   const id=uid('ENT'),code=input.code?.trim()||`${{cell:'CL',sample:'SP',mouse:'MS'}[input.type]}-${String(db.entities.filter(e=>e.type===input.type).length+1).padStart(4,'0')}`;
   required(!db.entities.some(e=>e.code===code),'实体编号已存在');
-  required(!input.location||!db.entities.some(e=>e.status!=='ended'&&e.location===input.location&&input.location.startsWith('LN01/')),'存储位置已占用');
   const e={id,code,name:input.name.trim(),type:input.type,subtype:input.subtype||types[input.type],status:input.dormant?'stored':'active',location:input.location||'',passage:Number(input.passage)||0,createdAt:at};db.entities.push(e);
+  checkLocation(db,e,e.location);
   db.lifecycles.push({id:uid('LC'),entityId:id,acquiredAt:at,startAt:input.dormant?null:at,countingStartedAt:input.dormant?null:at,endAt:null,status:input.dormant?'waiting':'active',sequence:1});return e;
 }
 // Commands operate on a copy. A failed command never leaves partial entities or events.
 export function execute(original,command,actor='local'){
   const db=structuredClone(original),now=new Date().toISOString(),p=command.data||{},at=p.at||now;validDate(at);
   if(command.key&&db.events.some(e=>e.idempotencyKey===command.key))return original;
+  initializeStorage(db);
+  if(command.type==='storage-box'){
+    const box=addStorageBox(db,p,at,actor);db.revision++;db.audit.push({id:uid('LOG'),at:now,actor,action:'storage-box',objectId:box.id,revision:db.revision});return db;
+  }
+  if(['study','cohort','membership','tag'].includes(command.type)){
+    const objectId=applyStudyCommand(db,command.type,p,at,actor);db.revision++;
+    db.audit.push({id:uid('LOG'),at:now,actor,action:command.type,objectId,reason:p.reason||'',revision:db.revision});return db;
+  }
   if(command.type==='batch'){
     required(command.key,'批量操作必须提供幂等键');
     required(Array.isArray(p.items)&&p.items.length>0&&p.items.length<=100,'批量记录数量必须为 1–100');
@@ -36,6 +46,7 @@ export function execute(original,command,actor='local'){
   }
   if(command.type==='entity'){
     required(Date.parse(at)<=Date.now(),'获得时间不能在未来');const e=entity(db,p,at);db.events.push({id:uid('EV'),type:'建档',at,createdAt:now,actor,entityIds:[e.id],participants:[{entityId:e.id,role:'subject',lifecycleId:lifecycle(db,e.id).id}],outputIds:[],note:p.note||'',data:{}});
+    if(e.location)db.events.at(-1).data=changeLocation(db,e,e.location,at,db.events.at(-1).id);
   }else if(command.type==='plan'){
     required(p.name?.trim(),'请填写计划名称');const target=db.entities.find(e=>e.id===p.entityId);required(target,'请选择关联实体');required(!p.eventType||templates[target.type].includes(p.eventType),'计划事件类型无效');db.plans.push({id:uid('PL'),name:p.name.trim(),entityId:p.entityId,eventType:p.eventType||null,scheduledAt:at,status:'pending',createdAt:now});
   }else if(command.type==='plan-update'){
@@ -51,17 +62,21 @@ export function execute(original,command,actor='local'){
   }else if(command.type==='event'){
     const e=db.entities.find(e=>e.id===p.entityId);required(e,'实体不存在');let l=lifecycle(db,e.id);required(p.eventType,'请选择事件类型');
     required(p.eventType==='修正记录'||p.eventType==='启动计时'||templates[e.type].includes(p.eventType),'事件类型与实体不匹配');
-    required(e.subtype!=='冻存管'||['复苏','转移','废弃','修正记录'].includes(p.eventType),'冻存管只能复苏、转移或废弃');
+    required(e.subtype!=='冻存管'||['复苏','转移','取出','归还','废弃','修正记录'].includes(p.eventType),'冻存管只能复苏、转移、取出、归还或废弃');
     if(e.type==='sample'&&e.status==='stored'&&p.eventType==='解冻'){required(Date.parse(at)>=Date.parse(l.endAt||l.acquiredAt||e.createdAt),'解冻不能早于冻存');const source=l;l.endAt=l.endAt||at;l.status='ended';l={id:uid('LC'),entityId:e.id,acquiredAt:e.createdAt,startAt:at,countingStartedAt:at,endAt:null,status:'active',sequence:db.lifecycles.filter(v=>v.entityId===e.id).length+1,sourceLifecycleId:source.id,sourceEventId:db.relations.find(r=>r.childId===e.id)?.eventId||null};db.lifecycles.push(l);e.status='active';}
     const correction=p.eventType==='修正记录';
     if(correction){required(db.events.some(v=>v.id===p.correctedFrom&&v.entityIds.includes(e.id)),'请选择被修正的事件');required(p.note?.trim(),'修正必须说明原因与更正内容');}
     else{required(!l.endAt,'该生命周期已结束，请进入衍生实体继续记录');required(!l.startAt||Date.parse(at)>=Date.parse(l.startAt),'事件不能早于生命周期起点');const latest=db.events.filter(v=>v.entityIds.includes(e.id)&&v.type!=='修正记录').sort((a,b)=>Date.parse(b.at)-Date.parse(a.at))[0];required(!latest||Date.parse(at)>=Date.parse(latest.at),'首版请按时间顺序追加事件');required(Date.parse(at)<=Date.now(),'未来操作请创建计划');}
     if(p.planId){const plan=db.plans.find(x=>x.id===p.planId);required(plan&&plan.entityId===e.id&&['pending','postponed'].includes(plan.status),'计划无效或已完成');required(!plan.eventType||plan.eventType===p.eventType,'执行事件与计划模板不一致');required(!correction,'修正记录不能完成实验计划');plan.status='completed';}
     const parsed=parseEventFields(p.eventType,e.type,p);
+    const membership=p.studyId?membershipAt(db,e.id,p.studyId,at):null;
+    if(p.studyId)required(membership&&(!p.cohortId||membership.cohortId===p.cohortId),'操作发生时该小鼠不属于所选项目分组');
     const ev={id:uid('EV'),type:p.eventType,at,createdAt:now,actor,idempotencyKey:command.key||null,batchId:p.batchId||null,templateVersion:'preset-v2',fieldSchema:parsed.schema,timePrecision:'minute',timezone:'Asia/Shanghai',entityIds:[e.id],participants:[{entityId:e.id,role:'subject',lifecycleId:l.id}],outputIds:[],note:p.note||'',correctedFrom:p.correctedFrom||null,planId:p.planId||null,data:{...parsed.data,...(p.operator?{operator:String(p.operator).trim()}: {})}};
+    if(membership){ev.studyId=membership.studyId;ev.cohortId=membership.cohortId;}
     if(p.relatedId){required(db.entities.some(x=>x.id===p.relatedId),'关联实体不存在');if(p.relatedId!==e.id){ev.entityIds.push(p.relatedId);ev.participants.push({entityId:p.relatedId,role:'input',lifecycleId:lifecycle(db,p.relatedId).id});}}
     if(['荷瘤','细胞回输'].includes(p.eventType))required(db.entities.some(v=>v.id===p.relatedId&&v.type==='cell'&&v.subtype==='培养批次'),'请选择来源细胞培养批次');
-    if(['转移','转笼'].includes(p.eventType)){required(p.location?.trim(),'请填写新位置');required(!p.location.startsWith('LN01/')||!db.entities.some(v=>v.id!==e.id&&v.status!=='ended'&&v.location===p.location.trim()),'存储位置已占用');Object.assign(ev.data,{from:e.location,to:p.location.trim()});e.location=p.location.trim();}
+    if(['转移','转笼','归还'].includes(p.eventType)){required(p.location?.trim(),'请填写新位置');Object.assign(ev.data,changeLocation(db,e,p.location.trim(),at,ev.id));}
+    if(p.eventType==='取出'){required(e.location,'实体当前没有可取出的位置');Object.assign(ev.data,changeLocation(db,e,'',at,ev.id));}
     if(p.eventType==='启动计时'){required(!l.startAt,'计时已经启动');if(e.type==='sample'){const source=l;l.endAt=at;l.status='ended';l={id:uid('LC'),entityId:e.id,acquiredAt:source.acquiredAt||e.createdAt,startAt:at,countingStartedAt:at,endAt:null,status:'active',sequence:db.lifecycles.filter(v=>v.entityId===e.id).length+1,sourceLifecycleId:source.id,sourceEventId:db.relations.find(r=>r.childId===e.id)?.eventId||null};db.lifecycles.push(l);}else{l.startAt=at;l.countingStartedAt=at;l.status='active';}ev.participants[0].lifecycleId=l.id;e.status='active';}
     let branch=['传代','分装','提取','活检','终点取材','复苏'].includes(p.eventType)||(p.eventType==='冻存'&&e.type==='cell');
     if(branch){
@@ -94,7 +109,10 @@ export function execute(original,command,actor='local'){
     }
     if(p.eventType==='实验使用'&&parsed.data.allUsed==='全部使用'){e.quantity=0;e.unit=parsed.data.unit;}
     if(['实验使用','消耗'].includes(p.eventType)&&parsed.data.remainingQuantity!==undefined){e.quantity=parsed.data.remainingQuantity;e.unit=parsed.data.unit;}
-    if(!correction&&(p.eventType==='复苏'||p.eventType==='冻存'&&e.type==='cell'||['终止培养','废弃','实际处置'].includes(p.eventType)||usedUp||branch&&p.keepParent===false&&!['活检','终点取材'].includes(p.eventType))){l.endAt=at;l.status='ended';e.status='ended';if(p.eventType==='复苏'){ev.data.from=e.location;e.location='';}}
+    if(!correction&&(p.eventType==='复苏'||p.eventType==='冻存'&&e.type==='cell'||['终止培养','废弃','实际处置'].includes(p.eventType)||usedUp||branch&&p.keepParent===false&&!['活检','终点取材'].includes(p.eventType))){
+      if(e.location)Object.assign(ev.data,changeLocation(db,e,'',at,ev.id));l.endAt=at;l.status='ended';e.status='ended';
+    }
+    if(!correction&&e.type==='sample'&&['启动计时','解冻'].includes(p.eventType)&&e.location)Object.assign(ev.data,changeLocation(db,e,'',at,ev.id));
     if(p.eventType==='冻存'&&e.type==='sample'){e.status='stored';l.endAt=at;l.status='ended';db.lifecycles.push({id:uid('LC'),entityId:e.id,acquiredAt:at,startAt:null,countingStartedAt:null,endAt:null,status:'waiting',sequence:db.lifecycles.filter(v=>v.entityId===e.id).length+1,sourceLifecycleId:l.id,sourceEventId:ev.id});}
     db.events.push(ev);if(p.planId)db.plans.find(x=>x.id===p.planId).eventId=ev.id;
   }else throw Error('不支持的操作');
@@ -110,6 +128,8 @@ export function validate(db){
   db.lifecycles.forEach(l=>{required(ids.has(l.entityId),'生命周期关联无效');if(l.startAt)validDate(l.startAt);if(l.endAt)validDate(l.endAt);required(!l.startAt||!l.endAt||Date.parse(l.endAt)>=Date.parse(l.startAt),'生命周期时间无效');});
   db.events.forEach(e=>{required(typeof e.type==='string'&&typeof e.note==='string'&&e.data&&typeof e.data==='object'&&Array.isArray(e.entityIds)&&e.entityIds.length>0&&e.entityIds.every(id=>ids.has(id))&&Array.isArray(e.outputIds)&&e.outputIds.every(id=>e.entityIds.includes(id)),'事件关联无效');validDate(e.at);required(!e.correctedFrom||events.has(e.correctedFrom),'修正关联无效');if(e.participants)required(Array.isArray(e.participants)&&e.participants.every(p=>e.entityIds.includes(p.entityId)&&['subject','input','output','source','recipient'].includes(p.role)&&db.lifecycles.some(l=>l.id===p.lifecycleId&&l.entityId===p.entityId)),'事件参与角色无效');});
   db.events.forEach(e=>{if(e.fieldSchema!==undefined)required(Array.isArray(e.fieldSchema)&&e.fieldSchema.every(f=>f&&typeof f.key==='string'&&typeof f.label==='string'&&['text','number','select'].includes(f.type)),'事件字段快照格式无效');});
+  validateStudies(db);
+  validateStorage(db);
   db.relations.forEach(r=>required(ids.has(r.parentId)&&ids.has(r.childId)&&r.parentId!==r.childId&&db.events.some(e=>e.id===r.eventId&&e.entityIds.includes(r.parentId)&&e.outputIds.includes(r.childId)),'谱系关联无效'));
   const visited=new Set(),active=new Set();function visit(id){required(!active.has(id),'谱系存在环');if(visited.has(id))return;active.add(id);db.relations.filter(r=>r.parentId===id).forEach(r=>visit(r.childId));active.delete(id);visited.add(id);}ids.forEach(visit);
   db.plans.forEach(p=>{required(ids.has(p.entityId)&&typeof p.name==='string'&&['pending','completed','cancelled','delayed','postponed'].includes(p.status),'计划关联无效');validDate(p.scheduledAt);if(p.nextAt)validDate(p.nextAt);if(p.history){required(Array.isArray(p.history),'计划历史格式无效');p.history.forEach(h=>{validDate(h.at);validDate(h.from);if(h.to)validDate(h.to);required(['postpone','cancel'].includes(h.action)&&typeof h.reason==='string'&&h.reason.trim(),'计划变更历史无效');});}required(p.status!=='completed'||db.events.some(e=>e.id===p.eventId&&e.planId===p.id),'完成计划缺少实际事件');});return db;
