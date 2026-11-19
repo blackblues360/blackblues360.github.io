@@ -6,6 +6,12 @@
       "icon": "wrench",
       "links": [
         {
+          "name": "Life Atlas",
+          "url": "tools/life-atlas/",
+          "iconUrl": "tools/life-atlas/icon.svg",
+          "description": "科研实体生命周期与谱系管理"
+        },
+        {
           "name": "孔板铺板设计器",
           "url": "tools/plate-layout/",
           "iconUrl": "tools/plate-layout/icon.png",
