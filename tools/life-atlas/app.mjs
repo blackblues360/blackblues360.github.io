@@ -1,14 +1,15 @@
-import {profileInputs,profileValues,profileDetails,profileEventDetails,passageLabel} from './profiles.mjs?v=20261120.4';
-import {storageBoxes,locationBox,locationHistory} from './storage.mjs?v=20261120.4';
-import {inventoryColumns,parseInventoryTable,suggestInventoryMapping,previewInventoryImport,inventoryTemplate} from './inventory-import.mjs?v=20261120.4';
-import {membershipAt} from './studies.mjs?v=20261120.4';
-import {cohortMeasurements,measurementCSV} from './measurements.mjs?v=20261120.4';
-import {eventFields,fieldLabel} from './event-fields.mjs?v=20261120.4';
-import {home,management as modulePage,eventsPage,storagePage,settingsPage,calendarPage} from './views.mjs?v=20261120.4';
-import {types,templates,empty,execute,day,days,age,eventAge,lifecycle,isCellReference,validate,demo} from './core.mjs?v=20261120.4';
-import {load,save} from './store.mjs?v=20261120.4';
-import {renderEntityReport,reportScopes} from './reports.mjs?v=20261120.4';
-import {storageInventoryCSV,renderStorageReport} from './storage-export.mjs?v=20261120.4';
+import {profileInputs,profileValues,profileDetails,profileEventDetails,passageLabel} from './profiles.mjs?v=20261120.5';
+import {storageBoxes,locationBox,locationHistory} from './storage.mjs?v=20261120.5';
+import {inventoryColumns,parseInventoryTable,suggestInventoryMapping,previewInventoryImport,inventoryTemplate} from './inventory-import.mjs?v=20261120.5';
+import {membershipAt} from './studies.mjs?v=20261120.5';
+import {cohortMeasurements,measurementCSV} from './measurements.mjs?v=20261120.5';
+import {eventFields,fieldLabel} from './event-fields.mjs?v=20261120.5';
+import {home,management as modulePage,eventsPage,storagePage,settingsPage,calendarPage} from './views.mjs?v=20261120.5';
+import {types,templates,empty,execute,day,days,age,eventAge,lifecycle,isCellReference,validate,demo} from './core.mjs?v=20261120.5';
+import {load,save} from './store.mjs?v=20261120.5';
+import {renderEntityReport,reportScopes} from './reports.mjs?v=20261120.5';
+import {storageInventoryCSV,renderStorageReport} from './storage-export.mjs?v=20261120.5';
+import {studyMembershipCSV,renderStudyReport} from './study-export.mjs?v=20261120.5';
 import {currentAccount,observeAccount} from '../../assets/js/account/client.mjs';
 const owner=currentAccount().user?.id;if(!owner)throw Error('请先登录');
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -286,7 +287,26 @@ function storageAction(action,presetLocation=null,kind=null) {
     <datalist id="storagePositions">${boxes.map(box=>`<option value="${esc(box.path)}/A1">${esc(box.name)}</option>`).join('')}</datalist>
     <label>实际时间<input name="at" type="datetime-local" required value="${localTime()}"></label><label>原因 / 备注<textarea name="note" maxlength="2000"></textarea></label><p class="form-hint">完整位置格式为“盒路径/坐标”，如 ${esc(boxes[0].path)}/A1。保存时再次校验规格、类型和占用。</p>`,async p=>commit({type:'event',data:{...p,eventType:'转移',at:p.at+'+08:00'}}));
 }
+function exportStudy(studyId){
+  if(currentAccount().user?.id!==owner||storageFailed)throw Error('请先确认登录和本地数据读取状态');
+  const study=(db.studies||[]).find(s=>s.id===studyId);if(!study)throw Error('实验项目不存在');
+  const cohorts=(db.cohorts||[]).filter(c=>c.studyId===studyId),cohortId=cohorts.some(c=>c.id===measurementCohort)?measurementCohort:'';
+  form('导出实验项目',`<p>${esc(study.name)}</p><label>历史分组范围<select name="cohortId"><option value="">项目全部分组</option>${options(cohorts,cohortId)}</select></label><label>导出格式<select name="format" id="studyExportFormat"><option value="pdf">项目报告 / 保存为 PDF</option><option value="csv">成员与分组 CSV</option></select></label><label><input type="checkbox" name="includeHistory" checked> 成员清单包含退出与转组历史</label><label><input type="checkbox" name="includeNotes"> 包含项目说明、变更原因与事件备注</label><div id="studyReportOptions"><label><input type="checkbox" name="includeMeasurements" checked> 包含体重与肿瘤测量图表</label><label><input type="checkbox" name="includeEvents" checked> 包含实际事件与追加修正明细</label></div><p class="muted">事件和测量按发生时的成员有效期归组，当前 / 历史成员清单的选择不改变事件范围。追加修正随原事件保留，不重算原值。PDF 在预览后通过浏览器打印保存。</p>`,async p=>{
+    if(currentAccount().user?.id!==owner)throw Error('登录状态已变化，请刷新后重试');
+    if(!['pdf','csv'].includes(p.format))throw Error('导出格式不受支持');
+    const settings={studyId,cohortId:p.cohortId,includeHistory:!!p.includeHistory,includeNotes:!!p.includeNotes,includeMeasurements:!!p.includeMeasurements,includeEvents:!!p.includeEvents,workspace:demoMode?'演示研究空间':'我的研究空间'};
+    if(p.format==='csv'){
+      download(studyMembershipCSV(db,settings),`life-atlas-study-members-${day(new Date())}${demoMode?'-demo':''}.csv`,'text/csv;charset=utf-8');
+      $('#drawer').hidden=true;toast('已导出项目成员与分组清单');return;
+    }
+    const html=renderStudyReport(db,settings);reportFocus=document.querySelector(`[data-study-action="export"][data-study-id="${studyId}"]`);$('#drawer').hidden=true;
+    $('#reportContent').innerHTML=html;$('#reportPreview').hidden=false;document.body.classList.add('printing-report');$('#printReport').focus();
+  });
+  const update=()=>{const csv=$('#studyExportFormat').value==='csv';$('#studyReportOptions').hidden=csv;$('#editor [type="submit"]').textContent=csv?'导出 CSV':'预览报告';};
+  $('#studyExportFormat').onchange=update;update();
+}
 function studyAction(action,studyId) {
+  if(action==='export'){exportStudy(studyId);return;}
   if(action==='create'){form('新建实验项目','<label>项目名称<input name="name" required maxlength="120"></label><label>项目说明<textarea name="description" maxlength="2000"></textarea></label>',async p=>commit({type:'study',data:p}));return;}
   if(action==='cohort'){form('新建项目分组','<label>分组名称<input name="name" required maxlength="120"></label>',async p=>commit({type:'cohort',data:{...p,studyId}}));return;}
   const mice=db.entities.filter(e=>e.type==='mouse');
@@ -308,7 +328,7 @@ if(b.dataset.storageAction){storageAction(b.dataset.storageAction,b.dataset.stoc
 if(b.dataset.withdraw){record(b.dataset.withdraw,null,'取出');return;}
 if(b.dataset.slot){const box=storageBoxes(db).find(box=>box.id===(b.dataset.boxId||selectedStorageBox))||storageBoxes(db)[0];storageAction('move',box.path+'/'+b.dataset.slot,box.kind);return;}
 
-const action=b.dataset.action;if(action==='exportMeasurements'){const study=(db.studies||[]).find(s=>s.id===selectedStudy)||(db.studies||[])[0];const rows=cohortMeasurements(db,{studyId:study?.id,cohortId:measurementCohort,eventType:measurementType});if(rows.length)download(measurementCSV(rows),'life-atlas-measurements.csv','text/csv;charset=utf-8');}if(action==='batch')batchRecord();if(action==='eventFilter'){eventQuery=$('#eventSearch').value;eventTypeFilter=$('#eventTypeFilter').value;render();}if(action==='density'){compact=!compact;render();}if(action==='clearSelection'){selectedEvents.clear();render();}if(action==='exportEvents'){const rows=db.events.filter(e=>selectedEvents.has(e.id));const csv=[['事件编号','事件类型','实际时间（含时区）','操作人员','模板版本','结构化字段 JSON','备注'],...rows.map(e=>[e.id,e.type,e.at,e.data.operator||e.actor,e.templateVersion||'',JSON.stringify(e.data),e.note])];download('\ufeff'+csv.map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n'),'life-atlas-events.csv','text/csv;charset=utf-8');toast('已导出 '+rows.length+' 个实际事件；计划不计为实际事件');}if(action==='create')create();if(action==='plan')plan();if(action==='demo'){demoMode=true;db=demo();render();$('#drawer').hidden=true;}if(action==='real'){const real=await load(owner);demoMode=false;db=real;render();$('#drawer').hidden=true;}if(action==='filter'){filter=$('#entityFilter').value;render();}if(action==='collapse'){collapsed=!collapsed;render();}if(action==='zoomIn'){zoom=Math.min(1.7,zoom+.1);render();}if(action==='zoomOut'){zoom=Math.max(.6,zoom-.1);render();}if(action==='zoomReset'){zoom=1;render();}if(action==='prev'){calendarOffset--;render();}if(action==='next'){calendarOffset++;render();}if(action==='today'){calendarOffset=0;render();}if(action==='export')download(JSON.stringify({format:'life-atlas-backup',exportedAt:new Date().toISOString(),data:db},null,2),`life-atlas-${day(new Date())}${demoMode?'-demo':''}.json`,'application/json');if(action==='csv'){const cell=v=>'"'+String(v??'').replaceAll('"','""').replace(/^[=+@-]/,"'$&")+'"';download('\ufeff'+[['编号','名称','类型','状态','位置'],...db.entities.filter(e=>e.type===view).map(e=>[e.code,e.name,e.subtype,e.status,e.location])].map(r=>r.map(cell).join(',')).join('\r\n'),'life-atlas-entities.csv','text/csv;charset=utf-8');}if(action==='import')$('#importFile').click();if(action==='snapshots'){const local=await import('./store.mjs?v=20261120.4');const all=demoMode?snapshots:await local.getSnapshots(owner);if(!all.length){toast('暂无恢复前保护快照');return;}download(JSON.stringify(all,null,2),'life-atlas-protection-snapshots.json','application/json');}
+const action=b.dataset.action;if(action==='exportMeasurements'){const study=(db.studies||[]).find(s=>s.id===selectedStudy)||(db.studies||[])[0];const rows=cohortMeasurements(db,{studyId:study?.id,cohortId:measurementCohort,eventType:measurementType});if(rows.length)download(measurementCSV(rows),'life-atlas-measurements.csv','text/csv;charset=utf-8');}if(action==='batch')batchRecord();if(action==='eventFilter'){eventQuery=$('#eventSearch').value;eventTypeFilter=$('#eventTypeFilter').value;render();}if(action==='density'){compact=!compact;render();}if(action==='clearSelection'){selectedEvents.clear();render();}if(action==='exportEvents'){const rows=db.events.filter(e=>selectedEvents.has(e.id));const csv=[['事件编号','事件类型','实际时间（含时区）','操作人员','模板版本','结构化字段 JSON','备注'],...rows.map(e=>[e.id,e.type,e.at,e.data.operator||e.actor,e.templateVersion||'',JSON.stringify(e.data),e.note])];download('\ufeff'+csv.map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n'),'life-atlas-events.csv','text/csv;charset=utf-8');toast('已导出 '+rows.length+' 个实际事件；计划不计为实际事件');}if(action==='create')create();if(action==='plan')plan();if(action==='demo'){demoMode=true;db=demo();render();$('#drawer').hidden=true;}if(action==='real'){const real=await load(owner);demoMode=false;db=real;render();$('#drawer').hidden=true;}if(action==='filter'){filter=$('#entityFilter').value;render();}if(action==='collapse'){collapsed=!collapsed;render();}if(action==='zoomIn'){zoom=Math.min(1.7,zoom+.1);render();}if(action==='zoomOut'){zoom=Math.max(.6,zoom-.1);render();}if(action==='zoomReset'){zoom=1;render();}if(action==='prev'){calendarOffset--;render();}if(action==='next'){calendarOffset++;render();}if(action==='today'){calendarOffset=0;render();}if(action==='export')download(JSON.stringify({format:'life-atlas-backup',exportedAt:new Date().toISOString(),data:db},null,2),`life-atlas-${day(new Date())}${demoMode?'-demo':''}.json`,'application/json');if(action==='csv'){const cell=v=>'"'+String(v??'').replaceAll('"','""').replace(/^[=+@-]/,"'$&")+'"';download('\ufeff'+[['编号','名称','类型','状态','位置'],...db.entities.filter(e=>e.type===view).map(e=>[e.code,e.name,e.subtype,e.status,e.location])].map(r=>r.map(cell).join(',')).join('\r\n'),'life-atlas-entities.csv','text/csv;charset=utf-8');}if(action==='import')$('#importFile').click();if(action==='snapshots'){const local=await import('./store.mjs?v=20261120.5');const all=demoMode?snapshots:await local.getSnapshots(owner);if(!all.length){toast('暂无恢复前保护快照');return;}download(JSON.stringify(all,null,2),'life-atlas-protection-snapshots.json','application/json');}
 }catch(error){toast(error.message);}});
 $('#quickCreate').onclick=()=>{if(view==='calendar'){plan();return;}if(view==='backup'){download(JSON.stringify({format:'life-atlas-backup',data:db},null,2),'life-atlas.json','application/json');return;}const items=db.entities.filter(e=>!isCellReference(db,e)&&(!types[view]||e.type===view));if(!items.length){create();return;}form('选择操作对象',`<label>关联实体<select name="entityId">${options(items)}</select></label>`,async p=>{record(p.entityId);});};
 document.addEventListener('click',event=>{
