@@ -1,7 +1,7 @@
-import {parseEventFields} from './event-fields.mjs?v=20261119.7';
-import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261119.7';
-import {initializeStorage,addStorageBox,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261119.7';
-import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261119.7';
+import {parseEventFields} from './event-fields.mjs?v=20261120.1';
+import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261120.1';
+import {initializeStorage,addStorageBox,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261120.1';
+import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261120.1';
 export const types = {sample:'样品',cell:'细胞',mouse:'小鼠'};
 export const templates = {sample:['接收','处理','分装','冻存','解冻','提取','检测','转移','取出','归还','消耗','废弃'],cell:['培养','换液','传代','冻存','复苏','转移','取出','归还','废弃','质量检测','实验使用','终止培养'],mouse:['入库','转笼','基因分型','荷瘤','给药','细胞回输','体重测量','肿瘤测量','活检','终点取材','实际处置']};
 const uid = prefix => prefix+'-'+crypto.randomUUID();
@@ -16,7 +16,8 @@ function required(value,message){if(!value)throw Error(message);}
 function validDate(value){required(value&&Number.isFinite(Date.parse(value)),'请输入有效时间');}
 function entity(db,input,at){
   required(types[input.type],'实体类型无效');required(input.name?.trim(),'请填写实体名称');validDate(at);
-  const id=uid('ENT'),code=input.code?.trim()||`${{cell:'CL',sample:'SP',mouse:'MS'}[input.type]}-${String(db.entities.filter(e=>e.type===input.type).length+1).padStart(4,'0')}`;
+  const id=uid('ENT');let code=input.code?.trim();
+  if(!code){let sequence=db.entities.filter(e=>e.type===input.type).length;do{sequence++;code=`${{cell:'CL',sample:'SP',mouse:'MS'}[input.type]}-${String(sequence).padStart(4,'0')}`;}while(db.entities.some(e=>e.code===code));}
   required(!db.entities.some(e=>e.code===code),'实体编号已存在');
   const subtype=input.subtype||types[input.type],reference=input.type==='cell'&&subtype==='细胞系';
   required(!reference||!input.location,'细胞系为基础档案，请为具体批次或冻存管分配物理位置');
@@ -38,6 +39,25 @@ export function execute(original,command,actor='local'){
   if(['study','cohort','membership','tag'].includes(command.type)){
     const objectId=applyStudyCommand(db,command.type,p,at,actor);db.revision++;
     db.audit.push({id:uid('LOG'),at:now,actor,action:command.type,objectId,reason:p.reason||'',revision:db.revision});return db;
+  }
+  if(command.type==='inventory-import'){
+    required(typeof command.key==='string'&&command.key&&command.key.length<=120,'批量导入必须提供有效幂等键');
+    required(Array.isArray(p.items)&&p.items.length>0&&p.items.length<=500,'每次必须新增 1–500 支冻存管');
+    required(p.items.every(item=>item&&Number.isInteger(item.sourceRow)&&item.sourceRow>=2&&item.data&&typeof item.data==='object'),'导入行数据无效');
+    required(new Set(p.items.map(item=>item.sourceRow)).size===p.items.length,'导入来源行重复');
+    const skippedRows=p.skippedRows||[],sourceName=p.sourceName||'粘贴表格';
+    required(Array.isArray(skippedRows)&&skippedRows.length<=500&&skippedRows.every(row=>Number.isInteger(row)&&row>=2)&&new Set(skippedRows).size===skippedRows.length&&!skippedRows.some(row=>p.items.some(item=>item.sourceRow===row)),'跳过行记录无效');
+    required(typeof sourceName==='string'&&sourceName.length<=200,'导入来源名称无效');
+    const request=JSON.stringify({items:p.items,skippedRows}),prior=db.audit.find(a=>a.action==='inventory-import'&&a.batchId===command.key);
+    if(prior){required(prior.request===request&&prior.sourceName===sourceName,'同一导入标识不能用于不同内容');return original;}
+    required(!db.events.some(e=>e.inventoryImportId===command.key),'已有不完整的同批导入记录，请检查备份');
+    required(!db.events.some(e=>p.items.some(item=>e.idempotencyKey===command.key+':'+item.sourceRow)),'导入行标识已被使用，请重新生成导入预览');
+    let next=db;
+    for(const item of p.items){
+      next=execute(next,{type:'inventory-register',key:command.key+':'+item.sourceRow,data:{...item.data,at}},actor);
+      Object.assign(next.events.at(-1),{inventoryImportId:command.key,inventorySourceRow:item.sourceRow,inventorySourceName:sourceName});
+    }
+    next.revision++;next.audit.push({id:uid('LOG'),at:now,actor,action:'inventory-import',objectId:command.key,batchId:command.key,count:p.items.length,skippedRows,sourceName,request,revision:next.revision});return next;
   }
   if(command.type==='batch'){
     required(command.key,'批量操作必须提供幂等键');

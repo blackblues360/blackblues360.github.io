@@ -1,11 +1,12 @@
-import {profileInputs,profileValues,profileDetails,profileEventDetails,passageLabel} from './profiles.mjs?v=20261119.7';
-import {storageBoxes,locationBox,locationHistory} from './storage.mjs?v=20261119.7';
-import {membershipAt} from './studies.mjs?v=20261119.7';
-import {cohortMeasurements,measurementCSV} from './measurements.mjs?v=20261119.7';
-import {eventFields,fieldLabel} from './event-fields.mjs?v=20261119.7';
-import {home,management as modulePage,eventsPage,storagePage,settingsPage,calendarPage} from './views.mjs?v=20261119.7';
-import {types,templates,empty,execute,day,days,age,eventAge,lifecycle,isCellReference,validate,demo} from './core.mjs?v=20261119.7';
-import {load,save} from './store.mjs?v=20261119.7';
+import {profileInputs,profileValues,profileDetails,profileEventDetails,passageLabel} from './profiles.mjs?v=20261120.1';
+import {storageBoxes,locationBox,locationHistory} from './storage.mjs?v=20261120.1';
+import {inventoryColumns,parseInventoryTable,suggestInventoryMapping,previewInventoryImport,inventoryTemplate} from './inventory-import.mjs?v=20261120.1';
+import {membershipAt} from './studies.mjs?v=20261120.1';
+import {cohortMeasurements,measurementCSV} from './measurements.mjs?v=20261120.1';
+import {eventFields,fieldLabel} from './event-fields.mjs?v=20261120.1';
+import {home,management as modulePage,eventsPage,storagePage,settingsPage,calendarPage} from './views.mjs?v=20261120.1';
+import {types,templates,empty,execute,day,days,age,eventAge,lifecycle,isCellReference,validate,demo} from './core.mjs?v=20261120.1';
+import {load,save} from './store.mjs?v=20261120.1';
 import {currentAccount} from '../../assets/js/account/client.mjs';
 const owner=currentAccount().user?.id;if(!owner)throw Error('请先登录');
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -144,6 +145,58 @@ function batchRecord() {
   $('#batchCohort').onchange=filterTargets;
   $('#batchEventType').onchange=update;update();$('#editor [type=submit]').textContent='校验并预览';
 }
+function inventoryImportRows(preview){
+  return `<div class="table-wrap"><table><thead><tr><th>源行</th><th>名称 / 管号</th><th>位置 / P 数</th><th>检查结果</th></tr></thead><tbody>${preview.rows.map(row=>`<tr class="inventory-import-row" data-result="${row.status}"><td>${row.sourceRow}</td><td>${esc(row.data?.name||'未解析')}<div class="code">${esc(row.code||row.data?.code||'自动编号')}</div></td><td>${esc(row.data?.location||'未解析')}<br>${row.data?passageLabel(row.data):''}</td><td>${row.status==='ready'?'待新增':row.status==='skip'?'跳过已有一致记录':esc(row.errors.join('；'))}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function importInventory(initial={}){
+  const boxes=storageBoxes(db).filter(box=>box.kind==='cell');if(!boxes.length){toast('请先建立细胞冻存盒');return;}
+  const boxId=initial.boxId||(boxes.find(box=>box.id===selectedStorageBox)||boxes[0]).id;
+  let parsed=null,parsedText='',sourceName=initial.sourceName||'粘贴表格',readSequence=0;
+  form('批量导入已有冻存库',`<p class="form-hint">每行一支冻存管。支持 CSV / TSV 文件，或直接从 Excel 复制含表头的清单粘贴。Excel 工作簿文件请先复制单元格或另存为 CSV；冻存盒需先建档。单次最多 500 支，不覆盖已有记录。</p>
+    <button type="button" id="inventoryTemplate">下载空白 CSV 模板</button><label>读取 CSV / TSV 文件<input id="inventoryCSV" type="file" accept=".csv,.tsv,.txt"></label>
+    <label>文件编码<select id="inventoryEncoding"><option value="utf-8">UTF-8（常用）</option><option value="gb18030">GB18030 / GBK（部分中文 Excel CSV）</option><option value="utf-16le">UTF-16 LE</option><option value="utf-16be">UTF-16 BE</option></select></label>
+    <label>表格内容<textarea name="content" id="inventoryText" rows="8" maxlength="2000000" placeholder="粘贴含表头的清单，例如：细胞名称、管号、格位、P数、实际冻存日期">${esc(initial.text||'')}</textarea></label>
+    <label>默认目标冻存盒<select name="boxId">${options(boxes.map(box=>({id:box.id,name:box.name+' · '+box.path})),boxId)}</select></label>
+    <label>默认所属细胞系（可选）<select name="cellLineId"><option value="">暂不关联</option>${options(db.entities.filter(e=>e.type==='cell'&&e.subtype==='细胞系'),initial.cellLineId)}</select></label>
+    <label>重复记录处理<select name="duplicates"><option value="error">遇到重复或冲突，全部停止</option><option value="skip-matching" ${initial.duplicates==='skip-matching'?'selected':''}>跳过管号、名称、位置及已填信息一致的已有记录</option></select></label>
+    <button type="button" id="inventoryReadHeaders">读取表头并配置字段</button><div id="inventoryMapping"></div><div id="inventoryIssues"></div>
+    <p class="form-hint">格位使用 A1、B2，也支持分别对应行和列。日期使用 YYYY-MM-DD；P 数、日期、数量未知可留空。导入保留来源文件名和源行号，不保存原始文件附件。</p>`,async p=>{
+      if(!parsed||p.content!==parsedText)throw Error('表格内容已改变，请重新读取表头');
+      const mapping=Object.fromEntries(inventoryColumns.map(field=>[field.key,Number(p['map_'+field.key])])),at=localTime()+'+08:00';
+      const preview=previewInventoryImport(db,parsed,mapping,{boxId:p.boxId,cellLineId:p.cellLineId,duplicates:p.duplicates,at});
+      $('#inventoryIssues').innerHTML=`<p>待新增 ${preview.items.length} 支 · 跳过 ${preview.skippedRows.length} 行 · 问题 ${preview.errors.length} 行</p>${inventoryImportRows(preview)}`;
+      if(preview.errors.length)throw Error('存在问题行，尚未保存任何记录。请修改内容或字段对应后重新预览');
+      if(!preview.items.length)throw Error('没有需要新增的冻存管；一致的已有记录已全部跳过');
+      const state={text:p.content,boxId:p.boxId,cellLineId:p.cellLineId,duplicates:p.duplicates,mapping,sourceName},revision=db.revision;
+      const command={type:'inventory-import',key:'IMPORT-'+crypto.randomUUID(),data:{at,sourceName,items:preview.items,skippedRows:preview.skippedRows}};
+      form('确认导入冻存库存',`<p>新增 <strong>${preview.items.length}</strong> 支 · 跳过 ${preview.skippedRows.length} 行 · 来源 ${esc(sourceName)}</p><p class="form-hint">本次追加库存记录，现有记录不覆盖。未知字段保留未知，不启动培养计时；任一保存校验失败，全部不写入。</p>${inventoryImportRows(preview)}<button type="button" id="inventoryImportBack">返回修改</button><label><input type="checkbox" required>确认上述新增与跳过结果</label>`,async()=>{
+        if(db.revision!==revision)throw Error('数据已变化，请返回修改并重新预览');await commit(command);toast(`已新增 ${preview.items.length} 支冻存管，跳过 ${preview.skippedRows.length} 行`);
+      });
+      $('#inventoryImportBack').onclick=()=>importInventory(state);$('#editor [type=submit]').textContent='确认并导入全部';
+    });
+  const readHeaders=()=>{
+    try{
+      parsedText=$('#inventoryText').value;parsed=parseInventoryTable(parsedText);
+      const mapping=initial.mapping||suggestInventoryMapping(parsed.headers);
+      $('#inventoryMapping').innerHTML=`<p>已读取 ${parsed.rows.length} 行 · ${esc(sourceName)}</p><details ${mapping.name<0||mapping.coordinate<0&&!(mapping.row>=0&&mapping.column>=0)?'open':''}><summary>字段对应（已自动匹配，可展开调整）</summary>${inventoryColumns.map(field=>`<label>${field.label}<select name="map_${field.key}"><option value="-1">不对应此字段</option>${parsed.headers.map((header,i)=>`<option value="${i}" ${mapping[field.key]===i?'selected':''}>第 ${i+1} 列：${esc(header||'无表头')}</option>`).join('')}</select></label>`).join('')}</details>`;
+      $('#inventoryIssues').innerHTML='';$('#formError').textContent='';$('#editor [type=submit]').disabled=false;
+    }catch(error){parsed=null;$('#inventoryMapping').innerHTML='';$('#formError').textContent=error.message;$('#editor [type=submit]').disabled=true;}
+  };
+  const readFile=async()=>{
+    const file=$('#inventoryCSV').files[0];if(!file)return;const sequence=++readSequence;parsed=null;$('#editor [type=submit]').disabled=true;
+    try{
+      if(file.size>2000000||file.name.length>200)throw Error('文件不能超过 2 MB，文件名不能超过 200 字符');
+      if(!/\.(csv|tsv|txt)$/i.test(file.name))throw Error('请使用 CSV / TSV 文件，或从 Excel 复制清单后粘贴');
+      const buffer=await file.arrayBuffer();if(sequence!==readSequence)return;const bytes=new Uint8Array(buffer);let encoding=$('#inventoryEncoding').value;
+      if(bytes[0]===255&&bytes[1]===254)encoding='utf-16le';if(bytes[0]===254&&bytes[1]===255)encoding='utf-16be';
+      $('#inventoryEncoding').value=encoding;$('#inventoryText').value=new TextDecoder(encoding,{fatal:true}).decode(buffer);sourceName=file.name;initial.mapping=null;readHeaders();
+    }catch(error){if(sequence!==readSequence)return;parsed=null;$('#editor [type=submit]').disabled=true;$('#formError').textContent=error instanceof TypeError?'无法按当前编码读取文件，请调整文件编码后重试':error.message;}
+  };
+  $('#inventoryCSV').onchange=readFile;$('#inventoryEncoding').onchange=readFile;
+  $('#inventoryReadHeaders').onclick=readHeaders;$('#inventoryTemplate').onclick=()=>download(inventoryTemplate(),'life-atlas-inventory-template.csv','text/csv;charset=utf-8');
+  $('#inventoryText').oninput=()=>{readSequence++;parsed=null;initial.mapping=null;sourceName='粘贴表格';$('#inventoryMapping').innerHTML='';$('#inventoryIssues').innerHTML='';$('#editor [type=submit]').disabled=true;};
+  $('#editor [type=submit]').textContent='校验并预览';$('#editor [type=submit]').disabled=true;if(initial.text)readHeaders();
+}
 function registerStock(presetLocation=null){
   const boxes=storageBoxes(db).filter(box=>box.kind==='cell');
   if(!boxes.length){toast('请先新建一个细胞冻存盒');return;}
@@ -171,6 +224,7 @@ function registerStock(presetLocation=null){
   $('#stockBox').onchange=update;update();
 }
 function storageAction(action,presetLocation=null,kind=null) {
+  if(action==='import'){importInventory();return;}
   if(action==='stock'){registerStock(presetLocation);return;}
   if(action==='box'){
     form('新建冻存盒',`<label>保存类型<select name="kind" id="boxKind"><option value="cell">细胞冻存盒（固定 9×9）</option><option value="sample">样品盒（自定义行列）</option></select></label>
@@ -211,7 +265,7 @@ if(b.dataset.storageAction){storageAction(b.dataset.storageAction,b.dataset.stoc
 if(b.dataset.withdraw){record(b.dataset.withdraw,null,'取出');return;}
 if(b.dataset.slot){const box=storageBoxes(db).find(box=>box.id===(b.dataset.boxId||selectedStorageBox))||storageBoxes(db)[0];storageAction('move',box.path+'/'+b.dataset.slot,box.kind);return;}
 
-const action=b.dataset.action;if(action==='exportMeasurements'){const study=(db.studies||[]).find(s=>s.id===selectedStudy)||(db.studies||[])[0];const rows=cohortMeasurements(db,{studyId:study?.id,cohortId:measurementCohort,eventType:measurementType});if(rows.length)download(measurementCSV(rows),'life-atlas-measurements.csv','text/csv;charset=utf-8');}if(action==='batch')batchRecord();if(action==='eventFilter'){eventQuery=$('#eventSearch').value;eventTypeFilter=$('#eventTypeFilter').value;render();}if(action==='density'){compact=!compact;render();}if(action==='clearSelection'){selectedEvents.clear();render();}if(action==='exportEvents'){const rows=db.events.filter(e=>selectedEvents.has(e.id));const csv=[['事件编号','事件类型','实际时间（含时区）','操作人员','模板版本','结构化字段 JSON','备注'],...rows.map(e=>[e.id,e.type,e.at,e.data.operator||e.actor,e.templateVersion||'',JSON.stringify(e.data),e.note])];download('\ufeff'+csv.map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n'),'life-atlas-events.csv','text/csv;charset=utf-8');toast('已导出 '+rows.length+' 个实际事件；计划不计为实际事件');}if(action==='create')create();if(action==='plan')plan();if(action==='demo'){demoMode=true;db=demo();render();$('#drawer').hidden=true;}if(action==='real'){const real=await load(owner);demoMode=false;db=real;render();$('#drawer').hidden=true;}if(action==='filter'){filter=$('#entityFilter').value;render();}if(action==='collapse'){collapsed=!collapsed;render();}if(action==='zoomIn'){zoom=Math.min(1.7,zoom+.1);render();}if(action==='zoomOut'){zoom=Math.max(.6,zoom-.1);render();}if(action==='zoomReset'){zoom=1;render();}if(action==='prev'){calendarOffset--;render();}if(action==='next'){calendarOffset++;render();}if(action==='today'){calendarOffset=0;render();}if(action==='export')download(JSON.stringify({format:'life-atlas-backup',exportedAt:new Date().toISOString(),data:db},null,2),`life-atlas-${day(new Date())}${demoMode?'-demo':''}.json`,'application/json');if(action==='csv'){const cell=v=>'"'+String(v??'').replaceAll('"','""').replace(/^[=+@-]/,"'$&")+'"';download('\ufeff'+[['编号','名称','类型','状态','位置'],...db.entities.filter(e=>e.type===view).map(e=>[e.code,e.name,e.subtype,e.status,e.location])].map(r=>r.map(cell).join(',')).join('\r\n'),'life-atlas-entities.csv','text/csv;charset=utf-8');}if(action==='import')$('#importFile').click();if(action==='snapshots'){const local=await import('./store.mjs?v=20261119.7');const all=demoMode?snapshots:await local.getSnapshots(owner);if(!all.length){toast('暂无恢复前保护快照');return;}download(JSON.stringify(all,null,2),'life-atlas-protection-snapshots.json','application/json');}
+const action=b.dataset.action;if(action==='exportMeasurements'){const study=(db.studies||[]).find(s=>s.id===selectedStudy)||(db.studies||[])[0];const rows=cohortMeasurements(db,{studyId:study?.id,cohortId:measurementCohort,eventType:measurementType});if(rows.length)download(measurementCSV(rows),'life-atlas-measurements.csv','text/csv;charset=utf-8');}if(action==='batch')batchRecord();if(action==='eventFilter'){eventQuery=$('#eventSearch').value;eventTypeFilter=$('#eventTypeFilter').value;render();}if(action==='density'){compact=!compact;render();}if(action==='clearSelection'){selectedEvents.clear();render();}if(action==='exportEvents'){const rows=db.events.filter(e=>selectedEvents.has(e.id));const csv=[['事件编号','事件类型','实际时间（含时区）','操作人员','模板版本','结构化字段 JSON','备注'],...rows.map(e=>[e.id,e.type,e.at,e.data.operator||e.actor,e.templateVersion||'',JSON.stringify(e.data),e.note])];download('\ufeff'+csv.map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n'),'life-atlas-events.csv','text/csv;charset=utf-8');toast('已导出 '+rows.length+' 个实际事件；计划不计为实际事件');}if(action==='create')create();if(action==='plan')plan();if(action==='demo'){demoMode=true;db=demo();render();$('#drawer').hidden=true;}if(action==='real'){const real=await load(owner);demoMode=false;db=real;render();$('#drawer').hidden=true;}if(action==='filter'){filter=$('#entityFilter').value;render();}if(action==='collapse'){collapsed=!collapsed;render();}if(action==='zoomIn'){zoom=Math.min(1.7,zoom+.1);render();}if(action==='zoomOut'){zoom=Math.max(.6,zoom-.1);render();}if(action==='zoomReset'){zoom=1;render();}if(action==='prev'){calendarOffset--;render();}if(action==='next'){calendarOffset++;render();}if(action==='today'){calendarOffset=0;render();}if(action==='export')download(JSON.stringify({format:'life-atlas-backup',exportedAt:new Date().toISOString(),data:db},null,2),`life-atlas-${day(new Date())}${demoMode?'-demo':''}.json`,'application/json');if(action==='csv'){const cell=v=>'"'+String(v??'').replaceAll('"','""').replace(/^[=+@-]/,"'$&")+'"';download('\ufeff'+[['编号','名称','类型','状态','位置'],...db.entities.filter(e=>e.type===view).map(e=>[e.code,e.name,e.subtype,e.status,e.location])].map(r=>r.map(cell).join(',')).join('\r\n'),'life-atlas-entities.csv','text/csv;charset=utf-8');}if(action==='import')$('#importFile').click();if(action==='snapshots'){const local=await import('./store.mjs?v=20261120.1');const all=demoMode?snapshots:await local.getSnapshots(owner);if(!all.length){toast('暂无恢复前保护快照');return;}download(JSON.stringify(all,null,2),'life-atlas-protection-snapshots.json','application/json');}
 }catch(error){toast(error.message);}});
 $('#quickCreate').onclick=()=>{if(view==='calendar'){plan();return;}if(view==='backup'){download(JSON.stringify({format:'life-atlas-backup',data:db},null,2),'life-atlas.json','application/json');return;}const items=db.entities.filter(e=>!isCellReference(db,e)&&(!types[view]||e.type===view));if(!items.length){create();return;}form('选择操作对象',`<label>关联实体<select name="entityId">${options(items)}</select></label>`,async p=>{record(p.entityId);});};
 document.addEventListener('click',event=>{
