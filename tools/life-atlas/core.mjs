@@ -1,7 +1,7 @@
-import {parseEventFields} from './event-fields.mjs?v=20261120.2';
-import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261120.2';
-import {initializeStorage,addStorageBox,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261120.2';
-import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261120.2';
+import {parseEventFields} from './event-fields.mjs?v=20261120.3';
+import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261120.3';
+import {initializeStorage,addStorageBox,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261120.3';
+import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261120.3';
 export const types = {sample:'样品',cell:'细胞',mouse:'小鼠'};
 export const templates = {sample:['接收','处理','分装','冻存','解冻','提取','检测','转移','取出','归还','消耗','废弃'],cell:['培养','换液','传代','冻存','复苏','转移','取出','归还','废弃','质量检测','实验使用','终止培养'],mouse:['入库','转笼','基因分型','荷瘤','给药','细胞回输','体重测量','肿瘤测量','活检','终点取材','实际处置']};
 const uid = prefix => prefix+'-'+crypto.randomUUID();

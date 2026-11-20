@@ -12,7 +12,7 @@ body.printing-report{overflow:hidden}
 @media(max-width:600px){.report-toolbar{flex-wrap:wrap;padding:12px}.report-paper{padding:20px;width:calc(100% - 16px);margin:8px}.report-toolbar .actions{flex-wrap:wrap}}
 @page{size:A4;margin:14mm}
 @media print{
-  html{background:white}
+  :root{background:white}
   html[data-tool-access="allowed"] body.printing-report{background:white;margin:0;overflow:visible}
   html[data-tool-access="allowed"] body.printing-report>.sidebar,html[data-tool-access="allowed"] body.printing-report>#drawer,html[data-tool-access="allowed"] body.printing-report>#toast{display:none!important}
   html[data-tool-access="allowed"] body.printing-report>.shell{display:block!important;margin:0!important;padding:0!important;min-height:0!important}
