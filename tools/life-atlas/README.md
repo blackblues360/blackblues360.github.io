@@ -2,7 +2,7 @@
 
 科研实体生命周期与谱系管理工具。开发预览已发布于 https://blackblues.xyz/tools/life-atlas/ 。当前版本包含项目分组、标签、多盒与位置历史。需求与 UI 原件保存在 `docs/development/life-atlas/`，完整 V0.2 基线及实现边界见该目录下的 `implementation.md`。
 
-已支持小鼠基础档案与实际年龄、细胞系与培养批次关联、培养条件继承、档案修订前后快照和分型结果历史。项目页支持分组体重 / 肿瘤测量对比、原始测量 CSV 与原始事件追溯；测量归属使用发生时的成员有效期。右侧详情和表单可点击左侧空白处关闭。三类实体页面均使用卡片切换时间轴；保留旧版已计时细胞系的实际生命周期。本轮新增上下游谱系 PNG 导出；126 项业务测试、56 组浏览器流程通过。
+已支持小鼠基础档案与实际年龄、细胞系与培养批次关联、培养条件继承、档案修订前后快照和分型结果历史。项目页支持分组体重 / 肿瘤测量对比、原始测量 CSV 与原始事件追溯；测量归属使用发生时的成员有效期。右侧详情和表单可点击左侧空白处关闭。三类实体页面均使用卡片切换时间轴；保留旧版已计时细胞系的实际生命周期。本轮新增项目概览 PNG 导出；130 项业务测试、59 组浏览器流程通过。
 
 从仓库根目录运行 `python scripts/serve.py --port 8765`，浏览器打开 `/tools/life-atlas/`。沿用网站登录服务；需已配置且有效的网站账户。无需额外安装或构建。
 
@@ -31,8 +31,10 @@
 验证：
 
 ```powershell
-node --test tools/life-atlas/tests/core.test.mjs tools/life-atlas/tests/workflows.test.mjs tools/life-atlas/tests/studies.test.mjs tools/life-atlas/tests/storage.test.mjs tools/life-atlas/tests/profiles.test.mjs tools/life-atlas/tests/measurements.test.mjs tools/life-atlas/tests/inventory.test.mjs tools/life-atlas/tests/inventory-import.test.mjs tools/life-atlas/tests/reports.test.mjs tools/life-atlas/tests/storage-export.test.mjs tools/life-atlas/tests/study-export.test.mjs tools/life-atlas/tests/measurement-png.test.mjs tools/life-atlas/tests/timeline-png.test.mjs tools/life-atlas/tests/lineage-png.test.mjs
+node --test tools/life-atlas/tests/core.test.mjs tools/life-atlas/tests/workflows.test.mjs tools/life-atlas/tests/studies.test.mjs tools/life-atlas/tests/storage.test.mjs tools/life-atlas/tests/profiles.test.mjs tools/life-atlas/tests/measurements.test.mjs tools/life-atlas/tests/inventory.test.mjs tools/life-atlas/tests/inventory-import.test.mjs tools/life-atlas/tests/reports.test.mjs tools/life-atlas/tests/storage-export.test.mjs tools/life-atlas/tests/study-export.test.mjs tools/life-atlas/tests/measurement-png.test.mjs tools/life-atlas/tests/timeline-png.test.mjs tools/life-atlas/tests/lineage-png.test.mjs tools/life-atlas/tests/study-png.test.mjs
 node tools/life-atlas/tests/browser.cjs
 ```
 
 浏览器测试需要本机 Edge、Playwright、预览服务；`LIFE_ATLAS_TEST_URL` 可指定服务地址。测试替换认证模块为合成账户，不使用真实身份或云数据。
+
+“导出实验项目 → 项目概览 PNG 图片”支持全部分组或所选历史分组，展示各组曾入组、当前有效及在管人数、有效体重 / 肿瘤记录条数、当前成员笼位和可选成员期历史及原因。概览只读，按历史成员期归属，不计算均值或混入其他项目。测量曲线使用独立 PNG 入口，事件明细请用项目 PDF。超长图片提示缩小范围或隐藏历史 / 备注；编码后复核账户。

@@ -1,8 +1,8 @@
-import {profileDetails,passageLabel} from './profiles.mjs?v=20261121.4';
-import {storageView} from './storage.mjs?v=20261121.4';
-import {studiesPage} from './studies.mjs?v=20261121.4';
-import {measurementsPage} from './measurements.mjs?v=20261121.4';
-import {types,age,day,days,lifecycle,isCellReference} from './core.mjs?v=20261121.4';
+import {profileDetails,passageLabel} from './profiles.mjs?v=20261121.5';
+import {storageView} from './storage.mjs?v=20261121.5';
+import {studiesPage} from './studies.mjs?v=20261121.5';
+import {measurementsPage} from './measurements.mjs?v=20261121.5';
+import {types,age,day,days,lifecycle,isCellReference} from './core.mjs?v=20261121.5';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const name=(db,id)=>db.entities.find(e=>e.id===id)?.name||'未知实体';
 const stamp=v=>new Date(v).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false});

@@ -1,7 +1,7 @@
-import {membershipAt} from './studies.mjs?v=20261121.4';
-import {cohortMeasurements,measurementSeries,measurementTypes} from './measurements.mjs?v=20261121.4';
-import {fieldLabel} from './event-fields.mjs?v=20261121.4';
-import {profileFields} from './profiles.mjs?v=20261121.4';
+import {membershipAt} from './studies.mjs?v=20261121.5';
+import {cohortMeasurements,measurementSeries,measurementTypes} from './measurements.mjs?v=20261121.5';
+import {fieldLabel} from './event-fields.mjs?v=20261121.5';
+import {profileFields} from './profiles.mjs?v=20261121.5';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stamp=(value,missing='未知')=>value?new Date(Date.parse(value)+8*3600000).toISOString().slice(0,19)+'+08:00':missing;
