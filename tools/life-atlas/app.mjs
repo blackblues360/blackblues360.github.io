@@ -1,15 +1,16 @@
-import {profileInputs,profileValues,profileDetails,profileEventDetails,passageLabel} from './profiles.mjs?v=20261120.5';
-import {storageBoxes,locationBox,locationHistory} from './storage.mjs?v=20261120.5';
-import {inventoryColumns,parseInventoryTable,suggestInventoryMapping,previewInventoryImport,inventoryTemplate} from './inventory-import.mjs?v=20261120.5';
-import {membershipAt} from './studies.mjs?v=20261120.5';
-import {cohortMeasurements,measurementCSV} from './measurements.mjs?v=20261120.5';
-import {eventFields,fieldLabel} from './event-fields.mjs?v=20261120.5';
-import {home,management as modulePage,eventsPage,storagePage,settingsPage,calendarPage} from './views.mjs?v=20261120.5';
-import {types,templates,empty,execute,day,days,age,eventAge,lifecycle,isCellReference,validate,demo} from './core.mjs?v=20261120.5';
-import {load,save} from './store.mjs?v=20261120.5';
-import {renderEntityReport,reportScopes} from './reports.mjs?v=20261120.5';
-import {storageInventoryCSV,renderStorageReport} from './storage-export.mjs?v=20261120.5';
-import {studyMembershipCSV,renderStudyReport} from './study-export.mjs?v=20261120.5';
+import {profileInputs,profileValues,profileDetails,profileEventDetails,passageLabel} from './profiles.mjs?v=20261121.1';
+import {storageBoxes,locationBox,locationHistory} from './storage.mjs?v=20261121.1';
+import {inventoryColumns,parseInventoryTable,suggestInventoryMapping,previewInventoryImport,inventoryTemplate} from './inventory-import.mjs?v=20261121.1';
+import {membershipAt} from './studies.mjs?v=20261121.1';
+import {cohortMeasurements,measurementCSV} from './measurements.mjs?v=20261121.1';
+import {eventFields,fieldLabel} from './event-fields.mjs?v=20261121.1';
+import {home,management as modulePage,eventsPage,storagePage,settingsPage,calendarPage} from './views.mjs?v=20261121.1';
+import {types,templates,empty,execute,day,days,age,eventAge,lifecycle,isCellReference,validate,demo} from './core.mjs?v=20261121.1';
+import {load,save} from './store.mjs?v=20261121.1';
+import {renderEntityReport,reportScopes} from './reports.mjs?v=20261121.1';
+import {storageInventoryCSV,renderStorageReport} from './storage-export.mjs?v=20261121.1';
+import {storageGridPNG} from './storage-png.mjs?v=20261121.1';
+import {studyMembershipCSV,renderStudyReport} from './study-export.mjs?v=20261121.1';
 import {currentAccount,observeAccount} from '../../assets/js/account/client.mjs';
 const owner=currentAccount().user?.id;if(!owner)throw Error('请先登录');
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -251,10 +252,15 @@ function registerStock(presetLocation=null){
 function exportStorage(){
   if(currentAccount().user?.id!==owner||storageFailed)throw Error('请先确认登录和本地数据读取状态');
   const box=storageBoxes(db).find(b=>b.id===selectedStorageBox)||storageBoxes(db)[0];
-  form('导出存储清单',`<p>当前盒：${esc(box.name)}<br><span class="muted">${esc(box.path)}</span></p><label>导出范围<select name="scope"><option value="box">当前盒</option><option value="all">全部冻存盒与样品盒</option></select></label><label>导出格式<select name="format" id="storageExportFormat"><option value="pdf">报告预览 / 保存为 PDF</option><option value="csv">CSV 清单</option></select></label><label><input type="checkbox" name="includeEmpty"> 清单包含空位（布局图始终显示全部格位）</label><label><input type="checkbox" name="includeNotes"> 包含档案备注</label><p class="muted">仅导出当前占用快照，不包含已取出、已复苏或已结束记录。实际冻存日期和当前位置存入时间分别列示；未知信息保持未知。</p>`,async p=>{
+  form('导出存储清单',`<p>当前盒：${esc(box.name)}<br><span class="muted">${esc(box.path)}</span></p><label>导出范围<select name="scope"><option value="box">当前盒</option><option value="all">全部冻存盒与样品盒</option></select></label><label>导出格式<select name="format" id="storageExportFormat"><option value="pdf">报告预览 / 保存为 PDF</option><option value="csv">CSV 清单</option><option value="png">当前盒格位 PNG 图片</option></select></label><div id="storagePNGOptions" hidden><label><input type="checkbox" name="includeCodes" checked> 图片包含实体编号</label><label><input type="checkbox" name="includeDates"> 图片包含实际冻存与当前位置存入日期</label><p class="muted">PNG 仅导出当前盒，始终显示全部格位。</p></div><label><input type="checkbox" name="includeEmpty"> 清单包含空位（布局图始终显示全部格位）</label><label><input type="checkbox" name="includeNotes"> 包含档案备注</label><p class="muted">仅导出当前占用快照，不包含已取出、已复苏或已结束记录。实际冻存日期和当前位置存入时间分别列示；未知信息保持未知。</p>`,async p=>{
     if(currentAccount().user?.id!==owner)throw Error('登录状态已变化，请刷新后重试');
-    if(!['pdf','csv'].includes(p.format))throw Error('导出格式不受支持');
+    if(!['pdf','csv','png'].includes(p.format))throw Error('导出格式不受支持');
     const options={boxId:box.id,scope:p.scope,includeEmpty:!!p.includeEmpty,includeNotes:!!p.includeNotes,workspace:demoMode?'演示研究空间':'我的研究空间'};
+    if(p.format==='png'){
+      const blob=await storageGridPNG(db,{...options,scope:'box',includeCodes:!!p.includeCodes,includeDates:!!p.includeDates});
+      if(currentAccount().user?.id!==owner)throw Error('登录状态已变化，请刷新后重试');
+      download(blob,`life-atlas-storage-${day(new Date())}${demoMode?'-demo':''}.png`,'image/png');$('#drawer').hidden=true;toast('已导出当前盒格位图片');return;
+    }
     if(p.format==='csv'){
       download(storageInventoryCSV(db,options),`life-atlas-storage-${day(new Date())}${demoMode?'-demo':''}.csv`,'text/csv;charset=utf-8');
       $('#drawer').hidden=true;toast('已导出当前存储清单');return;
@@ -263,7 +269,7 @@ function exportStorage(){
     reportFocus=document.querySelector('[data-storage-action="export"]');$('#drawer').hidden=true;
     $('#reportContent').innerHTML=html;$('#reportPreview').hidden=false;document.body.classList.add('printing-report');$('#printReport').focus();
   });
-  const updateLabel=()=>$('#editor [type="submit"]').textContent=$('#storageExportFormat').value==='csv'?'导出 CSV':'预览报告';
+  const updateLabel=()=>{const format=$('#storageExportFormat').value,png=format==='png';$('#storagePNGOptions').hidden=!png;const scope=$('#editor [name="scope"]');if(png)scope.value='box';scope.disabled=png;$('#editor [name="includeEmpty"]').disabled=png;$('#editor [type="submit"]').textContent=format==='csv'?'导出 CSV':png?'导出 PNG':'预览报告';};
   $('#storageExportFormat').onchange=updateLabel;updateLabel();
 }
 function storageAction(action,presetLocation=null,kind=null) {
@@ -328,7 +334,7 @@ if(b.dataset.storageAction){storageAction(b.dataset.storageAction,b.dataset.stoc
 if(b.dataset.withdraw){record(b.dataset.withdraw,null,'取出');return;}
 if(b.dataset.slot){const box=storageBoxes(db).find(box=>box.id===(b.dataset.boxId||selectedStorageBox))||storageBoxes(db)[0];storageAction('move',box.path+'/'+b.dataset.slot,box.kind);return;}
 
-const action=b.dataset.action;if(action==='exportMeasurements'){const study=(db.studies||[]).find(s=>s.id===selectedStudy)||(db.studies||[])[0];const rows=cohortMeasurements(db,{studyId:study?.id,cohortId:measurementCohort,eventType:measurementType});if(rows.length)download(measurementCSV(rows),'life-atlas-measurements.csv','text/csv;charset=utf-8');}if(action==='batch')batchRecord();if(action==='eventFilter'){eventQuery=$('#eventSearch').value;eventTypeFilter=$('#eventTypeFilter').value;render();}if(action==='density'){compact=!compact;render();}if(action==='clearSelection'){selectedEvents.clear();render();}if(action==='exportEvents'){const rows=db.events.filter(e=>selectedEvents.has(e.id));const csv=[['事件编号','事件类型','实际时间（含时区）','操作人员','模板版本','结构化字段 JSON','备注'],...rows.map(e=>[e.id,e.type,e.at,e.data.operator||e.actor,e.templateVersion||'',JSON.stringify(e.data),e.note])];download('\ufeff'+csv.map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n'),'life-atlas-events.csv','text/csv;charset=utf-8');toast('已导出 '+rows.length+' 个实际事件；计划不计为实际事件');}if(action==='create')create();if(action==='plan')plan();if(action==='demo'){demoMode=true;db=demo();render();$('#drawer').hidden=true;}if(action==='real'){const real=await load(owner);demoMode=false;db=real;render();$('#drawer').hidden=true;}if(action==='filter'){filter=$('#entityFilter').value;render();}if(action==='collapse'){collapsed=!collapsed;render();}if(action==='zoomIn'){zoom=Math.min(1.7,zoom+.1);render();}if(action==='zoomOut'){zoom=Math.max(.6,zoom-.1);render();}if(action==='zoomReset'){zoom=1;render();}if(action==='prev'){calendarOffset--;render();}if(action==='next'){calendarOffset++;render();}if(action==='today'){calendarOffset=0;render();}if(action==='export')download(JSON.stringify({format:'life-atlas-backup',exportedAt:new Date().toISOString(),data:db},null,2),`life-atlas-${day(new Date())}${demoMode?'-demo':''}.json`,'application/json');if(action==='csv'){const cell=v=>'"'+String(v??'').replaceAll('"','""').replace(/^[=+@-]/,"'$&")+'"';download('\ufeff'+[['编号','名称','类型','状态','位置'],...db.entities.filter(e=>e.type===view).map(e=>[e.code,e.name,e.subtype,e.status,e.location])].map(r=>r.map(cell).join(',')).join('\r\n'),'life-atlas-entities.csv','text/csv;charset=utf-8');}if(action==='import')$('#importFile').click();if(action==='snapshots'){const local=await import('./store.mjs?v=20261120.5');const all=demoMode?snapshots:await local.getSnapshots(owner);if(!all.length){toast('暂无恢复前保护快照');return;}download(JSON.stringify(all,null,2),'life-atlas-protection-snapshots.json','application/json');}
+const action=b.dataset.action;if(action==='exportMeasurements'){const study=(db.studies||[]).find(s=>s.id===selectedStudy)||(db.studies||[])[0];const rows=cohortMeasurements(db,{studyId:study?.id,cohortId:measurementCohort,eventType:measurementType});if(rows.length)download(measurementCSV(rows),'life-atlas-measurements.csv','text/csv;charset=utf-8');}if(action==='batch')batchRecord();if(action==='eventFilter'){eventQuery=$('#eventSearch').value;eventTypeFilter=$('#eventTypeFilter').value;render();}if(action==='density'){compact=!compact;render();}if(action==='clearSelection'){selectedEvents.clear();render();}if(action==='exportEvents'){const rows=db.events.filter(e=>selectedEvents.has(e.id));const csv=[['事件编号','事件类型','实际时间（含时区）','操作人员','模板版本','结构化字段 JSON','备注'],...rows.map(e=>[e.id,e.type,e.at,e.data.operator||e.actor,e.templateVersion||'',JSON.stringify(e.data),e.note])];download('\ufeff'+csv.map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n'),'life-atlas-events.csv','text/csv;charset=utf-8');toast('已导出 '+rows.length+' 个实际事件；计划不计为实际事件');}if(action==='create')create();if(action==='plan')plan();if(action==='demo'){demoMode=true;db=demo();render();$('#drawer').hidden=true;}if(action==='real'){const real=await load(owner);demoMode=false;db=real;render();$('#drawer').hidden=true;}if(action==='filter'){filter=$('#entityFilter').value;render();}if(action==='collapse'){collapsed=!collapsed;render();}if(action==='zoomIn'){zoom=Math.min(1.7,zoom+.1);render();}if(action==='zoomOut'){zoom=Math.max(.6,zoom-.1);render();}if(action==='zoomReset'){zoom=1;render();}if(action==='prev'){calendarOffset--;render();}if(action==='next'){calendarOffset++;render();}if(action==='today'){calendarOffset=0;render();}if(action==='export')download(JSON.stringify({format:'life-atlas-backup',exportedAt:new Date().toISOString(),data:db},null,2),`life-atlas-${day(new Date())}${demoMode?'-demo':''}.json`,'application/json');if(action==='csv'){const cell=v=>'"'+String(v??'').replaceAll('"','""').replace(/^[=+@-]/,"'$&")+'"';download('\ufeff'+[['编号','名称','类型','状态','位置'],...db.entities.filter(e=>e.type===view).map(e=>[e.code,e.name,e.subtype,e.status,e.location])].map(r=>r.map(cell).join(',')).join('\r\n'),'life-atlas-entities.csv','text/csv;charset=utf-8');}if(action==='import')$('#importFile').click();if(action==='snapshots'){const local=await import('./store.mjs?v=20261121.1');const all=demoMode?snapshots:await local.getSnapshots(owner);if(!all.length){toast('暂无恢复前保护快照');return;}download(JSON.stringify(all,null,2),'life-atlas-protection-snapshots.json','application/json');}
 }catch(error){toast(error.message);}});
 $('#quickCreate').onclick=()=>{if(view==='calendar'){plan();return;}if(view==='backup'){download(JSON.stringify({format:'life-atlas-backup',data:db},null,2),'life-atlas.json','application/json');return;}const items=db.entities.filter(e=>!isCellReference(db,e)&&(!types[view]||e.type===view));if(!items.length){create();return;}form('选择操作对象',`<label>关联实体<select name="entityId">${options(items)}</select></label>`,async p=>{record(p.entityId);});};
 document.addEventListener('click',event=>{
