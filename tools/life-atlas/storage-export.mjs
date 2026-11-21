@@ -1,6 +1,6 @@
-import {storageBoxes,locationBox} from './storage.mjs?v=20261121.2';
-import {day} from './core.mjs?v=20261121.2';
-import {passageLabel} from './profiles.mjs?v=20261121.2';
+import {storageBoxes,locationBox} from './storage.mjs?v=20261121.3';
+import {day} from './core.mjs?v=20261121.3';
+import {passageLabel} from './profiles.mjs?v=20261121.3';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const timestamp=value=>value?new Date(Date.parse(value)+8*3600000).toISOString().slice(0,19)+'+08:00':'未知';

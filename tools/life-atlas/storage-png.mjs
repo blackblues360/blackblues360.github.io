@@ -1,4 +1,4 @@
-import {collectStorageInventory} from './storage-export.mjs?v=20261121.2';
+import {collectStorageInventory} from './storage-export.mjs?v=20261121.3';
 
 export async function storageGridPNG(db,options={}){
   if(options.scope&&options.scope!=='box')throw Error('PNG 仅支持当前盒；全部盒请使用 PDF 或 CSV');

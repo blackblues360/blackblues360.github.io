@@ -1,8 +1,8 @@
-import {profileDetails,passageLabel} from './profiles.mjs?v=20261121.2';
-import {storageView} from './storage.mjs?v=20261121.2';
-import {studiesPage} from './studies.mjs?v=20261121.2';
-import {measurementsPage} from './measurements.mjs?v=20261121.2';
-import {types,age,day,days,lifecycle,isCellReference} from './core.mjs?v=20261121.2';
+import {profileDetails,passageLabel} from './profiles.mjs?v=20261121.3';
+import {storageView} from './storage.mjs?v=20261121.3';
+import {studiesPage} from './studies.mjs?v=20261121.3';
+import {measurementsPage} from './measurements.mjs?v=20261121.3';
+import {types,age,day,days,lifecycle,isCellReference} from './core.mjs?v=20261121.3';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const name=(db,id)=>db.entities.find(e=>e.id===id)?.name||'未知实体';
 const stamp=v=>new Date(v).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false});
@@ -41,7 +41,7 @@ export function management(db,type,{selected,tab,filter,table,timeline,selectedS
   const events=db.events.filter(v=>v.entityIds.includes(e.id)).sort((a,b)=>Date.parse(a.at)-Date.parse(b.at)),last=events.at(-1),l=lifecycle(db,e.id),children=db.relations.filter(r=>r.parentId===e.id);
   if(tab==='all')return header+`<div class="toolbar"><input id="entityFilter" value="${esc(filter)}" placeholder="搜索名称、编号或位置"><button data-action="filter">筛选</button><button data-action="csv">导出 CSV</button></div><section class="card">${table(items.filter(v=>`${v.name} ${v.code} ${v.location}`.toLowerCase().includes(filter.toLowerCase())),true)}</section>`;
   if(tab==='events')return header+eventList(db,events);
-  if(tab==='info')return header+`<section class="card"><div class="card-body"><h2>${esc(e.name)}</h2>${[['实体编号',e.code],['类型',e.subtype],['获得时间',stamp(e.createdAt)],['生命周期起点',l.startAt?stamp(l.startAt):'未启动'],['位置',e.location||'未分配'],['状态',state(db,e)],...(type==='cell'&&!isCellReference(db,e)?[['传代次数',passageLabel(e)]]:[])].map(([k,v])=>`<div class="field-line"><span>${k}</span><span>${esc(v)}</span></div>`).join('')}${profileDetails(db,e)}<button data-entity="${e.id}">查看完整档案</button> <button data-report="${e.id}">导出报告 / PDF</button></div></section>`;
+  if(tab==='info')return header+`<section class="card"><div class="card-body"><h2>${esc(e.name)}</h2>${[['实体编号',e.code],['类型',e.subtype],['获得时间',stamp(e.createdAt)],['生命周期起点',l.startAt?stamp(l.startAt):'未启动'],['位置',e.location||'未分配'],['状态',state(db,e)],...(type==='cell'&&!isCellReference(db,e)?[['传代次数',passageLabel(e)]]:[])].map(([k,v])=>`<div class="field-line"><span>${k}</span><span>${esc(v)}</span></div>`).join('')}${profileDetails(db,e)}<button data-entity="${e.id}">查看完整档案</button> <button data-report="${e.id}">导出报告 / PDF</button> <button data-timeline-png="${e.id}">导出时间轴 PNG</button></div></section>`;
   if(tab==='related')return header+`<section class="card">${table(db.entities.filter(v=>children.some(r=>r.childId===v.id)))}</section>`;
   const panel=`<section class="card inline-detail"><div class="card-body"><h2>${esc(last?.type||'实体信息')} ${pill(state(db,e),e.status==='ended'?'':'purple')}</h2>${[['日期',last?stamp(last.at):stamp(e.createdAt)],['所属实体',e.name],['生命周期',age(db,e.id)],['衍生实体',children.length+' 个'],...(type==='cell'&&!isCellReference(db,e)?[['传代次数',passageLabel(e)]]:[]),['当前位置',e.location||'尚未分配']].map(([k,v])=>`<div class="field-line"><span>${k}</span><span>${esc(v)}</span></div>`).join('')}<p class="note">${esc(last?.note||'点击时间轴节点查看事件参数、参与实体和来源信息。')}</p><div class="actions"><button class="primary" data-entity="${e.id}">实体详情</button>${last?`<button data-event="${last.id}">事件详情</button>`:''}</div></div></section>`;
   if(type==='mouse')return header+`<section class="card"><div class="card-head"><h2>生命周期 ${pill(state(db,e),'purple')}</h2><span>${esc(e.name)}</span></div>${timeline([e])}</section><div class="mouse-bottom"><section class="card"><div class="card-head"><h2>纵向测量</h2></div><div class="card-body">${measureChart(events)}</div></section>${eventList(db,events)}</div>`;
