@@ -1,6 +1,6 @@
-import {types,age,eventAge,isCellReference,lifecycle} from './core.mjs?v=20261121.5';
-import {profileFields,passageLabel,animalAge} from './profiles.mjs?v=20261121.5';
-import {fieldLabel} from './event-fields.mjs?v=20261121.5';
+import {types,age,eventAge,isCellReference,lifecycle} from './core.mjs?v=20261121.6';
+import {profileFields,passageLabel,animalAge} from './profiles.mjs?v=20261121.6';
+import {fieldLabel} from './event-fields.mjs?v=20261121.6';
 
 export const reportScopes={entity:'当前实体',upstream:'当前实体及全部上游',downstream:'当前实体及全部下游',lineage:'当前实体及全部上游、下游'};
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

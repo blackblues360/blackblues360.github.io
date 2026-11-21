@@ -1,7 +1,7 @@
-import {parseEventFields} from './event-fields.mjs?v=20261121.5';
-import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261121.5';
-import {initializeStorage,addStorageBox,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261121.5';
-import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261121.5';
+import {parseEventFields} from './event-fields.mjs?v=20261121.6';
+import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261121.6';
+import {initializeStorage,addStorageBox,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261121.6';
+import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261121.6';
 export const types = {sample:'样品',cell:'细胞',mouse:'小鼠'};
 export const templates = {sample:['接收','处理','分装','冻存','解冻','提取','检测','转移','取出','归还','消耗','废弃'],cell:['培养','换液','传代','冻存','复苏','转移','取出','归还','废弃','质量检测','实验使用','终止培养'],mouse:['入库','转笼','基因分型','荷瘤','给药','细胞回输','体重测量','肿瘤测量','活检','终点取材','实际处置']};
 const uid = prefix => prefix+'-'+crypto.randomUUID();
@@ -36,7 +36,7 @@ export function execute(original,command,actor='local'){
   if(command.type==='storage-box'){
     const box=addStorageBox(db,p,at,actor);db.revision++;db.audit.push({id:uid('LOG'),at:now,actor,action:'storage-box',objectId:box.id,revision:db.revision});return db;
   }
-  if(['study','cohort','membership','tag'].includes(command.type)){
+  if(['study','study-state','cohort','membership','tag'].includes(command.type)){
     const objectId=applyStudyCommand(db,command.type,p,at,actor);db.revision++;
     db.audit.push({id:uid('LOG'),at:now,actor,action:command.type,objectId,reason:p.reason||'',revision:db.revision});return db;
   }
@@ -118,6 +118,7 @@ export function execute(original,command,actor='local'){
     if(p.planId){const plan=db.plans.find(x=>x.id===p.planId);required(plan&&plan.entityId===e.id&&['pending','postponed'].includes(plan.status),'计划无效或已完成');required(!plan.eventType||plan.eventType===p.eventType,'执行事件与计划模板不一致');required(!correction,'修正记录不能完成实验计划');plan.status='completed';}
     const parsed=parseEventFields(p.eventType,e.type,p);
     const membership=p.studyId?membershipAt(db,e.id,p.studyId,at):null;
+    if(p.studyId&&!correction)required(db.studies.find(s=>s.id===p.studyId)?.status!=='archived','项目已归档，请先恢复');
     if(p.studyId)required(membership&&(!p.cohortId||membership.cohortId===p.cohortId),'操作发生时该小鼠不属于所选项目分组');
     const ev={id:uid('EV'),type:p.eventType,at,createdAt:now,actor,idempotencyKey:command.key||null,batchId:p.batchId||null,templateVersion:'preset-v2',fieldSchema:parsed.schema,timePrecision:'minute',timezone:'Asia/Shanghai',entityIds:[e.id],participants:[{entityId:e.id,role:'subject',lifecycleId:l.id}],outputIds:[],note:p.note||'',correctedFrom:p.correctedFrom||null,planId:p.planId||null,data:{...parsed.data,...(p.operator?{operator:String(p.operator).trim()}: {})}};
     if(membership){ev.studyId=membership.studyId;ev.cohortId=membership.cohortId;}

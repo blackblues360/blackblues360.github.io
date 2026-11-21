@@ -7,6 +7,15 @@ export function membershipAt(db,entityId,studyId,at=new Date().toISOString()) {
 export function applyStudyCommand(db,type,p,at,actor) {
   db.studies ||= [];db.cohorts ||= [];db.memberships ||= [];db.tags ||= [];db.entityTags ||= [];
   required(Date.parse(at)<=Date.now(),'未来分组变更请在实际发生时记录');
+  if(type==='study-state'){
+    const study=db.studies.find(s=>s.id===p.studyId);required(study,'项目不存在');
+    required(['archive','restore'].includes(p.action),'项目状态操作无效');
+    required(p.action==='archive'?study.status!=='archived':study.status==='archived','项目状态已变化，请刷新后重试');
+    required(typeof p.reason==='string'&&p.reason.trim()&&p.reason.length<=2000,'归档或恢复必须填写原因（最多 2000 字）');
+    required(Date.parse(at)>=Date.parse(study.stateHistory?.at(-1)?.at||study.createdAt),'项目状态变更时间不能早于已有记录');
+    study.status=p.action==='archive'?'archived':'active';study.archivedAt=p.action==='archive'?at:null;
+    study.stateHistory||=[];study.stateHistory.push({action:p.action,at,actor,reason:p.reason.trim()});return study.id;
+  }
   if(type==='study') {
     required(typeof p.name==='string'&&p.name.trim()&&p.name.length<=120,'请填写有效项目名称');
     required(!db.studies.some(s=>s.name===p.name.trim()),'项目名称已存在');
@@ -15,6 +24,7 @@ export function applyStudyCommand(db,type,p,at,actor) {
   }
   if(type==='cohort') {
     required(db.studies.some(s=>s.id===p.studyId),'项目不存在');
+    required(db.studies.find(s=>s.id===p.studyId).status!=='archived','项目已归档，请先恢复');
     required(typeof p.name==='string'&&p.name.trim()&&p.name.length<=120,'请填写有效分组名称');
     required(!db.cohorts.some(c=>c.studyId===p.studyId&&c.name===p.name.trim()),'项目内分组名称已存在');
     const cohort={id:uid('CO'),studyId:p.studyId,name:p.name.trim(),createdAt:at,actor};db.cohorts.push(cohort);return cohort.id;
@@ -23,6 +33,7 @@ export function applyStudyCommand(db,type,p,at,actor) {
   required(Date.parse(at)>=Date.parse(entity.createdAt),'变更时间不能早于实体获得时间');
   if(type==='membership') {
     required(entity.type==='mouse','正式分组仅适用于小鼠');required(db.studies.some(s=>s.id===p.studyId),'项目不存在');
+    required(db.studies.find(s=>s.id===p.studyId).status!=='archived','项目已归档，请先恢复');
     required(!p.cohortId||entity.status==='active','已结束个体不能加入新的分组');
     required(!p.cohortId||db.cohorts.some(c=>c.id===p.cohortId&&c.studyId===p.studyId),'分组不属于当前项目');
     const history=db.memberships.filter(m=>m.entityId===entity.id&&m.studyId===p.studyId);
@@ -54,6 +65,16 @@ export function validateStudies(db) {
   const validDate=value=>Number.isFinite(Date.parse(value));
   required(new Set(studies.map(s=>s.name)).size===studies.length&&new Set(cohorts.map(c=>c.studyId+':'+c.name)).size===cohorts.length&&new Set(tags.map(t=>t.name)).size===tags.length,'项目、分组或标签名称重复');
   studies.forEach(s=>required(typeof s.name==='string'&&s.name.trim()&&validDate(s.createdAt),'项目数据无效'));
+  studies.forEach(s=>{
+    required(s.status===undefined||['active','archived'].includes(s.status),'项目状态无效');
+    if(s.stateHistory!==undefined){
+      required(Array.isArray(s.stateHistory),'项目状态历史无效');
+      let previous=s.createdAt;
+      s.stateHistory.forEach((h,i)=>{required(h&&h.action===(i%2?'restore':'archive')&&validDate(h.at)&&Date.parse(h.at)>=Date.parse(previous)&&typeof h.actor==='string'&&typeof h.reason==='string'&&h.reason.trim()&&h.reason.length<=2000,'项目状态历史无效');previous=h.at;});
+      const last=s.stateHistory.at(-1);required(!last||s.status===(last.action==='archive'?'archived':'active'),'项目状态与历史不一致');
+    }
+    required(s.status==='archived'?validDate(s.archivedAt)&&s.stateHistory?.at(-1)?.action==='archive'&&s.archivedAt===s.stateHistory.at(-1).at:!s.archivedAt,'项目归档时间无效');
+  });
   cohorts.forEach(c=>required(studies.some(s=>s.id===c.studyId)&&typeof c.name==='string'&&c.name.trim()&&validDate(c.createdAt),'分组关联无效'));
   memberships.forEach(m=>{
     required(db.entities.some(e=>e.id===m.entityId&&e.type==='mouse')&&cohorts.some(c=>c.id===m.cohortId&&c.studyId===m.studyId)&&studies.some(s=>s.id===m.studyId),'成员关系无效');
@@ -68,8 +89,8 @@ export function validateStudies(db) {
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function studiesPage(db,selectedId) {
-  const studies=db.studies||[],study=studies.find(s=>s.id===selectedId)||studies[0],cohorts=(db.cohorts||[]).filter(c=>c.studyId===study?.id),mice=db.entities.filter(e=>e.type==='mouse');
-  return `<div class="toolbar"><select id="studyView" aria-label="实验项目"><option value="">选择项目</option>${studies.map(s=>`<option value="${s.id}" ${s.id===study?.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select><button class="primary" data-study-action="create">新建项目</button>${study?`<button data-study-action="cohort" data-study-id="${study.id}">新建分组</button><button data-study-action="assign" data-study-id="${study.id}">分配 / 调整成员</button><button data-study-action="export" data-study-id="${study.id}">导出项目 / CSV</button>`:''}<button data-study-action="tag">管理自由标签</button></div>
-    ${study?`<section class="card"><div class="card-head"><h2>${esc(study.name)}</h2><small>${esc(study.description)}</small></div><div class="card-body">${cohorts.map(c=>`<span class="pill purple" style="margin:5px">${esc(c.name)} · ${(db.memberships||[]).filter(m=>m.cohortId===c.id&&!m.leftAt).length} 只</span>`).join('')||'<p class="muted">请先建立项目分组</p>'}</div></section>`:'<section class="card"><div class="empty">创建项目并建立分组；一只小鼠可参与多个项目。</div></section>'}
+  const studies=db.studies||[],study=studies.find(s=>s.id===selectedId)||studies.find(s=>s.status!=='archived')||studies[0],cohorts=(db.cohorts||[]).filter(c=>c.studyId===study?.id),mice=db.entities.filter(e=>e.type==='mouse');
+  return `<div class="toolbar"><select id="studyView" aria-label="实验项目"><option value="">选择项目</option>${studies.map(s=>`<option value="${s.id}" ${s.id===study?.id?'selected':''}>${esc(s.name)}${s.status==='archived'?'（已归档）':''}</option>`).join('')}</select><button class="primary" data-study-action="create">新建项目</button>${study&&study.status!=='archived'?`<button data-study-action="cohort" data-study-id="${study.id}">新建分组</button><button data-study-action="assign" data-study-id="${study.id}">分配 / 调整成员</button>`:''}${study?`<button data-study-action="export" data-study-id="${study.id}">导出项目 / CSV</button><button data-study-action="${study.status==='archived'?'restore':'archive'}" data-study-id="${study.id}">${study.status==='archived'?'恢复项目':'归档项目'}</button>`:''}<button data-study-action="tag">管理自由标签</button></div>
+    ${study?`<section class="card"><div class="card-head"><h2>${esc(study.name)}${study.status==='archived'?' · 已归档':''}</h2><small>${esc(study.description)}</small></div><div class="card-body">${study.status==='archived'?'<p class="muted">已归档：保留成员有效期，不自动离组或结束小鼠。恢复后可调整分组；未指定项目的事件仍按历史成员期归属报告。</p>':''}${(study.stateHistory||[]).map(h=>`<p class="muted">${h.action==='archive'?'归档':'恢复'} · ${esc(new Date(h.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}))} · ${esc(h.actor)} · ${esc(h.reason)}</p>`).join('')}${cohorts.map(c=>`<span class="pill purple" style="margin:5px">${esc(c.name)} · ${(db.memberships||[]).filter(m=>m.cohortId===c.id&&!m.leftAt).length} 只</span>`).join('')||'<p class="muted">请先建立项目分组</p>'}</div></section>`:'<section class="card"><div class="empty">创建项目并建立分组；一只小鼠可参与多个项目。</div></section>'}
     <section class="card"><div class="card-head"><h2>小鼠成员与自由标签</h2></div><div class="table-wrap"><table><thead><tr><th>小鼠</th><th>当前项目分组</th><th>自由标签</th><th>成员历史</th></tr></thead><tbody>${mice.map(e=>{const member=study?membershipAt(db,e.id,study.id):null,history=(db.memberships||[]).filter(m=>m.entityId===e.id&&m.studyId===study?.id);return `<tr><td><button data-entity="${e.id}">${esc(e.name)}</button></td><td>${esc(cohorts.find(c=>c.id===member?.cohortId)?.name||'未加入')}</td><td>${(db.entityTags||[]).filter(t=>t.entityId===e.id&&!t.removedAt).map(t=>`<span class="pill">${esc((db.tags||[]).find(tag=>tag.id===t.tagId)?.name)}</span>`).join(' ')||'—'}</td><td>${history.map(m=>`${esc((db.cohorts||[]).find(c=>c.id===m.cohortId)?.name)} · ${esc(m.joinedAt.slice(0,10))} 至 ${m.leftAt?esc(m.leftAt.slice(0,10)):'现在'}${m.exitReason?' · '+esc(m.exitReason):''}`).join('<br>')||'—'}</td></tr>`;}).join('')}</tbody></table></div></section>`;
 }
