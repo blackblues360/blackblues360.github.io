@@ -1,4 +1,4 @@
-import {membershipAt} from './studies.mjs?v=20261121.1';
+import {membershipAt} from './studies.mjs?v=20261121.2';
 
 export const measurementTypes={'体重测量':'g','肿瘤测量':'mm³'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -69,7 +69,7 @@ export function measurementsPage(db,{studyId,cohortId='',eventType='体重测量
   return `<section class="card cohort-measurements"><div class="card-head"><h2>分组测量对比</h2><small>${entityIds.length} 只小鼠 · ${points.length} 条测量</small></div><div class="card-body">
     <div class="toolbar"><label>历史分组 <select id="measurementCohort" aria-label="测量分组"><option value="">项目全部分组</option>${cohorts.map(c=>`<option value="${c.id}" ${c.id===cohortId?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>
     <label>测量类型 <select id="measurementType" aria-label="测量类型">${Object.keys(measurementTypes).map(type=>`<option ${type===eventType?'selected':''}>${type}</option>`).join('')}</select></label>
-    <button data-action="exportMeasurements" ${points.length?'':'disabled'}>导出原始测量 CSV</button></div>
+    <button data-action="exportMeasurements" ${points.length?'':'disabled'}>导出原始测量 CSV</button><button data-action="measurementPNG" ${points.length?'':'disabled'}>导出测量 PNG</button></div>
     <p class="form-hint">按测量发生时的项目成员有效期归属，转组不改变旧记录。已指定其他项目的事件不纳入；未指定项目的测量按历史成员期归属。横轴按实际时间比例排列，每只小鼠独立显示，跨成员期或生命周期不连线。</p>
     <p class="form-hint">连线仅连接已记录的测量点，不补值、不计算均值或误差。追加修正保留原值并标记，请从原始事件核对。</p>
     ${chart||'<div class="empty">当前项目 / 分组暂无此类有效测量；未入组时的测量或单位不匹配的旧记录不纳入。</div>'}</div>

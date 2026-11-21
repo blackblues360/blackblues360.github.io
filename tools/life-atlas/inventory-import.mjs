@@ -1,5 +1,5 @@
-import {execute} from './core.mjs?v=20261121.1';
-import {storageBoxes} from './storage.mjs?v=20261121.1';
+import {execute} from './core.mjs?v=20261121.2';
+import {storageBoxes} from './storage.mjs?v=20261121.2';
 
 export const inventoryColumns=[
   {key:'name',label:'细胞 / 冻存管名称',aliases:['细胞名称','冻存管名称','名称','细胞','name','cellname']},
