@@ -1,7 +1,7 @@
-import {parseEventFields} from './event-fields.mjs?v=20261121.6';
-import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261121.6';
-import {initializeStorage,addStorageBox,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261121.6';
-import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261121.6';
+import {parseEventFields} from './event-fields.mjs?v=20261122.1';
+import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261122.1';
+import {initializeStorage,addStorageBox,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261122.1';
+import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261122.1';
 export const types = {sample:'样品',cell:'细胞',mouse:'小鼠'};
 export const templates = {sample:['接收','处理','分装','冻存','解冻','提取','检测','转移','取出','归还','消耗','废弃'],cell:['培养','换液','传代','冻存','复苏','转移','取出','归还','废弃','质量检测','实验使用','终止培养'],mouse:['入库','转笼','基因分型','荷瘤','给药','细胞回输','体重测量','肿瘤测量','活检','终点取材','实际处置']};
 const uid = prefix => prefix+'-'+crypto.randomUUID();
@@ -44,6 +44,7 @@ export function execute(original,command,actor='local'){
     required(typeof command.key==='string'&&command.key&&command.key.length<=120,'批量导入必须提供有效幂等键');
     required(Array.isArray(p.items)&&p.items.length>0&&p.items.length<=500,'每次必须新增 1–500 支冻存管');
     required(p.items.every(item=>item&&Number.isInteger(item.sourceRow)&&item.sourceRow>=2&&item.data&&typeof item.data==='object'),'导入行数据无效');
+    required(p.items.every(item=>item.sourceCell===undefined||typeof item.sourceCell==='string'&&/^[A-Z]{1,3}[1-9]\d{0,5}$/.test(item.sourceCell)),'导入来源单元格无效');
     required(new Set(p.items.map(item=>item.sourceRow)).size===p.items.length,'导入来源行重复');
     const skippedRows=p.skippedRows||[],sourceName=p.sourceName||'粘贴表格';
     required(Array.isArray(skippedRows)&&skippedRows.length<=500&&skippedRows.every(row=>Number.isInteger(row)&&row>=2)&&new Set(skippedRows).size===skippedRows.length&&!skippedRows.some(row=>p.items.some(item=>item.sourceRow===row)),'跳过行记录无效');
@@ -56,6 +57,7 @@ export function execute(original,command,actor='local'){
     for(const item of p.items){
       next=execute(next,{type:'inventory-register',key:command.key+':'+item.sourceRow,data:{...item.data,at}},actor);
       Object.assign(next.events.at(-1),{inventoryImportId:command.key,inventorySourceRow:item.sourceRow,inventorySourceName:sourceName});
+      if(item.sourceCell)next.events.at(-1).inventorySourceCell=item.sourceCell;
     }
     next.revision++;next.audit.push({id:uid('LOG'),at:now,actor,action:'inventory-import',objectId:command.key,batchId:command.key,count:p.items.length,skippedRows,sourceName,request,revision:next.revision});return next;
   }

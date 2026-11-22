@@ -1,4 +1,4 @@
-import {types,eventAge,age,isCellReference} from './core.mjs?v=20261121.6';
+import {types,eventAge,age,isCellReference} from './core.mjs?v=20261122.1';
 
 export function collectTimelineImage(db,entityId,{includeCodes=true,includeDates=true,includeAge=true,includeNotes=false,includeBranches=true}={}){
   const entity=db.entities.find(e=>e.id===entityId);if(!entity)throw Error('要导出的实体不存在');

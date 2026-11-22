@@ -1,6 +1,6 @@
-import {types,age,eventAge,isCellReference,lifecycle} from './core.mjs?v=20261121.6';
-import {profileFields,passageLabel,animalAge} from './profiles.mjs?v=20261121.6';
-import {fieldLabel} from './event-fields.mjs?v=20261121.6';
+import {types,age,eventAge,isCellReference,lifecycle} from './core.mjs?v=20261122.1';
+import {profileFields,passageLabel,animalAge} from './profiles.mjs?v=20261122.1';
+import {fieldLabel} from './event-fields.mjs?v=20261122.1';
 
 export const reportScopes={entity:'当前实体',upstream:'当前实体及全部上游',downstream:'当前实体及全部下游',lineage:'当前实体及全部上游、下游'};
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -59,7 +59,7 @@ export function renderEntityReport(db,id,{scope='entity',includeNotes=true,inclu
     const rows=[['事件编号',event.id],['实际发生时间',stamp(event.at)],['记录创建时间',stamp(event.createdAt)],['操作人员',event.data?.operator||event.actor||'未知'],['参与实体',participants.map(p=>`${names(p.entityId)}（${({subject:'操作对象',input:'输入材料',output:'产出实体'})[p.role]||p.role}）`).join('；')],['生命周期位置',report.entities.filter(e=>event.entityIds.includes(e.id)).map(e=>`${e.code}：${eventAge(db,e.id,event)}`).join('；')]];
     if(event.correctedFrom)rows.push(['追加修正的原事件',event.correctedFrom]);
     if(event.planId)rows.push(['关联计划编号',event.planId]);
-    if(event.inventorySourceName)rows.push(['库存导入来源',`${event.inventorySourceName} · 原表第 ${event.inventorySourceRow} 行`]);
+    if(event.inventorySourceName)rows.push(['库存导入来源',`${event.inventorySourceName} · ${event.inventorySourceCell?'原表单元格 '+event.inventorySourceCell+'（记录 '+event.inventorySourceRow+'）':'原表第 '+event.inventorySourceRow+' 行'}`]);
     if(event.studyId)rows.push(['实验项目',(db.studies||[]).find(s=>s.id===event.studyId)?.name||event.studyId]);
     for(const [key,v] of Object.entries(event.data||{}))if(includeNotes||!['note','notes'].includes(key))rows.push([labels[key]||fieldLabel(event,key),value(v,event)]);
     if(includeNotes&&event.note)rows.push(['事件备注',event.note]);

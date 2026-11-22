@@ -48,7 +48,7 @@ export function validateProfiles(db) {
   imports.forEach(a=>{
     required(typeof a.batchId==='string'&&a.batchId&&a.batchId.length<=120&&Number.isInteger(a.count)&&a.count>=1&&a.count<=500&&typeof a.sourceName==='string'&&a.sourceName.length<=200&&typeof a.request==='string'&&Array.isArray(a.skippedRows)&&a.skippedRows.length<=500&&a.skippedRows.every(row=>Number.isInteger(row)&&row>=2)&&new Set(a.skippedRows).size===a.skippedRows.length,'导入审计记录无效');
     const events=db.events.filter(e=>e.inventoryImportId===a.batchId),request=JSON.parse(a.request);
-    required(events.length===a.count&&Array.isArray(request.items)&&request.items.length===a.count&&new Set(request.items.map(item=>item.sourceRow)).size===a.count&&new Set(events.map(e=>e.inventorySourceRow)).size===events.length&&request.items.every(item=>events.some(e=>e.inventorySourceRow===item.sourceRow))&&!a.skippedRows.some(row=>events.some(e=>e.inventorySourceRow===row))&&JSON.stringify(request.skippedRows)===JSON.stringify(a.skippedRows),'导入批次记录不完整');
+    required(events.length===a.count&&Array.isArray(request.items)&&request.items.length===a.count&&new Set(request.items.map(item=>item.sourceRow)).size===a.count&&new Set(events.map(e=>e.inventorySourceRow)).size===events.length&&request.items.every(item=>events.some(e=>e.inventorySourceRow===item.sourceRow&&e.inventorySourceCell===item.sourceCell))&&!a.skippedRows.some(row=>events.some(e=>e.inventorySourceRow===row))&&JSON.stringify(request.skippedRows)===JSON.stringify(a.skippedRows),'导入批次记录不完整');
   });
   db.entities.forEach(e=>{
     if(e.attributes!==undefined)parseProfile(e.type,e.subtype,e.attributes,e.createdAt);
@@ -65,6 +65,7 @@ export function validateProfiles(db) {
     }
   });
   db.events.forEach(e=>{
+    if(e.inventorySourceCell!==undefined)required(e.inventoryImportId&&typeof e.inventorySourceCell==='string'&&/^[A-Z]{1,3}[1-9]\d{0,5}$/.test(e.inventorySourceCell),'导入来源单元格无效');
     if(e.inventoryImportId!==undefined)required(e.type==='历史库存登记'&&typeof e.inventoryImportId==='string'&&Number.isInteger(e.inventorySourceRow)&&e.inventorySourceRow>=2&&imports.some(a=>a.batchId===e.inventoryImportId&&a.sourceName===e.inventorySourceName),'导入事件来源无效');
     if(e.profileSchema!==undefined)required(Array.isArray(e.profileSchema)&&e.profileSchema.every(f=>f&&typeof f.key==='string'&&typeof f.label==='string'),'档案字段快照无效');
     if(e.data.profile){const entity=db.entities.find(v=>v.id===e.entityIds[0]);required(entity&&typeof e.data.profile==='object'&&e.data.profile.attributes,'建档快照无效');parseProfile(entity.type,entity.subtype,e.data.profile.attributes,entity.createdAt);if(e.data.profile.cellLineId)cellLine(db,e.data.profile.cellLineId);}
@@ -100,6 +101,6 @@ export function profileEventDetails(db,event) {
   const lineName=id=>db.entities.find(e=>e.id===id)?.name||'未关联';
   const rows=schema.filter(f=>before?(before.attributes[f.key]||'')!==(after.attributes[f.key]||''):after.attributes[f.key]).map(f=>`<div class="field-line"><span>${esc(f.label)}</span><span style="white-space:pre-wrap">${before?esc(before.attributes[f.key]||'未记录')+' → ':''}${esc(after.attributes[f.key]||'未记录')}</span></div>`).join('');
   const line=before?before.cellLineId!==after.cellLineId:after.cellLineId;
-  const stock=event.type==='历史库存登记'?`<p class="form-hint">本事件记录现有库存的登记确认，不代表今天进行了冻存。未知历史信息保留未知，位置从登记确认时间起跟踪。</p>${event.inventoryImportId?`<div class="field-line"><span>导入来源</span><span>${esc(event.inventorySourceName)} · 第 ${event.inventorySourceRow} 行</span></div>`:''}<div class="field-line"><span>登记时传代数</span><span>${after.passage===null?'未知':'P'+after.passage}</span></div><div class="field-line"><span>登记时每管数量</span><span>${after.quantity===null?'未知':esc(after.quantity+' '+after.unit)}</span></div>`:'';
+  const stock=event.type==='历史库存登记'?`<p class="form-hint">本事件记录现有库存的登记确认，不代表今天进行了冻存。未知历史信息保留未知，位置从登记确认时间起跟踪。</p>${event.inventoryImportId?`<div class="field-line"><span>导入来源</span><span>${esc(event.inventorySourceName)} · ${event.inventorySourceCell?'单元格 '+esc(event.inventorySourceCell)+'（记录 '+event.inventorySourceRow+'）':'第 '+event.inventorySourceRow+' 行'}</span></div>`:''}<div class="field-line"><span>登记时传代数</span><span>${after.passage===null?'未知':'P'+after.passage}</span></div><div class="field-line"><span>登记时每管数量</span><span>${after.quantity===null?'未知':esc(after.quantity+' '+after.unit)}</span></div>`:'';
   return rows+stock+(line?`<div class="field-line"><span>所属细胞系</span><span>${before?esc(lineName(before.cellLineId))+' → ':''}${esc(lineName(after.cellLineId))}</span></div>`:'')+(event.data.to?`<div class="field-line"><span>初始位置</span><span>${esc(event.data.to)}</span></div>`:'')||'<p class="muted">暂无已填写的基础字段</p>';
 }

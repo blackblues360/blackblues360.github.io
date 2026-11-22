@@ -1,5 +1,5 @@
-import {execute} from './core.mjs?v=20261121.6';
-import {storageBoxes} from './storage.mjs?v=20261121.6';
+import {execute} from './core.mjs?v=20261122.1';
+import {storageBoxes} from './storage.mjs?v=20261122.1';
 
 export const inventoryColumns=[
   {key:'name',label:'细胞 / 冻存管名称',aliases:['细胞名称','冻存管名称','名称','细胞','name','cellname']},
@@ -60,6 +60,26 @@ export function suggestInventoryMapping(headers){
   return mapping;
 }
 
+export function parseInventoryGrid(input){
+  const table=parseInventoryTable(input),columns=table.headers.slice(1);
+  if(!columns.length||columns.length>9||columns.some(c=>! /^[1-9]$/.test(c))||new Set(columns).size!==columns.length)throw Error('盒位表第一行必须为不重复的列号 1–9，左上角留空');
+  if(table.headers[0])throw Error('盒位表左上角请留空，第一列填写行号 A–I');
+  if(table.rows.length>9)throw Error('细胞盒最多 9 行（A–I）');
+  const rows=[],seen=new Set();
+  for(const record of table.rows){
+    const letter=record.values[0].toUpperCase();
+    if(!/^[A-I]$/.test(letter)||seen.has(letter))throw Error('盒位表第一列必须为不重复的行号 A–I');seen.add(letter);
+    for(let i=0;i<columns.length;i++){
+      const content=record.values[i+1];if(!content)continue;
+      const parts=content.split(/[|｜]/).map(s=>s.trim());
+      if(!parts[0]||parts.length>4)throw Error(`格位 ${letter+columns[i]} 请填写名称，或“名称｜管号｜P数｜冻存日期”`);
+      rows.push({line:rows.length+2,sourceCell:String.fromCharCode(66+i)+record.line,values:[parts[0],parts[1]||'',letter+columns[i],parts[2]||'',parts[3]||'']});
+    }
+  }
+  if(!rows.length)throw Error('盒位表没有可导入的冻存管');
+  return {headers:['细胞名称','管号','格位','P数','实际冻存日期'],rows};
+}
+
 export function previewInventoryImport(db,table,mapping,options){
   if(inventoryColumns.some(f=>mapping[f.key]!==undefined&&(!Number.isInteger(mapping[f.key])||mapping[f.key]<-1)))throw Error('字段对应无效，请重新读取表头');
   const mapped=inventoryColumns.filter(f=>Number.isInteger(mapping[f.key])&&mapping[f.key]>=0);
@@ -71,7 +91,7 @@ export function previewInventoryImport(db,table,mapping,options){
   const get=(record,key)=>mapping[key]>=0?record.values[mapping[key]]||'':'';
   const unknown=value=>!value||/^(未知|不详|未记录|unknown|n\/?a|\?)$/i.test(value);
   const records=table.rows.map(record=>{
-    const result={sourceRow:record.line,status:'ready',errors:[],data:null};
+    const result={sourceRow:record.line,...(record.sourceCell?{sourceCell:record.sourceCell}:{}),status:'ready',errors:[],data:null};
     try{
       const boxText=get(record,'box');let box;
       if(boxText){const matches=boxes.filter(b=>[b.path,b.name,b.code].includes(boxText));if(matches.length!==1)throw Error('冻存盒不存在或名称不唯一，请填写已建档的完整盒路径');box=matches[0];}
@@ -115,9 +135,13 @@ export function previewInventoryImport(db,table,mapping,options){
       next=execute(next,{type:'inventory-register',data:{...item,at:options.at}},'import-preview');row.code=next.entities.at(-1).code;
     }catch(error){row.status='error';row.errors.push(error.message);}
   }
-  return {rows:records,items:records.filter(r=>r.status==='ready').map(r=>({sourceRow:r.sourceRow,data:r.data})),skippedRows:records.filter(r=>r.status==='skip').map(r=>r.sourceRow),errors:records.filter(r=>r.status==='error')};
+  return {rows:records,items:records.filter(r=>r.status==='ready').map(r=>({sourceRow:r.sourceRow,...(r.sourceCell?{sourceCell:r.sourceCell}:{}),data:r.data})),skippedRows:records.filter(r=>r.status==='skip').map(r=>r.sourceRow),errors:records.filter(r=>r.status==='error')};
 }
 
 export function inventoryTemplate(){
   return '\ufeff细胞名称,管号,格位,P数,实际冻存日期,每管数量,数量单位,冻存液,所属细胞系,来源,备注\r\n';
+}
+
+export function inventoryGridTemplate(){
+  return '\ufeff\t'+Array.from({length:9},(_,i)=>i+1).join('\t')+'\r\n'+Array.from({length:9},(_,i)=>String.fromCharCode(65+i)+'\t'.repeat(9)).join('\r\n');
 }

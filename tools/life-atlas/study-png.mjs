@@ -1,4 +1,4 @@
-import {collectStudyReport} from './study-export.mjs?v=20261121.6';
+import {collectStudyReport} from './study-export.mjs?v=20261122.1';
 
 export function collectStudyImage(db,options={}){
   const {includeHistory=true,includeNotes=false,generatedAt=new Date().toISOString()}=options,report=collectStudyReport(db,{...options,generatedAt});

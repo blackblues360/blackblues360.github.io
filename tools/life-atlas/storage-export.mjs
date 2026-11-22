@@ -1,6 +1,6 @@
-import {storageBoxes,locationBox} from './storage.mjs?v=20261121.6';
-import {day} from './core.mjs?v=20261121.6';
-import {passageLabel} from './profiles.mjs?v=20261121.6';
+import {storageBoxes,locationBox} from './storage.mjs?v=20261122.1';
+import {day} from './core.mjs?v=20261122.1';
+import {passageLabel} from './profiles.mjs?v=20261122.1';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const timestamp=value=>value?new Date(Date.parse(value)+8*3600000).toISOString().slice(0,19)+'+08:00':'未知';
@@ -24,7 +24,7 @@ export function collectStorageInventory(db,{scope='box',boxId,includeEmpty=false
         cellLine:cellLine?`${cellLine.name} · ${cellLine.code}`:e.cellLineId||'',passage:e.type==='cell'?passageLabel(e):'',
         frozenDate:e.attributes?.frozenDate||(freeze?day(freeze.at):'未知'),storedAt:timestamp(history?.validFrom),
         timeSource:history?.validFrom?'操作记录':'未知（旧位置快照或缺少来源）',
-        quantity:Number.isFinite(e.quantity)?e.quantity:'未知',unit:e.unit||'',cryoprotectant:e.attributes?.cryoprotectant||freeze?.data?.cryoprotectant||'',source:e.attributes?.source||'',notes:e.attributes?.notes||'',importSource:imported?.inventorySourceName||'',importRow:imported?.inventorySourceRow??''};
+        quantity:Number.isFinite(e.quantity)?e.quantity:'未知',unit:e.unit||'',cryoprotectant:e.attributes?.cryoprotectant||freeze?.data?.cryoprotectant||'',source:e.attributes?.source||'',notes:e.attributes?.notes||'',importSource:imported?.inventorySourceName||'',importRow:imported?.inventorySourceCell?`${imported.inventorySourceRow} / ${imported.inventorySourceCell}`:imported?.inventorySourceRow??''};
     });
     return {box,cells,occupied:occupants.size,empty:box.rows*box.columns-occupants.size,records:includeEmpty?cells:cells.filter(c=>c.entity)};
   });
