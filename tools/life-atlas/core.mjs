@@ -1,7 +1,7 @@
-import {parseEventFields} from './event-fields.mjs?v=20261122.1';
-import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261122.1';
-import {initializeStorage,addStorageBox,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261122.1';
-import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261122.1';
+import {parseEventFields} from './event-fields.mjs?v=20261123.1';
+import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261123.1';
+import {initializeStorage,addStorageBox,changeStorageBoxState,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261123.1';
+import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261123.1';
 export const types = {sample:'样品',cell:'细胞',mouse:'小鼠'};
 export const templates = {sample:['接收','处理','分装','冻存','解冻','提取','检测','转移','取出','归还','消耗','废弃'],cell:['培养','换液','传代','冻存','复苏','转移','取出','归还','废弃','质量检测','实验使用','终止培养'],mouse:['入库','转笼','基因分型','荷瘤','给药','细胞回输','体重测量','肿瘤测量','活检','终点取材','实际处置']};
 const uid = prefix => prefix+'-'+crypto.randomUUID();
@@ -33,6 +33,9 @@ export function execute(original,command,actor='local'){
   const db=structuredClone(original),now=new Date().toISOString(),p=command.data||{},at=p.at||now;validDate(at);
   if(command.key&&db.events.some(e=>e.idempotencyKey===command.key))return original;
   initializeStorage(db);
+  if(command.type==='storage-box-state'){
+    const box=changeStorageBoxState(db,p,at,actor);db.revision++;db.audit.push({id:uid('LOG'),at:now,actor,action:'storage-box-state',objectId:box.id,reason:p.reason,revision:db.revision});return db;
+  }
   if(command.type==='storage-box'){
     const box=addStorageBox(db,p,at,actor);db.revision++;db.audit.push({id:uid('LOG'),at:now,actor,action:'storage-box',objectId:box.id,revision:db.revision});return db;
   }

@@ -1,4 +1,4 @@
-import {collectStorageInventory} from './storage-export.mjs?v=20261122.1';
+import {collectStorageInventory} from './storage-export.mjs?v=20261123.1';
 
 export async function storageGridPNG(db,options={}){
   if(options.scope&&options.scope!=='box')throw Error('PNG 仅支持当前盒；全部盒请使用 PDF 或 CSV');
@@ -19,7 +19,7 @@ export async function storageGridPNG(db,options={}){
     lines.push(line);return lines;
   };
   const cellLines=cells.map(c=>[c.coordinate,...(c.entity?[c.name,...(includeCodes?[c.code]:[]),[c.state,c.passage].filter(Boolean).join(' · '),...(includeDates?['冻存日期',c.frozenDate,'当前位置存入',...c.storedAt.split('T')]:[]),...(includeNotes&&c.notes?['备注：'+c.notes]:[])]:['空位'])].flatMap(text=>wrap(text,cellWidth-16)));
-  const meta=[`Life Atlas · ${box.kind==='cell'?'细胞冻存盒':'样品盒'}格位布局`,box.name,box.path,`${workspace} · ${new Date(generatedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})}（Asia/Shanghai）`,`${box.rows} × ${box.columns} · 已占用 ${occupied} · 空位 ${empty} · 修订 ${db.revision}`,`当前占用快照 · ${includeCodes?'含编号':'不含编号'} · ${includeDates?'含冻存 / 存入日期':'不含日期明细'} · ${includeNotes?'含备注':'不含备注'}`].flatMap(text=>wrap(text,width-64));
+  const meta=[`Life Atlas · ${box.kind==='cell'?'细胞冻存盒':'样品盒'}格位布局`,box.name+(box.status==='archived'?' · 已归档（不可存入）':''),box.path,`${workspace} · ${new Date(generatedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})}（Asia/Shanghai）`,`${box.rows} × ${box.columns} · 已占用 ${occupied} · 空位 ${empty} · 修订 ${db.revision}`,`当前占用快照 · ${includeCodes?'含编号':'不含编号'} · ${includeDates?'含冻存 / 存入日期':'不含日期明细'} · ${includeNotes?'含备注':'不含备注'}`].flatMap(text=>wrap(text,width-64));
   const headerHeight=meta.length*26+40,rowHeights=Array.from({length:box.rows},(_,r)=>Math.max(80,...cellLines.slice(r*box.columns,(r+1)*box.columns).map(lines=>lines.length*23+18)));
   const height=headerHeight+36+rowHeights.reduce((a,b)=>a+b,0)+36;
   if(height>16000||width*height>32000000)throw Error('图片内容过长，请关闭备注或改用 PDF 导出');

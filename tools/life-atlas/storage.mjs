@@ -27,11 +27,25 @@ export function addStorageBox(db,p,at,actor) {
 export function locationBox(db,location) {
   return storageBoxes(db).filter(box=>location.startsWith(box.path+'/')).sort((a,b)=>b.path.length-a.path.length)[0];
 }
+export function changeStorageBoxState(db,p,at,actor){
+  const box=storageBoxes(db).find(b=>b.id===p.boxId);required(box,'冻存盒不存在');
+  required(['archive','restore'].includes(p.action),'冻存盒状态操作无效');
+  required(p.action==='archive'?box.status!=='archived':box.status==='archived','冻存盒状态已变化，请刷新后重试');
+  required(typeof p.reason==='string'&&p.reason.trim()&&p.reason.length<=2000,'归档或恢复必须填写原因（最多 2000 字）');
+  required(Date.parse(at)<=Date.now()&&(!box.createdAt||Date.parse(at)>=Date.parse(box.createdAt))&&(!box.stateHistory?.length||Date.parse(at)>=Date.parse(box.stateHistory.at(-1).at)),'冻存盒状态变更时间无效');
+  if(p.action==='archive'){
+    required(!db.entities.some(e=>e.status!=='ended'&&locationBox(db,e.location)?.id===box.id)&&!(db.storageHistory||[]).some(h=>!h.validTo&&locationBox(db,h.location)?.id===box.id),'盒内仍有库存，请先转移或取出后再归档');
+    required((db.storageHistory||[]).filter(h=>locationBox(db,h.location)?.id===box.id).every(h=>!h.validTo||Date.parse(h.validTo)<=Date.parse(at)),'归档时间不能早于最后一次取出');
+  }
+  box.status=p.action==='archive'?'archived':'active';box.archivedAt=p.action==='archive'?at:null;
+  box.stateHistory||=[];box.stateHistory.push({action:p.action,at,actor,reason:p.reason.trim()});return box;
+}
 export function checkLocation(db,entity,location) {
   required(typeof location==='string'&&location.length<=500,'位置格式无效');
   if(!location)return;
   const box=locationBox(db,location);
   if(!box){required(entity.type==='mouse'||!location.startsWith('LN01/')&&!/\/[A-Z]\d+$/.test(location),'目标冻存盒不存在，请先建立冻存盒');return;}
+  required(box.status!=='archived','目标冻存盒已归档，请先恢复');
   const coordinate=location.slice(box.path.length+1),match=/^([A-Z])([1-9]\d*)$/.exec(coordinate);
   required(match&&match[1].charCodeAt(0)-64<=box.rows&&Number(match[2])<=box.columns,'坐标超出冻存盒行列范围');
   required(entity.status!=='ended','已结束实体不能占用冻存盒');
@@ -55,6 +69,15 @@ export function validateStorage(db) {
     required(Array.isArray(db.storageBoxes)&&db.storageBoxes.length>0,'冻存盒数据无效');
     required(new Set(db.storageBoxes.map(b=>b.id)).size===db.storageBoxes.length&&new Set(db.storageBoxes.map(b=>b.path)).size===db.storageBoxes.length,'冻存盒编号或路径重复');
     db.storageBoxes.forEach(b=>required(b&&typeof b.id==='string'&&typeof b.name==='string'&&typeof b.path==='string'&&b.path&&['cell','sample'].includes(b.kind)&&Number.isInteger(b.rows)&&Number.isInteger(b.columns)&&b.rows>=1&&b.rows<=26&&b.columns>=1&&b.columns<=26&&(b.kind!=='cell'||b.rows===9&&b.columns===9),'冻存盒规格无效'));
+    db.storageBoxes.forEach(b=>{
+      required(b.status===undefined||['active','archived'].includes(b.status),'冻存盒状态无效');
+      if(b.stateHistory!==undefined){
+        required(Array.isArray(b.stateHistory),'冻存盒状态历史无效');let previous=b.createdAt;
+        b.stateHistory.forEach((h,i)=>{required(h&&h.action===(i%2?'restore':'archive')&&Number.isFinite(Date.parse(h.at))&&(!previous||Date.parse(h.at)>=Date.parse(previous))&&typeof h.actor==='string'&&typeof h.reason==='string'&&h.reason.trim()&&h.reason.length<=2000,'冻存盒状态历史无效');previous=h.at;});
+        const last=b.stateHistory.at(-1);required(!last||b.status===(last.action==='archive'?'archived':'active'),'冻存盒状态与历史不一致');
+      }
+      required(b.status==='archived'?Number.isFinite(Date.parse(b.archivedAt))&&b.stateHistory?.at(-1)?.action==='archive'&&b.archivedAt===b.stateHistory.at(-1).at:!b.archivedAt,'冻存盒归档时间无效');
+    });
   }
   db.entities.filter(e=>e.status!=='ended').forEach(e=>checkLocation(db,e,e.location));
   if(db.storageHistory===undefined)return;
@@ -82,9 +105,9 @@ export function validateStorage(db) {
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function storageView(db,selectedId) {
-  const boxes=storageBoxes(db),box=boxes.find(b=>b.id===selectedId)||boxes[0],occupied=db.entities.filter(e=>e.status!=='ended'&&locationBox(db,e.location)?.id===box.id);
+  const boxes=storageBoxes(db),box=boxes.find(b=>b.id===selectedId)||boxes.find(b=>b.status!=='archived')||boxes[0],occupied=db.entities.filter(e=>e.status!=='ended'&&locationBox(db,e.location)?.id===box.id);
   const equipment=[...new Set(boxes.map(b=>[b.facility,b.room,b.equipment].filter(Boolean).join(' / ')))];
-  return `<div class="toolbar">${box.kind==='cell'?'<button class="primary" data-storage-action="stock">登记已有冻存管</button><button data-storage-action="import">批量导入库存</button>':''}<button data-storage-action="box">新建冻存盒</button><button data-storage-action="move">存入 / 转移 / 归还已建档记录</button><button data-storage-action="export">导出清单 / PDF</button><span class="muted">每格一个独立保存单位 · 取出保留历史</span></div><div class="storage-layout"><section class="card"><div class="card-body"><h2>存储位置</h2>${equipment.map(group=>`<div class="location-tree"><strong>${esc(group)}</strong>${boxes.filter(b=>[b.facility,b.room,b.equipment].filter(Boolean).join(' / ')===group).map(b=>`<button data-storage-box="${b.id}" class="${b.id===box.id?'selected-location':''}">${esc(b.rack)} / ${esc(b.name)} (${b.rows}×${b.columns})<small> · ${b.kind==='cell'?'细胞':'样品'}</small></button>`).join('')}</div>`).join('')}</div></section><section class="card"><div class="storage-legend"><span>已占用 ${occupied.length}</span><span>空位 ${box.rows*box.columns-occupied.length}</span></div><div class="table-wrap"><div class="storage-grid labelled" style="grid-template-columns:20px repeat(${box.columns},minmax(26px,1fr));min-width:${box.columns*35+50}px"><span></span>${Array.from({length:box.columns},(_,i)=>`<span class="grid-label">${i+1}</span>`).join('')}${Array.from({length:box.rows},(_,row)=>`<span class="grid-label">${String.fromCharCode(65+row)}</span>${Array.from({length:box.columns},(_,col)=>{const pos=String.fromCharCode(65+row)+(col+1),e=occupied.find(e=>e.location===box.path+'/'+pos);return `<button class="${e?'occupied':''}" ${e?`data-entity="${e.id}"`:`data-slot="${pos}" data-box-id="${box.id}"`} aria-label="${pos} ${e?esc(e.name):'空位'}" title="${pos} · ${e?esc(e.name):'空位'}">${pos}</button>`;}).join('')}`).join('')}</div></div></section><section class="card"><div class="card-body"><h2>${esc(box.name)}</h2><p class="form-hint">${esc(box.path)}</p><div class="field-line"><span>保存类型</span><span>${box.kind==='cell'?'细胞冻存管':'样品'}</span></div><div class="field-line"><span>规格</span><span>${box.rows} × ${box.columns}</span></div><div class="field-line"><span>占用</span><span>${occupied.length} / ${box.rows*box.columns}</span></div><p class="form-hint">点击占用格位查看来源与位置历史；点击空位选择保存单位；没有已建档冻存管时可直接登记已有库存。</p></div></section></div>`;
+  return `<div class="toolbar">${box.kind==='cell'&&box.status!=='archived'?'<button class="primary" data-storage-action="stock">登记已有冻存管</button><button data-storage-action="import">批量导入库存</button>':''}<button data-storage-action="box">新建冻存盒</button>${box.status!=='archived'?'<button data-storage-action="move">存入 / 转移 / 归还已建档记录</button>':''}<button data-storage-action="${box.status==='archived'?'restore':'archive'}" data-box-id="${box.id}">${box.status==='archived'?'恢复冻存盒':'归档空盒'}</button><button data-storage-action="export">导出清单 / PDF</button><span class="muted">每格一个独立保存单位 · 取出保留历史</span></div><div class="storage-layout"><section class="card"><div class="card-body"><h2>存储位置</h2>${equipment.map(group=>`<div class="location-tree"><strong>${esc(group)}</strong>${boxes.filter(b=>[b.facility,b.room,b.equipment].filter(Boolean).join(' / ')===group).map(b=>`<button data-storage-box="${b.id}" class="${b.id===box.id?'selected-location':''}">${esc(b.rack)} / ${esc(b.name)} (${b.rows}×${b.columns})<small> · ${b.kind==='cell'?'细胞':'样品'}${b.status==='archived'?' · 已归档':''}</small></button>`).join('')}</div>`).join('')}</div></section><section class="card"><div class="storage-legend"><span>已占用 ${occupied.length}</span><span>空位 ${box.rows*box.columns-occupied.length}</span></div><div class="table-wrap"><div class="storage-grid labelled" style="grid-template-columns:20px repeat(${box.columns},minmax(26px,1fr));min-width:${box.columns*35+50}px"><span></span>${Array.from({length:box.columns},(_,i)=>`<span class="grid-label">${i+1}</span>`).join('')}${Array.from({length:box.rows},(_,row)=>`<span class="grid-label">${String.fromCharCode(65+row)}</span>${Array.from({length:box.columns},(_,col)=>{const pos=String.fromCharCode(65+row)+(col+1),e=occupied.find(e=>e.location===box.path+'/'+pos);return `<button class="${e?'occupied':''}" ${e?`data-entity="${e.id}"`:box.status==='archived'?'disabled':`data-slot="${pos}" data-box-id="${box.id}"`} aria-label="${pos} ${e?esc(e.name):'空位'}" title="${pos} · ${e?esc(e.name):'空位'}">${pos}</button>`;}).join('')}`).join('')}</div></div></section><section class="card"><div class="card-body"><h2>${esc(box.name)}${box.status==='archived'?' · 已归档':''}</h2>${(box.stateHistory||[]).map(h=>`<p class="form-hint">${h.action==='archive'?'归档':'恢复'} · ${esc(new Date(h.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}))} · ${esc(h.actor)} · ${esc(h.reason)}</p>`).join('')}<p class="form-hint">${esc(box.path)}</p><div class="field-line"><span>保存类型</span><span>${box.kind==='cell'?'细胞冻存管':'样品'}</span></div><div class="field-line"><span>规格</span><span>${box.rows} × ${box.columns}</span></div><div class="field-line"><span>占用</span><span>${occupied.length} / ${box.rows*box.columns}</span></div><p class="form-hint">${box.status==='archived'?'此盒已归档，格位不可存入；恢复后可以继续使用。历史位置记录仍可从实体查看。':'点击占用格位查看来源与位置历史；点击空位选择保存单位；没有已建档冻存管时可直接登记已有库存。'}</p></div></section></div>`;
 }
 export function locationHistory(db,entityId) {
   const records=db.storageHistory?.filter(h=>h.entityId===entityId)||[];

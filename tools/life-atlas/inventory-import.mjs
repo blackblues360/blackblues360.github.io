@@ -1,5 +1,5 @@
-import {execute} from './core.mjs?v=20261122.1';
-import {storageBoxes} from './storage.mjs?v=20261122.1';
+import {execute} from './core.mjs?v=20261123.1';
+import {storageBoxes} from './storage.mjs?v=20261123.1';
 
 export const inventoryColumns=[
   {key:'name',label:'细胞 / 冻存管名称',aliases:['细胞名称','冻存管名称','名称','细胞','name','cellname']},
@@ -87,7 +87,7 @@ export function previewInventoryImport(db,table,mapping,options){
   if(new Set(mapped.map(f=>mapping[f.key])).size!==mapped.length)throw Error('同一列不能对应多个字段');
   if(!(mapping.name>=0)||!(mapping.coordinate>=0)&&!(mapping.row>=0&&mapping.column>=0))throw Error('请对应名称列，以及格位列（或行、列两列）');
   if(!['error','skip-matching'].includes(options.duplicates))throw Error('重复记录处理方式无效');
-  const boxes=storageBoxes(db).filter(b=>b.kind==='cell'),lines=db.entities.filter(e=>e.type==='cell'&&e.subtype==='细胞系');
+  const boxes=storageBoxes(db).filter(b=>b.kind==='cell'&&b.status!=='archived'),lines=db.entities.filter(e=>e.type==='cell'&&e.subtype==='细胞系');
   const get=(record,key)=>mapping[key]>=0?record.values[mapping[key]]||'':'';
   const unknown=value=>!value||/^(未知|不详|未记录|unknown|n\/?a|\?)$/i.test(value);
   const records=table.rows.map(record=>{

@@ -7,6 +7,7 @@ const run=(db,type,data)=>execute(db,{type,data:{at,...data}});
 const vial=(db,name='vial')=>run(db,'entity',{type:'cell',subtype:'冻存管',name,dormant:true});
 const move=(db,id,location,time=next)=>run(db,'event',{entityId:id,eventType:'转移',location,at:time});
 const boxData={kind:'sample',facility:'Lab',room:'R1',equipment:'F1',rack:'Rack1',code:'B1',name:'样品盒',rows:5,columns:7};
+const state=(db,action,reason='盒管理原因',time=last)=>run(db,'storage-box-state',{boxId:'BOX-LN01-A-01',action,reason,at:time});
 
 test('cell boxes are fixed 9x9; sample boxes use custom dimensions',()=>{
   const db=run(empty(),'storage-box',boxData);assert.equal(storageBoxes(db).at(-1).rows,5);assert.equal(storageBoxes(db).at(-1).columns,7);
@@ -51,4 +52,28 @@ test('historical occupancy cannot be overwritten by another entity backfill',()=
   let db=vial(vial(empty(),'v1'),'v2');db=move(db,db.entities[0].id,'LN01/A/01/A1');db=run(db,'event',{entityId:db.entities[0].id,eventType:'取出',reason:'test',at:last});
   assert.throws(()=>move(db,db.entities[1].id,'LN01/A/01/A1','2026-11-02T12:00:00+08:00'),/历史占用/);
   db=move(db,db.entities[1].id,'LN01/A/01/A1',last);validate(db);
+});
+
+test('occupied box cannot archive; emptied box retains closed history and original events',()=>{
+  let db=vial(empty());db=move(db,db.entities[0].id,'LN01/A/01/A1');const before=JSON.stringify(db);assert.throws(()=>state(db,'archive'),/仍有库存/);assert.equal(JSON.stringify(db),before);db=run(db,'event',{entityId:db.entities[0].id,eventType:'取出',reason:'测试移出',at:last});const snapshot=structuredClone(db),archived=state(db,'archive');assert.deepEqual(archived.events,snapshot.events);assert.deepEqual(archived.storageHistory,snapshot.storageHistory);assert.equal(archived.storageBoxes[0].status,'archived');assert.equal(archived.audit.at(-1).action,'storage-box-state');validate(JSON.parse(JSON.stringify(archived)));
+});
+test('archived box refuses new stock and movement while restore reopens same physical box',()=>{
+  let db=state(vial(empty()),'archive');assert.throws(()=>move(db,db.entities[0].id,'LN01/A/01/A1',last),/已归档/);assert.throws(()=>run(db,'inventory-register',{name:'外部库存',location:'LN01/A/01/A1',at:last}),/已归档/);db=state(db,'restore','重新启用','2026-11-04T10:00:00+08:00');db=move(db,db.entities[0].id,'LN01/A/01/A1','2026-11-05T10:00:00+08:00');assert.equal(db.storageBoxes[0].stateHistory.length,2);assert.equal(db.storageBoxes[0].path,'LN01/A/01');validate(db);
+});
+test('archive and restore reject blank reasons, repeated states, earlier and future changes',()=>{
+  const db=state(empty(),'archive');assert.throws(()=>state(db,'archive'),/状态已变化/);assert.throws(()=>state(db,'restore',' '),/原因/);assert.throws(()=>state(db,'restore','原因',at),/时间/);assert.throws(()=>state(db,'restore','原因','2099-01-01T00:00:00Z'),/时间/);assert.throws(()=>state(empty(),'restore'),/状态已变化/);
+});
+test('legacy boxes remain readable but imported invalid archive state or history is rejected',()=>{
+  validate(vial(empty()));const db=state(empty(),'archive');for(const change of [b=>b.status='bad',b=>b.archivedAt=null,b=>b.stateHistory[0].reason='',b=>b.stateHistory[0].action='restore']){const copy=structuredClone(db);change(copy.storageBoxes[0]);assert.throws(()=>validate(copy),/冻存盒/);}const corrupt=vial(empty());corrupt.entities[0].location='LN01/A/01/A1';corrupt.storageBoxes=db.storageBoxes;assert.throws(()=>validate(corrupt),/已归档/);
+});
+test('archived path stays reserved and nested child occupancy does not belong to parent box',()=>{
+  let db=run(empty(),'storage-box',{...boxData,facility:'LN01',room:'A',equipment:'01',rack:'X',code:'Y',kind:'cell',rows:9,columns:9});db=vial(db);db=move(db,db.entities[0].id,'LN01/A/01/X/Y/A1');db=state(db,'archive');assert.equal(db.storageBoxes[0].status,'archived');assert.equal(db.entities[0].location,'LN01/A/01/X/Y/A1');validate(db);assert.throws(()=>run(db,'storage-box',{...boxData,facility:'LN01',room:'A',equipment:'01',rack:'X',code:'Y',kind:'cell',rows:9,columns:9}),/已存在/);
+});
+
+test('inventory preview cannot resolve an archived target or named box',async()=>{
+  const {parseInventoryTable,suggestInventoryMapping,previewInventoryImport}=await import('../inventory-import.mjs');const db=state(empty(),'archive'),table=parseInventoryTable('名称,格位,盒路径\n细胞,A1,LN01/A/01');assert.equal(previewInventoryImport(db,table,suggestInventoryMapping(table.headers),{boxId:'BOX-LN01-A-01',duplicates:'error',at:last}).errors.length,1);
+});
+
+test('archived empty box remains exportable with explicit archived status',async()=>{
+  const {renderStorageReport,storageInventoryCSV}=await import('../storage-export.mjs');const db=state(empty(),'archive');assert.match(renderStorageReport(db),/已归档（不可存入）/);assert.match(storageInventoryCSV(db,{includeEmpty:true}),/细胞盒（已归档）/);assert.equal(db.storageBoxes[0].status,'archived');
 });
