@@ -1,7 +1,7 @@
-import {parseEventFields} from './event-fields.mjs?v=20261123.1';
-import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261123.1';
-import {initializeStorage,addStorageBox,changeStorageBoxState,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261123.1';
-import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261123.1';
+import {parseEventFields} from './event-fields.mjs?v=20261124.1';
+import {applyStudyCommand,validateStudies,membershipAt} from './studies.mjs?v=20261124.1';
+import {initializeStorage,addStorageBox,changeStorageBoxState,locationBox,checkLocation,changeLocation,validateStorage} from './storage.mjs?v=20261124.1';
+import {parseProfile,profileFields,cellLine,validateProfiles} from './profiles.mjs?v=20261124.1';
 export const types = {sample:'样品',cell:'细胞',mouse:'小鼠'};
 export const templates = {sample:['接收','处理','分装','冻存','解冻','提取','检测','转移','取出','归还','消耗','废弃'],cell:['培养','换液','传代','冻存','复苏','转移','取出','归还','废弃','质量检测','实验使用','终止培养'],mouse:['入库','转笼','基因分型','荷瘤','给药','细胞回输','体重测量','肿瘤测量','活检','终点取材','实际处置']};
 const uid = prefix => prefix+'-'+crypto.randomUUID();
@@ -63,6 +63,26 @@ export function execute(original,command,actor='local'){
       if(item.sourceCell)next.events.at(-1).inventorySourceCell=item.sourceCell;
     }
     next.revision++;next.audit.push({id:uid('LOG'),at:now,actor,action:'inventory-import',objectId:command.key,batchId:command.key,count:p.items.length,skippedRows,sourceName,request,revision:next.revision});return next;
+  }
+  if(command.type==='storage-batch-move'){
+    required(typeof command.key==='string'&&command.key&&command.key.length<=120,'批量转移必须提供有效幂等键');
+    required(Array.isArray(p.items)&&p.items.length>=1&&p.items.length<=100,'每次转移 1–100 支冻存管');
+    required(p.items.every(i=>i&&typeof i.entityId==='string'&&typeof i.from==='string'&&typeof i.location==='string'),'逐管转移记录无效');
+    required(new Set(p.items.map(i=>i.entityId)).size===p.items.length&&new Set(p.items.map(i=>i.location)).size===p.items.length,'重复选择冻存管或目标格位');
+    required(typeof p.reason==='string'&&p.reason.trim()&&p.reason.length<=2000,'请填写转移原因（最多 2000 字）');
+    required(Date.parse(at)<=Date.now(),'转移时间不能在未来');
+    const items=p.items.map(i=>({entityId:i.entityId,from:i.from,location:i.location})),request=JSON.stringify({at,reason:p.reason.trim(),items}),prior=db.audit.find(a=>a.action==='storage-batch-move'&&a.batchId===command.key);
+    if(prior){required(prior.request===request,'同一转移标识不能用于不同内容');required(db.events.filter(e=>e.storageMoveBatchId===command.key).length===items.length,'批量转移记录不完整');return original;}
+    required(!db.events.some(e=>e.storageMoveBatchId===command.key||items.some(i=>e.idempotencyKey===command.key+':'+i.entityId)),'批量转移标识已被使用');
+    for(const i of items){
+      const e=db.entities.find(e=>e.id===i.entityId),source=locationBox(db,i.from),target=locationBox(db,i.location);
+      required(e&&e.type==='cell'&&e.subtype==='冻存管'&&e.status==='stored'&&source?.kind==='cell','请选择已存入细胞盒的冻存管');
+      required(e.location===i.from,'原格位已变化，请重新预览');required(i.from!==i.location,'目标格位与原位置相同');
+      required(target?.kind==='cell','目标必须为已建档细胞盒');checkLocation(db,e,i.location);
+    }
+    let next=db;
+    for(const i of items){next=execute(next,{type:'event',key:command.key+':'+i.entityId,data:{entityId:i.entityId,eventType:'转移',location:i.location,at,note:p.reason.trim()}},actor);next.events.at(-1).storageMoveBatchId=command.key;}
+    next.revision++;next.audit.push({id:uid('LOG'),at:now,actor,action:'storage-batch-move',objectId:command.key,batchId:command.key,request,count:items.length,revision:next.revision});return next;
   }
   if(command.type==='batch'){
     required(command.key,'批量操作必须提供幂等键');
