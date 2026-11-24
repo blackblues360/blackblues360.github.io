@@ -1,5 +1,5 @@
-import {collectEntityReport,reportScopes} from './reports.mjs?v=20261124.1';
-import {types,age,lifecycle,isCellReference} from './core.mjs?v=20261124.1';
+import {collectEntityReport,reportScopes} from './reports.mjs?v=20261124.2';
+import {types,age,lifecycle,isCellReference} from './core.mjs?v=20261124.2';
 
 export function collectLineageImage(db,entityId,{scope='lineage'}={}){
   const report=collectEntityReport(db,entityId,{scope}),ids=new Set(report.entities.map(e=>e.id));

@@ -1,4 +1,4 @@
-import {cohortMeasurements,measurementSeries,measurementTypes} from './measurements.mjs?v=20261124.1';
+import {cohortMeasurements,measurementSeries,measurementTypes} from './measurements.mjs?v=20261124.2';
 
 export function collectMeasurementImage(db,{studyId,cohortId='',eventType='体重测量'}={}){
   const study=(db.studies||[]).find(s=>s.id===studyId);

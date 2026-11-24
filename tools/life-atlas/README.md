@@ -2,7 +2,7 @@
 
 科研实体生命周期与谱系管理工具。开发预览已发布于 https://blackblues.xyz/tools/life-atlas/ 。当前版本包含项目分组、标签、多盒与位置历史。需求与 UI 原件保存在 `docs/development/life-atlas/`，完整 V0.2 基线及实现边界见该目录下的 `implementation.md`。
 
-已支持小鼠基础档案与实际年龄、细胞系与培养批次关联、培养条件继承、档案修订前后快照和分型结果历史。项目页支持分组体重 / 肿瘤测量对比、原始测量 CSV 与原始事件追溯；测量归属使用发生时的成员有效期。右侧详情和表单可点击左侧空白处关闭。三类实体页面均使用卡片切换时间轴；保留旧版已计时细胞系的实际生命周期。本轮新增逐管批量转移；161 项业务测试、73 组浏览器流程通过。
+已支持小鼠基础档案与实际年龄、细胞系与培养批次关联、培养条件继承、档案修订前后快照和分型结果历史。项目页支持分组体重 / 肿瘤测量对比、原始测量 CSV 与原始事件追溯；测量归属使用发生时的成员有效期。右侧详情和表单可点击左侧空白处关闭。三类实体页面均使用卡片切换时间轴；保留旧版已计时细胞系的实际生命周期。本轮新增自动云备份与版本恢复；169 项业务测试、81 组浏览器流程通过。
 
 从仓库根目录运行 `python scripts/serve.py --port 8765`，浏览器打开 `/tools/life-atlas/`。沿用网站登录服务；需已配置且有效的网站账户。无需额外安装或构建。
 
@@ -26,13 +26,14 @@
 
 “基本信息 → 导出谱系 PNG”支持当前实体、全部上游、全部下游或上下游，使用当前档案绘制来源层级；可选编号、当前 D+、当前生命周期及来源事件日期、档案备注。会合节点只画一次，保留全部范围内来源边，跨层连线绕开中间节点，并提供节点 / 关系索引。不会扩展兄弟分支或后代其他来源；图外相邻关系计数另作提示，共享输入参与不画成谱系边。横向不表示时间比例；有环、范围错误或图片过大时阻止生成，提示核对数据或缩小范围 / 改用 PDF。导出只读，编码后再次核对账户身份。
 
-入口已经加入首页工具列表及账户中心导航。演示空间与个人数据库分离；正式数据按账户 ID 保存在本机 IndexedDB。云备份尚未实现，请导出 JSON。
+入口已经加入首页工具列表及账户中心导航。演示空间与个人数据库分离；正式数据按账户 ID 保存在本机 IndexedDB。云备份需在备份中心确认启用；本机保存为工作副本，云端为独立历史快照，不是实时同步。
 
 验证：
 
 ```powershell
-node --test tools/life-atlas/tests/core.test.mjs tools/life-atlas/tests/workflows.test.mjs tools/life-atlas/tests/studies.test.mjs tools/life-atlas/tests/storage.test.mjs tools/life-atlas/tests/storage-batch.test.mjs tools/life-atlas/tests/profiles.test.mjs tools/life-atlas/tests/measurements.test.mjs tools/life-atlas/tests/inventory.test.mjs tools/life-atlas/tests/inventory-import.test.mjs tools/life-atlas/tests/inventory-workbook.test.mjs tools/life-atlas/tests/reports.test.mjs tools/life-atlas/tests/storage-export.test.mjs tools/life-atlas/tests/study-export.test.mjs tools/life-atlas/tests/measurement-png.test.mjs tools/life-atlas/tests/timeline-png.test.mjs tools/life-atlas/tests/lineage-png.test.mjs tools/life-atlas/tests/study-png.test.mjs
+node --test tools/life-atlas/tests/core.test.mjs tools/life-atlas/tests/workflows.test.mjs tools/life-atlas/tests/studies.test.mjs tools/life-atlas/tests/storage.test.mjs tools/life-atlas/tests/storage-batch.test.mjs tools/life-atlas/tests/cloud-backup.test.mjs tools/life-atlas/tests/profiles.test.mjs tools/life-atlas/tests/measurements.test.mjs tools/life-atlas/tests/inventory.test.mjs tools/life-atlas/tests/inventory-import.test.mjs tools/life-atlas/tests/inventory-workbook.test.mjs tools/life-atlas/tests/reports.test.mjs tools/life-atlas/tests/storage-export.test.mjs tools/life-atlas/tests/study-export.test.mjs tools/life-atlas/tests/measurement-png.test.mjs tools/life-atlas/tests/timeline-png.test.mjs tools/life-atlas/tests/lineage-png.test.mjs tools/life-atlas/tests/study-png.test.mjs
 node tools/life-atlas/tests/browser.cjs
+node tools/life-atlas/tests/cloud-browser.cjs
 ```
 
 浏览器测试需要本机 Edge、Playwright、预览服务；`LIFE_ATLAS_TEST_URL` 可指定服务地址。测试替换认证模块为合成账户，不使用真实身份或云数据。
@@ -46,3 +47,8 @@ Excel 解析使用随网站保存的 SheetJS CE 0.20.3（Apache-2.0），按需�
 位置与存储支持归档空盒 / 恢复冻存盒，均须填写原因。存在当前库存或未结束位置记录时禁止归档；归档后格位停用，登记、导入及转移目标选项不含归档盒，手工填写路径也会拒绝存入。归档保留盒号、物理路径、历史与导出，不允许同路径重建；恢复继续使用原盒。旧数据未带状态时按可用处理，状态历史随 JSON 保存并校验。此功能不包含层级节点编辑。
 
 细胞盒支持“批量转移冻存管”：勾选当前盒冻存管，选择一个目标细胞盒并逐管填写空坐标，记录实际时间与原因；先逐管预览，可返回修改，二次确认后单次本地保存。重复目标、占用、归档盒、原位置变化和历史时间冲突均阻止整批保存；不支持占用格互换。每管保留原身份、P 数、生命周期，分别追加转移事件与位置区间，整批有幂等标识及审计，备份恢复校验其完整性。每次最多 100 支；样品批量转移和冻存时逐管自动定位仍未实现。
+
+自动云备份：备份中心确认启用后，每次本地事务保存会原子更新账户隔离的持久待备份队列；页面打开时约每 2 分钟上传最新完整快照，重开与联网后重试。默认关闭，不上传演示数据；暂停保留已有云端版本。每账户最近 20 份、每份最多 5 MiB，单次上传有幂等标识与 SHA-256；上传期间的新修改不会被旧成功响应清掉。页面关闭后无后台上传保证。超限或失败不回滚本地数据，仍可导出 JSON。
+云端恢复：刷新当前账户版本，选中后先验证账户、校验和和完整领域关联；预览数量后用户确认替换当前浏览器的工作副本。保存前同时创建本机保护快照并校验修订号，避免另一页面改动被静默覆盖。恢复不自动覆盖其他设备；恢复后的本机修订继续排队备份。跨账户请求与结果切换使用现有会话保护。附件、增量备份、多设备同步与浏览器关闭后的上传尚未实现。云端表和受控写入函数见新增数据库迁移。
+
+旧请求过期后停止自动发送并保留原捕获时间；点击立即备份才在本机事务中重新抓取当前副本。云端用轻量请求回执防止已淘汰的旧 ID 再次插入；回执仅含去重元数据，不保留已淘汰快照正文。列表分别显示快照时间和上传时间。
